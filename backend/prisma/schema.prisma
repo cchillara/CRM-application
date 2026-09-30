@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  SALES
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  EMAIL
+  PHONE
+  ADVERTISEMENT
+  OTHER
+}
+
+enum DealStage {
+  PROSPECTING
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+  FOLLOW_UP
+}
+
+
+model User {
+  id             String       @id @default(uuid())
+  firebaseUid    String       @unique
+  email          String       @unique
+  firstName      String
+  lastName       String?
+  role           UserRole     @default(SALES)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  leads          Lead[]
+  tasks          Task[]
+  activities Activity[]
+}
+
+model Organization {
+  id        String @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  website   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  customers Customer[]
+}
+
+model Company {
+  id        String @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  website   String?
+  address   String?
+  city      String?
+  state     String?
+  country   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts  Contact[]
+  leads     Lead[]
+  customers  Customer[]
+}
+
+model Contact {
+  id        String  @id @default(uuid())
+  firstName String
+  lastName  String?
+  email     String?
+  phone     String?
+  jobTitle  String?
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  leads     Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+
+  status      LeadStatus @default(NEW)
+  source      LeadSource @default(OTHER)
+
+  companyId   String?
+  company     Company?   @relation(fields: [companyId], references: [id])
+
+  contactId   String?
+  contact     Contact?   @relation(fields: [contactId], references: [id])
+
+  assignedToId String?
+  assignedTo   User?     @relation(fields: [assignedToId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id])
+
+  deals          Deal[]
+  tasks          Task[]
+  activities Activity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deal {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+
+  value       Decimal?
+  stage       DealStage @default(PROSPECTING)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  tasks Task[]
+   activities Activity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+
+  status  TaskStatus @default(TODO)
+  dueDate DateTime?
+
+  assignedToId String
+  assignedTo   User   @relation(fields: [assignedToId], references: [id])
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  dealId String?
+  deal   Deal? @relation(fields: [dealId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Activity {
+  id          String       @id @default(uuid())
+  type        ActivityType
+  description String
+
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+
+  customerId  String?
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+
+  dealId      String?
+  deal        Deal?        @relation(fields: [dealId], references: [id])
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
