@@ -1,6 +1,61 @@
+import { useState } from "react";
 import "./Auth.css";
+import {
+    createUserWithEmailAndPassword,
+    updateProfile
+} from "firebase/auth";
+import { auth } from "../firebase";
 
 function Signup() {
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSignup = async (e) => {
+        e.preventDefault();
+
+        setError("");
+
+        // Check password confirmation
+        if (password !== confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Create Firebase user
+            const userCredential =
+                await createUserWithEmailAndPassword(
+                    auth,
+                    email,
+                    password
+                );
+
+            // Save user's name in Firebase profile
+            await updateProfile(userCredential.user, {
+                displayName: name,
+            });
+
+            console.log("User created:", userCredential.user);
+
+            alert("Account created successfully!");
+
+            // Go to login page
+            window.location.href = "/login";
+
+        } catch (error) {
+            console.error(error);
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="auth-page">
 
@@ -29,7 +84,6 @@ function Signup() {
 
                 </div>
 
-
                 <div className="auth-card">
 
                     <div className="auth-header">
@@ -42,8 +96,7 @@ function Signup() {
 
                     </div>
 
-
-                    <form>
+                    <form onSubmit={handleSignup}>
 
                         <div className="form-group">
 
@@ -55,10 +108,12 @@ function Signup() {
                                 id="name"
                                 type="text"
                                 placeholder="Enter your full name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
                             />
 
                         </div>
-
 
                         <div className="form-group">
 
@@ -70,10 +125,12 @@ function Signup() {
                                 id="email"
                                 type="email"
                                 placeholder="Enter your email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                             />
 
                         </div>
-
 
                         <div className="form-group">
 
@@ -85,10 +142,12 @@ function Signup() {
                                 id="password"
                                 type="password"
                                 placeholder="Create a password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
                             />
 
                         </div>
-
 
                         <div className="form-group">
 
@@ -100,20 +159,32 @@ function Signup() {
                                 id="confirmPassword"
                                 type="password"
                                 placeholder="Confirm your password"
+                                value={confirmPassword}
+                                onChange={(e) =>
+                                    setConfirmPassword(e.target.value)
+                                }
+                                required
                             />
 
                         </div>
 
+                        {error && (
+                            <p className="auth-error">
+                                {error}
+                            </p>
+                        )}
 
                         <button
                             type="submit"
                             className="auth-button"
+                            disabled={loading}
                         >
-                            Create Account
+                            {loading
+                                ? "Creating Account..."
+                                : "Create Account"}
                         </button>
 
                     </form>
-
 
                     <p className="auth-switch">
                         Already have an account?
