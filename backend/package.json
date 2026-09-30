@@ -1,0 +1,33 @@
+{
+  "name": "crm",
+  "version": "1.0.0",
+  "description": "Backend for the crm ",
+  "homepage": "https://github.com/cchillara/CRM-application#readme",
+  "bugs": {
+    "url": "https://github.com/cchillara/CRM-application/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cchillara/CRM-application.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "experss": "^0.0.1-security",
+    "express": "^5.2.1",
+    "firebase": "^12.19.0",
+    "firebase-admin": "^14.5.0",
+    "nodemon": "^3.1.14",
+    "pg": "^8.23.0"
+  }
+}
