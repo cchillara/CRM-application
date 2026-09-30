@@ -1,6 +1,18 @@
 import "./App.css";
+import Login from "./auth/Login";
+import Signup from "./auth/Signup";
 
 function App() {
+  const path = window.location.pathname;
+
+  if (path === "/login") {
+    return <Login />;
+  }
+
+  if (path === "/signup") {
+    return <Signup />;
+  }
+
   return (
     <>
       {/* Navbar */}
@@ -15,7 +27,7 @@ function App() {
           <a href="#contact">Contact</a>
         </nav>
 
-        <div className="login">Login</div>
+        <a href="/login" className="login">Login</a>
       </header>
 
       {/* Hero */}
