@@ -1,8 +1,29 @@
 import { Router } from "express";
-import { getProtectedProfile } from "../controllers/auth.controller.js";
+
+import {
+    getProtectedProfile,
+    registerUser
+} from "../controllers/auth.controller.js";
+
 import { verifyFirebaseToken } from "../middleware/authmiddleware.js";
 
 const router = Router();
-router.get("/protected", verifyFirebaseToken, getProtectedProfile);
+
+
+// Protected profile
+router.get(
+    "/protected",
+    verifyFirebaseToken,
+    getProtectedProfile
+);
+
+
+// Register Firebase user in PostgreSQL
+router.post(
+    "/register",
+    verifyFirebaseToken,
+    registerUser
+);
+
 
 export default router;
