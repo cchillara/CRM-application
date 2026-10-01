@@ -55,28 +55,8 @@ enum ActivityType {
   FOLLOW_UP
 }
 
-
-model User {
-  id             String       @id @default(uuid())
-  firebaseUid    String       @unique
-  email          String       @unique
-  firstName      String
-  lastName       String?
-  role           UserRole     @default(SALES)
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  leads          Lead[]
-  tasks          Task[]
-  activities Activity[]
-}
-
 model Organization {
-  id        String @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
   email     String?
   phone     String?
@@ -85,27 +65,58 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  customers Customer[]
+  users      User[]
+  companies  Company[]
+  customers  Customer[]
+  leads      Lead[]
+  deals      Deal[]
+  tasks      Task[]
+  activities Activity[]
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique
+  email       String   @unique
+  firstName   String
+  lastName    String?
+  role        UserRole @default(SALES)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads      Lead[]
+  deals      Deal[]
+  tasks      Task[]
+  activities Activity[]
 }
 
 model Company {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   name      String
   email     String?
   phone     String?
   website   String?
+
   address   String?
   city      String?
   state     String?
   country   String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   contacts  Contact[]
   leads     Lead[]
-  customers  Customer[]
+  customers Customer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 model Contact {
@@ -119,10 +130,12 @@ model Contact {
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 
-  leads     Lead[]
+  leads Lead[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([companyId])
 }
 
 model Lead {
@@ -130,66 +143,97 @@ model Lead {
   title       String
   description String?
 
-  status      LeadStatus @default(NEW)
-  source      LeadSource @default(OTHER)
+  status LeadStatus @default(NEW)
+  source LeadSource @default(OTHER)
 
-  companyId   String?
-  company     Company?   @relation(fields: [companyId], references: [id])
-
-  contactId   String?
-  contact     Contact?   @relation(fields: [contactId], references: [id])
-
-  assignedToId String?
-  assignedTo   User?     @relation(fields: [assignedToId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Customer {
-  id             String       @id @default(uuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  companyId      String
-  company        Company      @relation(fields: [companyId], references: [id])
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
-  deals          Deal[]
-  tasks          Task[]
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+
+  assignedToId String?
+  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+
+  tasks      Task[]
   activities Activity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([companyId])
+  @@index([contactId])
+}
+
+model Customer {
+  id String @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  deals      Deal[]
+  tasks      Task[]
+  activities Activity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([companyId])
 }
 
 model Deal {
-  id          String    @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
   description String?
 
-  value       Decimal?
-  stage       DealStage @default(PROSPECTING)
+  value Decimal?
+  stage DealStage @default(PROSPECTING)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
 
-  tasks Task[]
-   activities Activity[]
+  assignedToId String?
+  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+
+  tasks      Task[]
+  activities Activity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([customerId])
 }
 
 model Task {
-  id          String     @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
   description String?
 
   status  TaskStatus @default(TODO)
   dueDate DateTime?
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   assignedToId String
-  assignedTo   User   @relation(fields: [assignedToId], references: [id])
+  assignedTo   User @relation(fields: [assignedToId], references: [id])
+
+  leadId String?
+  lead   Lead? @relation(fields: [leadId], references: [id])
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
@@ -199,6 +243,12 @@ model Task {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([dealId])
 }
 
 model Activity {
@@ -206,15 +256,27 @@ model Activity {
   type        ActivityType
   description String
 
-  userId      String
-  user        User         @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  customerId  String?
-  customer    Customer?    @relation(fields: [customerId], references: [id])
+  userId String
+  user   User @relation(fields: [userId], references: [id])
 
-  dealId      String?
-  deal        Deal?        @relation(fields: [dealId], references: [id])
+  leadId String?
+  lead   Lead? @relation(fields: [leadId], references: [id])
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  dealId String?
+  deal   Deal? @relation(fields: [dealId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([dealId])
 }
