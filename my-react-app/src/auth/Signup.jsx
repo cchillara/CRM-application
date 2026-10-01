@@ -38,12 +38,14 @@ function Signup() {
         setLoading(true);
 
         try {
+
             const userCredential =
                 await createUserWithEmailAndPassword(
                     auth,
                     email,
                     password
                 );
+
 
             await updateProfile(
                 userCredential.user,
@@ -52,20 +54,72 @@ function Signup() {
                 }
             );
 
+
+            const idToken =
+                await userCredential.user.getIdToken();
+
             console.log(
-                "User created:",
-                userCredential.user
+                "Firebase UID:",
+                userCredential.user.uid
+            );
+
+
+            const nameParts = name.trim().split(" ");
+
+            const firstName = nameParts[0];
+
+            const lastName =
+                nameParts.slice(1).join(" ") || null;
+
+
+            const organizationId = "52a39a42-bdbf-45a7-842e-ff6909e53a12";
+
+            // 6. Send user information to backend
+            const response = await fetch(
+                "http://localhost:5000/api/v1/auth/register",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${idToken}`,
+                    },
+
+                    body: JSON.stringify({
+                        firstName,
+                        lastName,
+                        organizationId,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message ||
+                    "Failed to create CRM user"
+                );
+            }
+
+            console.log(
+                "CRM User created:",
+                data
             );
 
             alert(
                 "Account created successfully!"
             );
 
+
             window.location.href = "/login";
+
         } catch (error) {
             console.error(error);
 
             setError(error.message);
+
         } finally {
             setLoading(false);
         }
