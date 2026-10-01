@@ -1,5 +1,4 @@
 import { auth } from "../firebase-admin.js";
-import prisma from "../db/index.js";
 import { ApiError } from "../utils/apiError.js";
 
 export const verifyFirebaseToken = async (req, res, next) => {
@@ -13,17 +12,7 @@ export const verifyFirebaseToken = async (req, res, next) => {
     const idToken = authHeader.split("Bearer ")[1];
     const decodedToken = await auth.verifyIdToken(idToken);
 
-    const user = await prisma.user.findUnique({
-      where: {
-        firebaseUid: decodedToken.uid
-      }
-    });
-
-    if (!user) {
-      throw new ApiError(403, "CRM user is not registered");
-    }
-
-    req.user = user;
+    req.user = decodedToken;
 
     next();
   } catch (error) {
