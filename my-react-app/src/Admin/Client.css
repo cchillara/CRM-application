@@ -1,0 +1,1243 @@
+html,
+body,
+#root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    
+}
+
+body {
+    overflow: hidden;
+}
+
+.client-layout {
+    width: 100%;
+    height: 100vh;
+}
+
+.client-sidebar {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 275px;
+    height: 100vh;
+
+    margin: 0;
+    padding: 0;
+
+    background-color: #10141D;
+    /* color: #FFFFFF; */
+    color: white;
+
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+
+    z-index: 1000;
+
+    overflow: hidden;
+}
+
+
+.side-header {
+    border: 1px 1px solid rgb(221, 206, 206);
+    border-radius: 10px;
+    display: flex;
+    margin: 30px 10px 10px 10px;
+
+    padding: 10px 20px 20px 20px;
+    background-color: #10141D;
+    border-bottom: 1px solid #1F2632;
+
+    box-sizing: border-box;
+}
+
+
+
+.side-menu {
+    display: flex;
+    flex-direction: column;
+
+    margin: 30px 10px 0 10px;
+    padding: 10px;
+
+    font-size: 20px;
+
+    gap: 10px;
+
+    box-sizing: border-box;
+}
+
+
+
+
+.side-menu .navlink {
+    padding: 15px;
+
+    text-decoration: none;
+    color: #A7AFBD;
+
+    border-radius: 10px;
+
+    box-sizing: border-box;
+}
+
+
+
+
+.side-menu .navlink:hover {
+    background-color: #2868C7;
+    color: #FFFFFF;
+}
+
+
+
+
+.side-menu .navlink.active {
+   background-color: #2868C7;
+    color: #FFFFFF;
+}
+
+
+
+.side-logout {
+    margin-top: auto;
+    padding: 20px;
+}
+
+
+.side-logout button {
+    width: 100%;
+    height: 60px;
+
+    border: none;
+    border-radius: 10px;
+
+    font-size: 20px;
+
+    background-color: #2868C7;
+    color: white;
+
+    cursor: pointer;
+}
+
+
+.side-logout button:hover {
+    background-color: #2868C7;
+}
+
+
+/* ---------- MAIN CONTENT ---------- */
+
+.client-content {
+    position: fixed;
+
+    top: 0;
+    left: 250px;
+
+    width: calc(100% - 250px);
+    height: 100vh;
+
+    padding: 30px;
+
+    box-sizing: border-box;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    background-color: white;
+}
+
+.client-dashboard {
+    width: 100%;
+    height: 100%;
+    /* background-color: rgba(248, 245, 245, 0.707); */
+    
+
+    .dash-nav {
+        background-color:rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .dash-content {
+        display: flex;
+        flex-direction: row;
+        margin-left: 23px;
+        margin-right: 23px;
+        justify-content: space-between;
+    }
+    
+
+    .dash-sub-content {
+        background-color: rgba(248, 245, 245, 0.707);
+        color:  rgb(89, 87, 87);
+        border-radius: 20px;
+        padding: 10px;
+        min-width: 23%;
+        min-height: 120px;
+        margin-top: 20px;
+        padding-top: 10px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+
+        h2{
+            padding: 10px;
+        }
+        h3 {
+            padding: 10px;
+            color: rgb(89, 87, 87);
+            font-size: larger;
+        }
+    }
+
+    .client-project-ticket {
+        display: flex;
+        flex-direction: row;
+        
+       
+    }
+
+    .client-projects {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        padding: 10px;
+        min-width: 60%;
+        min-height: 100%;
+        margin-top: 20px;
+        padding-top: 10px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+        margin-left: 20px;
+        margin-right: 20px;
+
+
+        .project-holders {
+            display: flex;
+            flex-direction: column;
+            font-size: larger;
+            margin: 8px;
+        }
+
+        .project-holders-heading {
+            display: flex;
+            flex-direction: row;
+            font-size: larger;
+            justify-content: space-between;
+            margin: 12px;
+
+        }
+
+        .project-holders-heading a button {
+            /* background-color: rgba(201, 198, 198, 0.707); */
+           color:  #3e76ca; ;
+            border: 1px;
+            width: 80px;
+            height: 22px;
+            padding: 2px;
+            border-radius: 10px;
+        }
+
+
+    }
+
+    .client-tickets {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        padding: 10px;
+        min-width: 35%;
+        min-height: 100%;
+        margin-top: 20px;
+        padding-top: 10px;
+        margin-right: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+
+        .client-tickets-heading {
+            color:  rgb(89, 87, 87);
+            font-size: larger;
+            margin-top: 20px;
+            margin-left: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .client-tickets-heading a button {
+            /* background-color: rgba(201, 198, 198, 0.707); */
+           color:  #3e76ca; ;
+            border: 1px;
+            width: 80px;
+            height: 22px;
+            padding: 2px;
+            border-radius: 10px;
+        }
+
+        .project-tickets {
+            display: flex;
+            flex-direction: column;
+            font-size: larger;
+            margin: 10px;
+        }
+    }
+
+
+}
+
+.org-content {
+    width: 100%;
+    height: 100%;
+
+    .orgn-info {
+        background-color: rgba(248, 245, 245, 0.707);
+        color:  rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .org-para {
+        background-color: rgba(248, 245, 245, 0.707);
+        color:  rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .ord-address {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .org-prim-contact {
+        background-color: rgba(248, 245, 245, 0.707);
+        color:  rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .org-comp-contact {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .org-content {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+}
+
+.user-mngt {
+    width: 100%;
+    height: 100%;
+
+    .users {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .com-user {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .user-card {
+        background-color: white;
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-left: 5px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+}
+
+.contr-details {
+    width: 100%;
+    height: 100%;
+
+    .contr-heading {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .contracts {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .contract {
+        background-color: white;
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-left: 5px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+}
+
+.tickets-div {
+    width: 100%;
+    height: 100%;
+
+    .tickets-heading {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .ticks-div {
+        background-color: rgba(248, 245, 245, 0.707);
+        color:  rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .tick-div {
+        background-color: white;
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+}
+
+.billing-div {
+    width: 100%;
+    height: 100%;
+
+    .bill-heading {
+        background-color: rgba(248, 245, 245, 0.707);
+        color:  rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .bill-details {
+        background-color: rgba(248, 245, 245, 0.707);
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+    .bill-inn-details {
+        background-color: white;
+        color: rgb(89, 87, 87);
+        border-radius: 20px;
+        margin: 23px;
+        margin-left: 5px;
+        margin-bottom: 0px;
+        padding: 20px;
+        border-shadow: 0px 0px 10px 0px rgb(143, 142, 142);
+    }
+
+}
+
+/* ---- PROGRESS BARS ---- */
+.progress-bar-wrapper {
+    width: 100%;
+    height: 8px;
+    background-color: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+    margin: 6px 0 4px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: #3e76ca;
+    border-radius: 99px;
+    transition: width 0.5s ease;
+}
+
+.progress-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* ---- CONTRACT PROGRESS CARD (Dashboard) ---- */
+.contract-progress-card {
+    border: 1px solid #f0f0f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background-color: white;
+}
+
+.contract-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.contract-progress-header h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #374151;
+}
+
+.contract-id-label {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 2px 0 6px;
+}
+
+.contract-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
+.contract-badge {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.badge-active {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.badge-completed {
+    background-color: #e0e7ff;
+    color: #4338ca;
+}
+
+.badge-review {
+    background-color: #fef9c3;
+    color: #a16207;
+}
+
+/* ---- DASHBOARD EXTRA ---- */
+.dash-sub-label {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 0;
+    padding: 0 10px 10px;
+}
+
+.ticket-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ticket-tno {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.ticket-date {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 4px 0 0;
+}
+
+.ticket-status-small {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.ts-pending {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.ts-open {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+/* ---- TICKETS PAGE ---- */
+.tickets-heading {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(248, 245, 245, 0.707);
+    border-radius: 20px;
+    margin: 23px;
+    margin-bottom: 0;
+    padding: 20px 24px;
+}
+
+.tickets-heading-left h2 {
+    margin: 0;
+    color: #374151;
+}
+
+.tickets-heading-left p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.btn-create-ticket {
+    background: linear-gradient(135deg, rgb(22, 141, 200), rgb(30, 115, 157));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+}
+
+.btn-create-ticket:hover {
+    opacity: 0.88;
+}
+
+.tickets-summary-bar {
+    display: flex;
+    gap: 20px;
+    margin: 16px 23px 0;
+    padding: 14px 20px;
+    background-color: rgba(248, 245, 245, 0.707);
+    border-radius: 14px;
+}
+
+.summary-item {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.open-count strong {
+    color: #dc2626;
+}
+
+.pending-count strong {
+    color: #d97706;
+}
+
+.resolved-count strong {
+    color: #16a34a;
+}
+
+.tick-div {
+    border: 1px solid #f0f0f0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background-color: white;
+}
+
+.tick-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.tick-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #1f2937;
+}
+
+.tick-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ticket-status {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.ticket-status.pending {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.ticket-status.open {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.ticket-status.resolved {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.priority-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.priority-low {
+    background-color: #f0fdf4;
+    color: #15803d;
+}
+
+.priority-medium {
+    background-color: #fefce8;
+    color: #a16207;
+}
+
+.priority-high {
+    background-color: #fff7ed;
+    color: #c2410c;
+}
+
+.priority-critical {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+.tick-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.tick-meta-item {
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.tick-description {
+    margin: 10px 0 0;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* ---- FORM STYLES (shared) ---- */
+.create-ticket-form-wrapper,
+.add-user-form-wrapper {
+    margin: 16px 23px 0;
+}
+
+.create-ticket-form,
+.add-user-form {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.create-ticket-form h3,
+.add-user-form h3 {
+    margin: 0 0 20px;
+    color: #1f2937;
+    font-size: 18px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #374151;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: rgb(22, 141, 200);
+}
+
+.form-group textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.btn-submit-ticket {
+    background: linear-gradient(135deg, rgb(22, 141, 200), rgb(30, 115, 157));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-submit-ticket:hover {
+    opacity: 0.88;
+}
+
+.btn-cancel {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+    background-color: #e5e7eb;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.form-error {
+    color: #ef4444;
+    font-size: 13px;
+    margin: -8px 0 8px;
+}
+
+/* ---- USER MANAGEMENT ---- */
+.users-heading-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.users-heading-row h2 {
+    margin: 0;
+    color: #374151;
+}
+
+.users-heading-row p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.btn-add-user {
+    background: linear-gradient(135deg, rgb(22, 141, 200), rgb(30, 115, 157));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-add-user:hover {
+    opacity: 0.88;
+}
+
+.user-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    border: 1px solid #f0f0f0;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    padding: 16px 20px;
+}
+
+.user-card-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgb(22, 141, 200), rgb(30, 115, 157));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.user-info h3 {
+    margin: 0 0 4px;
+    color: #1f2937;
+    font-size: 16px;
+}
+
+.user-role-badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    background-color: #e0f2fe;
+    color: rgb(22, 141, 200);
+    font-weight: 600;
+    margin: 2px 0;
+}
+
+.user-email {
+    font-size: 13px;
+    color: #9ca3af;
+    margin: 4px 0 0;
+}
+
+.user-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-delete-user {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-delete-user:hover {
+    background-color: #fecaca;
+}
+
+.confirm-delete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.btn-confirm-delete {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-cancel-delete {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.no-users-msg {
+    text-align: center;
+    color: #9ca3af;
+    padding: 40px;
+}
+
+/* ---- BILLING PAGE ---- */
+.billing-summary-row {
+    display: flex;
+    gap: 16px;
+    margin: 16px 23px 0;
+    flex-wrap: wrap;
+}
+
+.billing-summary-card {
+    flex: 1;
+    min-width: 180px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 18px 20px;
+}
+
+.billing-summary-card.paid-card {
+    border-left: 4px solid #16a34a;
+}
+
+.billing-summary-card.pending-card {
+    border-left: 4px solid #d97706;
+}
+
+.billing-card-label {
+    font-size: 13px;
+    color: #9ca3af;
+    margin: 0 0 6px;
+    font-weight: 500;
+}
+
+.billing-card-amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.billing-card-cycle {
+    font-size: 22px;
+    font-weight: 700;
+    color: rgb(22, 141, 200);
+    margin: 0;
+}
+
+.billing-card-sub {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 6px 0 0;
+}
+
+.billing-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 20px 23px 0;
+}
+
+.billing-tab {
+    padding: 10px 22px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background-color: white;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.billing-tab:hover {
+    background-color: #f3f4f6;
+}
+
+.billing-tab.tab-active {
+    background: linear-gradient(135deg, rgb(22, 141, 200), rgb(30, 115, 157));
+    color: white;
+    border-color: transparent;
+    font-weight: 600;
+}
+
+.bill-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.bill-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bill-info-label {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bill-info-value {
+    font-size: 15px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+/* Invoice Table */
+.invoice-table-wrapper {
+    overflow-x: auto;
+    margin-top: 12px;
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.invoice-table th {
+    background-color: #f8fafc;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.invoice-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+
+.invoice-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+.invoice-id {
+    font-weight: 600;
+    color: rgb(22, 141, 200) !important;
+}
+
+.invoice-amount {
+    font-weight: 600;
+}
+
+.invoice-status {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.invoice-status.paid {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.invoice-status.invoice-pending {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+/* Contract Breakdown */
+.contract-breakdown-item {
+    margin-bottom: 20px;
+}
+
+.contract-breakdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.contract-breakdown-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.contract-breakdown-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgb(22, 141, 200);
+}
+
+.contract-breakdown-meta {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 6px 0 0;
+}
