@@ -13,6 +13,11 @@ enum UserRole {
   SALES
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -56,11 +61,11 @@ enum ActivityType {
 }
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  website   String?
+  id      String  @id @default(uuid())
+  name    String
+  email   String?
+  phone   String?
+  website String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,12 +80,13 @@ model Organization {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  firebaseUid String   @unique
-  email       String   @unique
+  id          String     @id @default(uuid())
+  firebaseUid String     @unique
+  email       String     @unique
   firstName   String
   lastName    String?
-  role        UserRole @default(SALES)
+  role        UserRole   @default(SALES)
+  status      UserStatus @default(ACTIVE)
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
@@ -92,19 +98,32 @@ model User {
   deals      Deal[]
   tasks      Task[]
   activities Activity[]
+
+  @@index([role])
+  @@index([status])
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  permissions Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Company {
-  id        String  @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  website   String?
+  id      String  @id @default(uuid())
+  name    String
+  email   String?
+  phone   String?
+  website String?
 
-  address   String?
-  city      String?
-  state     String?
-  country   String?
+  address String?
+  city    String?
+  state   String?
+  country String?
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -139,7 +158,7 @@ model Contact {
 }
 
 model Lead {
-  id          String     @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
   description String?
 
@@ -156,7 +175,7 @@ model Lead {
   contact   Contact? @relation(fields: [contactId], references: [id])
 
   assignedToId String?
-  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
 
   tasks      Task[]
   activities Activity[]
@@ -205,7 +224,7 @@ model Deal {
   customer   Customer @relation(fields: [customerId], references: [id])
 
   assignedToId String?
-  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
 
   tasks      Task[]
   activities Activity[]
@@ -230,16 +249,16 @@ model Task {
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   assignedToId String
-  assignedTo   User @relation(fields: [assignedToId], references: [id])
+  assignedTo   User   @relation(fields: [assignedToId], references: [id])
 
   leadId String?
-  lead   Lead? @relation(fields: [leadId], references: [id])
+  lead   Lead?   @relation(fields: [leadId], references: [id])
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
 
   dealId String?
-  deal   Deal? @relation(fields: [dealId], references: [id])
+  deal   Deal?   @relation(fields: [dealId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -260,16 +279,16 @@ model Activity {
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   leadId String?
-  lead   Lead? @relation(fields: [leadId], references: [id])
+  lead   Lead?   @relation(fields: [leadId], references: [id])
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
 
   dealId String?
-  deal   Deal? @relation(fields: [dealId], references: [id])
+  deal   Deal?   @relation(fields: [dealId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

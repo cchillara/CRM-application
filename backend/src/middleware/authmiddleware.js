@@ -10,12 +10,17 @@ export const verifyFirebaseToken = async (req, res, next) => {
     }
 
     const idToken = authHeader.split("Bearer ")[1];
+
     const decodedToken = await auth.verifyIdToken(idToken);
 
     req.user = decodedToken;
 
     next();
   } catch (error) {
+    console.error("Firebase verification error:");
+    console.error("Code:", error.code);
+    console.error("Message:", error.message);
+
     if (error instanceof ApiError) {
       throw error;
     }
