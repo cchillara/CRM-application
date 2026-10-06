@@ -13,17 +13,13 @@ function Signup() {
     const [email, setEmail] = useState("");
 
     const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] =
-        useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const [showPassword, setShowPassword] =
-        useState(false);
-
-    const [showConfirmPassword, setShowConfirmPassword] =
-        useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleSignup = async (e) => {
         e.preventDefault();
@@ -38,7 +34,7 @@ function Signup() {
         setLoading(true);
 
         try {
-
+            // 1. Create Firebase user
             const userCredential =
                 await createUserWithEmailAndPassword(
                     auth,
@@ -46,35 +42,28 @@ function Signup() {
                     password
                 );
 
+            const firebaseUser = userCredential.user;
 
-            await updateProfile(
-                userCredential.user,
-                {
-                    displayName: name,
-                }
-            );
+            // 2. Set Firebase display name
+            await updateProfile(firebaseUser, {
+                displayName: name,
+            });
 
+            // 3. Get Firebase ID token
+            const idToken = await firebaseUser.getIdToken();
 
-            const idToken =
-                await userCredential.user.getIdToken();
+            console.log("Firebase UID:", firebaseUser.uid);
 
-            console.log(
-                "Firebase UID:",
-                userCredential.user.uid
-            );
-
-
-            const nameParts = name.trim().split(" ");
+            // 4. Split full name
+            const nameParts = name.trim().split(/\s+/);
 
             const firstName = nameParts[0];
 
             const lastName =
                 nameParts.slice(1).join(" ") || null;
 
-
-            const organizationId = "52a39a42-bdbf-45a7-842e-ff6909e53a12";
-
-            // 6. Send user information to backend
+            // 5. Send only the fields expected by backend
+            // DO NOT send organizationId.
             const response = await fetch(
                 "http://localhost:5000/api/v1/auth/register",
                 {
@@ -88,14 +77,32 @@ function Signup() {
                     body: JSON.stringify({
                         firstName,
                         lastName,
-                        organizationId,
                     }),
                 }
             );
 
-            const data = await response.json();
+            // 6. Safely read backend response
+            const contentType =
+                response.headers.get("content-type") || "";
 
+            let data;
 
+            if (contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+
+                console.error(
+                    "Backend returned non-JSON response:",
+                    text
+                );
+
+                throw new Error(
+                    "Backend returned an invalid response. Check the backend terminal."
+                );
+            }
+
+            // 7. Handle backend error
             if (!response.ok) {
                 throw new Error(
                     data.message ||
@@ -112,13 +119,16 @@ function Signup() {
                 "Account created successfully!"
             );
 
-
+            // 8. Go to login
             window.location.href = "/login";
 
         } catch (error) {
             console.error(error);
 
-            setError(error.message);
+            setError(
+                error.message ||
+                "Something went wrong while creating the account."
+            );
 
         } finally {
             setLoading(false);
@@ -132,6 +142,7 @@ function Signup() {
                 {/* ================= LEFT ================= */}
 
                 <div className="auth-info">
+
                     <div className="auth-logo">
                         SHNOOR<span>.</span>
                     </div>
@@ -155,6 +166,7 @@ function Signup() {
                     </p>
 
                     <div className="auth-benefits">
+
                         <div className="auth-benefit">
                             <span>✓</span>
                             Centralize customer information
@@ -169,26 +181,34 @@ function Signup() {
                             <span>✓</span>
                             Get a clearer view of your business
                         </div>
+
                     </div>
                 </div>
 
                 {/* ================= RIGHT ================= */}
 
                 <div className="auth-card">
+
                     <div className="auth-header">
-                        <h2>Create your account</h2>
+
+                        <h2>
+                            Create your account
+                        </h2>
 
                         <p>
                             Start managing your customer relationships
                             with SHNOOR.
                         </p>
+
                     </div>
 
                     <form
                         onSubmit={handleSignup}
                         className="auth-form"
                     >
+
                         <div className="form-group">
+
                             <label htmlFor="name">
                                 Full name
                             </label>
@@ -203,9 +223,11 @@ function Signup() {
                                 }
                                 required
                             />
+
                         </div>
 
                         <div className="form-group">
+
                             <label htmlFor="email">
                                 Email address
                             </label>
@@ -220,14 +242,17 @@ function Signup() {
                                 }
                                 required
                             />
+
                         </div>
 
                         <div className="form-group">
+
                             <label htmlFor="password">
                                 Password
                             </label>
 
                             <div className="input-wrapper">
+
                                 <input
                                     id="password"
                                     className="password-input"
@@ -257,15 +282,19 @@ function Signup() {
                                         ? "Hide"
                                         : "Show"}
                                 </button>
+
                             </div>
+
                         </div>
 
                         <div className="form-group">
+
                             <label htmlFor="confirmPassword">
                                 Confirm password
                             </label>
 
                             <div className="input-wrapper">
+
                                 <input
                                     id="confirmPassword"
                                     className="password-input"
@@ -297,7 +326,9 @@ function Signup() {
                                         ? "Hide"
                                         : "Show"}
                                 </button>
+
                             </div>
+
                         </div>
 
                         {error && (
@@ -315,14 +346,18 @@ function Signup() {
                                 ? "Creating account..."
                                 : "Create account"}
                         </button>
+
                     </form>
 
                     <p className="auth-switch">
                         Already have an account?{" "}
+
                         <a href="/login">
                             Sign in
                         </a>
+
                     </p>
+
                 </div>
             </div>
         </div>
