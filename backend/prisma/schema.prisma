@@ -8,9 +8,22 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN
+  ORGANIZATION_ADMIN
   MANAGER
   SALES
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
 }
 
 enum LeadStatus {
@@ -56,55 +69,112 @@ enum ActivityType {
 }
 
 model Organization {
-  id        String   @id @default(uuid())
+  id        String             @id @default(uuid())
   name      String
+  status    OrganizationStatus @default(ACTIVE)
   email     String?
   phone     String?
   website   String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  users      User[]
-  companies  Company[]
-  customers  Customer[]
-  leads      Lead[]
-  deals      Deal[]
-  tasks      Task[]
-  activities Activity[]
+  users       User[]
+  teams       Team[]
+  invitations OrganizationInvitation[]
+  companies   Company[]
+  customers   Customer[]
+  leads       Lead[]
+  deals       Deal[]
+  tasks       Task[]
+  activities  Activity[]
+  auditLogs   AuditLog[]
 }
 
 model User {
-  id          String   @id @default(uuid())
-  firebaseUid String   @unique
-  email       String   @unique
+  id          String     @id @default(uuid())
+  firebaseUid String     @unique
+  email       String     @unique
   firstName   String
   lastName    String?
-  role        UserRole @default(SALES)
+  role        UserRole   @default(SALES)
+  status      UserStatus @default(INVITED)
+  lastLoginAt DateTime?
 
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  leads      Lead[]
-  deals      Deal[]
-  tasks      Task[]
-  activities Activity[]
+  teamMemberships     TeamMembership[]
+  assignedLeads       Lead[]                   @relation("LeadAssignedTo")
+  convertedLeads      Lead[]                   @relation("LeadConvertedBy")
+  assignedDeals       Deal[]                   @relation("DealAssignedTo")
+  assignedTasks       Task[]                   @relation("TaskAssignedTo")
+  performedActivities Activity[]               @relation("ActivityPerformedBy")
+  auditLogs           AuditLog[]
+}
+
+model Team {
+  id             String   @id @default(uuid())
+  name           String
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  members TeamMembership[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model TeamMembership {
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@id([teamId, userId])
+  @@index([userId])
+}
+
+model OrganizationInvitation {
+  id             String   @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  email       String
+  role        UserRole
+  tokenHash   String   @unique
+  invitedById String
+
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 model Company {
-  id        String  @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  website   String?
+  id      String  @id @default(uuid())
+  name    String
+  email   String?
+  phone   String?
+  website String?
 
-  address   String?
-  city      String?
-  state     String?
-  country   String?
+  address String?
+  city    String?
+  state   String?
+  country String?
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -116,6 +186,7 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([organizationId, name])
   @@index([organizationId])
 }
 
@@ -156,7 +227,13 @@ model Lead {
   contact   Contact? @relation(fields: [contactId], references: [id])
 
   assignedToId String?
-  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+  assignedTo   User?   @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+
+  convertedAt  DateTime?
+  convertedById String?
+  convertedBy   User?     @relation("LeadConvertedBy", fields: [convertedById], references: [id])
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
 
   tasks      Task[]
   activities Activity[]
@@ -168,6 +245,7 @@ model Lead {
   @@index([assignedToId])
   @@index([companyId])
   @@index([contactId])
+  @@index([customerId])
 }
 
 model Customer {
@@ -179,6 +257,7 @@ model Customer {
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 
+  leads      Lead[]
   deals      Deal[]
   tasks      Task[]
   activities Activity[]
@@ -186,12 +265,13 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([organizationId, companyId])
   @@index([organizationId])
   @@index([companyId])
 }
 
 model Deal {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   title       String
   description String?
 
@@ -205,7 +285,7 @@ model Deal {
   customer   Customer @relation(fields: [customerId], references: [id])
 
   assignedToId String?
-  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+  assignedTo   User?   @relation("DealAssignedTo", fields: [assignedToId], references: [id])
 
   tasks      Task[]
   activities Activity[]
@@ -219,7 +299,7 @@ model Deal {
 }
 
 model Task {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   title       String
   description String?
 
@@ -230,16 +310,16 @@ model Task {
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   assignedToId String
-  assignedTo   User @relation(fields: [assignedToId], references: [id])
+  assignedTo   User   @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
 
   leadId String?
-  lead   Lead? @relation(fields: [leadId], references: [id])
+  lead   Lead?   @relation(fields: [leadId], references: [id])
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
 
   dealId String?
-  deal   Deal? @relation(fields: [dealId], references: [id])
+  deal   Deal?   @relation(fields: [dealId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -259,26 +339,49 @@ model Activity {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  userId String
-  user   User @relation(fields: [userId], references: [id])
+  performedById String
+  performedBy   User   @relation("ActivityPerformedBy", fields: [performedById], references: [id])
 
   leadId String?
-  lead   Lead? @relation(fields: [leadId], references: [id])
+  lead   Lead?   @relation(fields: [leadId], references: [id])
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
 
   dealId String?
-  deal   Deal? @relation(fields: [dealId], references: [id])
+  deal   Deal?   @relation(fields: [dealId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
-  @@index([userId])
+  @@index([performedById])
   @@index([leadId])
   @@index([customerId])
   @@index([dealId])
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  action     String
+  entityType String
+  entityId   String
+
+  oldValues Json?
+  newValues Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([actorId])
+  @@index([entityType, entityId])
 }
 
 model SuperAdmin {
@@ -286,6 +389,6 @@ model SuperAdmin {
   firebaseUid String   @unique
   email       String   @unique
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
