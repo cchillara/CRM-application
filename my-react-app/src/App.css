@@ -3,23 +3,23 @@
    ========================================================= */
 
 :root {
-  --primary: #111111;
-  --primary-dark: #090909;
+  --primary: #0F141C;
+  --primary-dark: #0A0E14;
 
-  --red: #e53935;
-  --red-dark: #c62828;
-  --red-light: #fff4f4;
+  --red: #2468C5;
+  --red-dark: #1D58A8;
+  --red-light: #EAF2FF;
 
-  --blue: #2563eb;
-  --blue-light: #eff6ff;
+  --blue: #2468C5;
+  --blue-light: #EAF2FF;
 
-  --heading: #111111;
-  --body: #555555;
-  --muted: #8b8b8b;
+  --heading: #0F141C;
+  --body: #66717F;
+  --muted: #7D8794;
 
-  --background: #fafafa;
-  --white: #ffffff;
-  --border: #e5e5e5;
+  --background: #F5F7FA;
+  --white: #FFFFFF;
+  --border: #E1E6EC;
 
   --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 15px 40px rgba(0, 0, 0, 0.08);
@@ -50,7 +50,7 @@ body {
     Arial,
     sans-serif;
 
-  background: #ffffff;
+  background: #FFFFFF;
   color: var(--heading);
 }
 
@@ -66,7 +66,7 @@ button {
 .site {
   width: 100%;
   overflow: hidden;
-  background: #ffffff;
+  background: #FFFFFF;
 }
 
 /* =========================================================
@@ -84,9 +84,9 @@ button {
 
   gap: 30px;
 
-  background: rgba(255, 255, 255, 0.97);
+  background: rgba(15, 20, 28, 0.97);
 
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid #1D2530;
 
   position: sticky;
   top: 0;
@@ -96,7 +96,7 @@ button {
 }
 
 .logo {
-  color: #111111;
+  color: #0F141C;
 
   font-size: 24px;
   font-weight: 800;
@@ -131,7 +131,7 @@ button {
 
   display: inline-block;
 
-  color: #333333;
+  color: #202833;
 
   font-size: 14px;
   font-weight: 500;
@@ -195,7 +195,7 @@ button {
 .nav-login {
   display: inline-block;
 
-  color: #111111;
+  color: #0F141C;
 
   font-size: 14px;
   font-weight: 600;
@@ -239,7 +239,7 @@ button {
   transform: translateY(-2px) scale(1.03);
 
   box-shadow:
-    0 8px 18px rgba(229, 57, 53, 0.22);
+    0 8px 18px rgba(36, 104, 197, 0.22);
 }
 
 /* =========================
@@ -264,7 +264,7 @@ button {
 
   margin: 5px 0;
 
-  background: #111111;
+  background: #0F141C;
 }
 
 /* =========================================================
@@ -278,12 +278,12 @@ button {
 
   background:
     radial-gradient(circle at 88% 20%,
-      rgba(229, 57, 53, 0.07),
+      rgba(36, 104, 197, 0.07),
       transparent 28%),
     radial-gradient(circle at 8% 85%,
-      rgba(37, 99, 235, 0.04),
+      rgba(36, 104, 197, 0.04),
       transparent 25%),
-    #ffffff;
+    #FFFFFF;
 
   display: grid;
 
@@ -309,7 +309,7 @@ button {
 
   background: var(--red-light);
 
-  border: 1px solid #ffdada;
+  border: 1px solid #314A68;
 
   padding: 8px 13px;
 
@@ -334,7 +334,7 @@ button {
 .hero h1 {
   margin-top: 25px;
 
-  color: #111111;
+  color: #0F141C;
 
   font-size: clamp(44px, 5vw, 67px);
 
@@ -409,7 +409,7 @@ button {
   transform: translateY(-2px);
 
   box-shadow:
-    0 10px 25px rgba(229, 57, 53, 0.18);
+    0 10px 25px rgba(36, 104, 197, 0.18);
 }
 
 .primary-button span {
@@ -482,7 +482,7 @@ button {
   width: 18px;
   height: 18px;
 
-  background: #fff0f0;
+  background: #EAF2FF;
 
   color: var(--red);
 
@@ -510,7 +510,7 @@ button {
   left: 10%;
   top: 10%;
 
-  background: rgba(229, 57, 53, 0.08);
+  background: rgba(36, 104, 197, 0.08);
 
   filter: blur(70px);
 
@@ -540,7 +540,7 @@ button {
 }
 
 .dashboard-sidebar {
-  background: #111111;
+  background: #0F141C;
 
   padding: 25px 14px;
 
@@ -578,7 +578,7 @@ button {
 
   gap: 9px;
 
-  color: #bdbdbd;
+  color: #AEB8C5;
 
   font-size: 10px;
 
@@ -606,7 +606,7 @@ button {
 .sidebar-item:hover {
   color: white;
 
-  background: rgba(229, 57, 53, 0.18);
+  background: rgba(36, 104, 197, 0.18);
 }
 
 .sidebar-bottom {
@@ -616,7 +616,7 @@ button {
 .dashboard-content {
   padding: 25px;
 
-  background: #ffffff;
+  background: #FFFFFF;
 }
 
 .dashboard-heading {
@@ -765,7 +765,7 @@ button {
   left: 0;
   right: 0;
 
-  border-top: 1px dashed #e5e5e5;
+  border-top: 1px dashed #E1E6EC;
 }
 
 .line-one {
@@ -804,8 +804,8 @@ button {
   border-radius: 4px 4px 0 0;
 
   background: linear-gradient(180deg,
-      #ef5350 0%,
-      #e53935 100%);
+      #3F7FD1 0%,
+      #2468C5 100%);
 }
 
 /* =========================================================
@@ -815,7 +815,7 @@ button {
 .trust-bar {
   padding: 25px 7%;
 
-  background: #111111;
+  background: #0F141C;
 
   display: flex;
 
@@ -827,7 +827,7 @@ button {
 }
 
 .trust-bar>p {
-  color: #999999;
+  color: #7D8794;
 
   font-size: 9px;
 
@@ -845,7 +845,7 @@ button {
 }
 
 .trust-items span {
-  color: #eeeeee;
+  color: #1D2530;
 
   font-size: 11px;
 
@@ -913,7 +913,7 @@ button {
    ========================================================= */
 
 .features {
-  background: #fafafa;
+  background: #F5F7FA;
 }
 
 .feature-grid {
@@ -950,13 +950,13 @@ button {
 
   box-shadow: var(--shadow-md);
 
-  border-color: #f0b4b4;
+  border-color: #B9D1EF;
 }
 
 .feature-card.featured {
-  background: #fffafa;
+  background: #F8FBFF;
 
-  border-color: #ffd6d6;
+  border-color: #C9DCF4;
 }
 
 .feature-icon {
@@ -1033,7 +1033,7 @@ button {
 .dashboard-section {
   padding: 110px 7%;
 
-  background: #f7f7f7;
+  background: #F5F7FA;
 }
 
 .dashboard-showcase {
@@ -1093,7 +1093,7 @@ button {
 
   gap: 10px;
 
-  color: #475569;
+  color: #4F5D6D;
 
   font-size: 13px;
 
@@ -1196,7 +1196,7 @@ button {
 .showcase-stats>div {
   padding: 16px;
 
-  background: #fafafa;
+  background: #F5F7FA;
 
   border: 1px solid var(--border);
 
@@ -1278,7 +1278,7 @@ button {
 
   padding: 14px 0;
 
-  border-bottom: 1px solid #f1f1f1;
+  border-bottom: 1px solid #EDF0F3;
 }
 
 .activity-row:last-child {
@@ -1383,7 +1383,7 @@ button {
 
   border-left: 2px solid var(--red);
 
-  background: #fafafa;
+  background: #F5F7FA;
 }
 
 .about-stats strong {
@@ -1423,7 +1423,7 @@ button {
 }
 
 .cta-content .section-label {
-  color: #ffe1e1;
+  color: #D8E6F8;
 }
 
 .cta-content h2 {
@@ -1449,7 +1449,7 @@ button {
 
   margin: 20px auto 0;
 
-  color: #fff0f0;
+  color: #EAF2FF;
 
   font-size: 15px;
 
@@ -1527,7 +1527,7 @@ button {
    ========================================================= */
 
 footer {
-  background: #111111;
+  background: #0F141C;
 
   color: white;
 
@@ -1567,7 +1567,7 @@ footer {
 .footer-brand p {
   margin-top: 17px;
 
-  color: #999999;
+  color: #7D8794;
 
   font-size: 12px;
 
@@ -1585,7 +1585,7 @@ footer {
 .footer-column h4 {
   margin-bottom: 7px;
 
-  color: #dddddd;
+  color: #D7DDE5;
 
   font-size: 9px;
 
@@ -1594,7 +1594,7 @@ footer {
 
 .footer-column a,
 .footer-column span {
-  color: #999999;
+  color: #7D8794;
 
   font-size: 11px;
 
@@ -1612,7 +1612,7 @@ footer {
 
   padding-top: 20px;
 
-  border-top: 1px solid #292929;
+  border-top: 1px solid #26303D;
 
   display: flex;
 
@@ -1622,7 +1622,7 @@ footer {
 
   gap: 20px;
 
-  color: #777777;
+  color: #7D8794;
 
   font-size: 9px;
 }
