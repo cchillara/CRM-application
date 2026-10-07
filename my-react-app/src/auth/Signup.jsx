@@ -13,17 +13,13 @@ function Signup() {
     const [email, setEmail] = useState("");
 
     const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] =
-        useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const [showPassword, setShowPassword] =
-        useState(false);
-
-    const [showConfirmPassword, setShowConfirmPassword] =
-        useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleSignup = async (e) => {
         e.preventDefault();
@@ -38,7 +34,6 @@ function Signup() {
         setLoading(true);
 
         try {
-
             const userCredential =
                 await createUserWithEmailAndPassword(
                     auth,
@@ -46,13 +41,51 @@ function Signup() {
                     password
                 );
 
-
             await updateProfile(
                 userCredential.user,
                 {
-                    displayName: name,
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${idToken}`,
+                    },
+
+                    body: JSON.stringify({
+                        firstName,
+                        lastName,
+                    }),
                 }
             );
+
+            // 6. Safely read backend response
+            const contentType =
+                response.headers.get("content-type") || "";
+
+            let data;
+
+            if (contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+
+                console.error(
+                    "Backend returned non-JSON response:",
+                    text
+                );
+
+                throw new Error(
+                    "Backend returned an invalid response. Check the backend terminal."
+                );
+            }
+
+            // 7. Handle backend error
+            if (!response.ok) {
+                throw new Error(
+                    data.message ||
+                    "Failed to create CRM user"
+                );
+            }
 
 
             const idToken =
@@ -113,13 +146,13 @@ function Signup() {
             );
 
 
+            // 8. Go to login
             window.location.href = "/login";
 
         } catch (error) {
             console.error(error);
 
             setError(error.message);
-
         } finally {
             setLoading(false);
         }
@@ -132,6 +165,7 @@ function Signup() {
                 {/* ================= LEFT ================= */}
 
                 <div className="auth-info">
+
                     <div className="auth-logo">
                         SHNOOR<span>.</span>
                     </div>
@@ -155,6 +189,7 @@ function Signup() {
                     </p>
 
                     <div className="auth-benefits">
+
                         <div className="auth-benefit">
                             <span>✓</span>
                             Centralize customer information
@@ -169,26 +204,34 @@ function Signup() {
                             <span>✓</span>
                             Get a clearer view of your business
                         </div>
+
                     </div>
                 </div>
 
                 {/* ================= RIGHT ================= */}
 
                 <div className="auth-card">
+
                     <div className="auth-header">
-                        <h2>Create your account</h2>
+
+                        <h2>
+                            Create your account
+                        </h2>
 
                         <p>
                             Start managing your customer relationships
                             with SHNOOR.
                         </p>
+
                     </div>
 
                     <form
                         onSubmit={handleSignup}
                         className="auth-form"
                     >
+
                         <div className="form-group">
+
                             <label htmlFor="name">
                                 Full name
                             </label>
@@ -203,9 +246,11 @@ function Signup() {
                                 }
                                 required
                             />
+
                         </div>
 
                         <div className="form-group">
+
                             <label htmlFor="email">
                                 Email address
                             </label>
@@ -220,14 +265,17 @@ function Signup() {
                                 }
                                 required
                             />
+
                         </div>
 
                         <div className="form-group">
+
                             <label htmlFor="password">
                                 Password
                             </label>
 
                             <div className="input-wrapper">
+
                                 <input
                                     id="password"
                                     className="password-input"
@@ -257,15 +305,19 @@ function Signup() {
                                         ? "Hide"
                                         : "Show"}
                                 </button>
+
                             </div>
+
                         </div>
 
                         <div className="form-group">
+
                             <label htmlFor="confirmPassword">
                                 Confirm password
                             </label>
 
                             <div className="input-wrapper">
+
                                 <input
                                     id="confirmPassword"
                                     className="password-input"
@@ -297,7 +349,9 @@ function Signup() {
                                         ? "Hide"
                                         : "Show"}
                                 </button>
+
                             </div>
+
                         </div>
 
                         {error && (
@@ -315,14 +369,18 @@ function Signup() {
                                 ? "Creating account..."
                                 : "Create account"}
                         </button>
+
                     </form>
 
                     <p className="auth-switch">
                         Already have an account?{" "}
+
                         <a href="/login">
                             Sign in
                         </a>
+
                     </p>
+
                 </div>
             </div>
         </div>
