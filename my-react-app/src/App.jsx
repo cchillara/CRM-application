@@ -2,20 +2,19 @@ import { useState } from "react";
 import "./App.css";
 import Login from "./auth/Login";
 import Signup from "./auth/Signup";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import SalesLayout from "./components/sales/SalesLayout.jsx";
+import SalesDashboard from "./pages/sales/SalesDashboard.jsx";
+import SalesLeads from "./pages/sales/SalesLeads.jsx";
+import SalesLeadDetails from "./pages/sales/SalesLeadDetails.jsx";
+import SalesCustomers from "./pages/sales/SalesCustomers.jsx";
+import SalesTasks from "./pages/sales/SalesTasks.jsx";
 
-function App() {
-  const path = window.location.pathname;
+function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (path === "/login") {
-    return <Login />;
-  }
-
-  if (path === "/signup") {
-    return <Signup />;
-  }
-
   const closeMenu = () => setMenuOpen(false);
+
 
   return (
     <div className="site">
@@ -575,6 +574,26 @@ function App() {
         </div>
       </footer>
     </div>
+  );
+}
+/* Edited by subham sharma on 06-10-2026*/
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        <Route element={<SalesLayout />}>
+          <Route path="/dashboard" element={<SalesDashboard />} />
+          <Route path="/leads/:leadId" element={<SalesLeadDetails />} />
+          <Route path="/leads" element={<SalesLeads />} />
+          <Route path="/customers" element={<SalesCustomers />} />
+          <Route path="/tasks" element={<SalesTasks />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 

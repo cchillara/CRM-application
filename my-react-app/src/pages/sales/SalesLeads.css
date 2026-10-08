@@ -1,0 +1,441 @@
+.sales-leads-page {
+  min-height: 100vh;
+  padding: 28px;
+  overflow-x: clip;
+  background: var(--bg-main, var(--background));
+  color: var(--text-main, var(--heading));
+  font-family: var(--font-family);
+}
+
+.sales-leads-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.sales-leads-header h1 {
+  margin: 0;
+  color: var(--text-main, var(--heading));
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sales-leads-header p {
+  margin: 5px 0 0;
+  color: var(--text-muted, var(--body));
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.sales-leads-card {
+  overflow: hidden;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-card, var(--white));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.sales-leads-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 22px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.sales-leads-tabs {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.sales-leads-tab {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 4px 0 13px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, var(--body));
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sales-leads-tab.active {
+  color: var(--blue-primary, var(--blue));
+}
+
+.sales-leads-tab.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--blue-primary, var(--blue));
+  content: "";
+}
+
+.sales-leads-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 16px;
+}
+
+.sales-leads-search,
+.sales-leads-select-label select {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card, var(--white));
+  color: var(--text-muted, var(--body));
+}
+
+.sales-leads-search {
+  gap: 8px;
+  width: min(280px, 100%);
+  padding: 0 11px;
+}
+
+.sales-leads-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-main, var(--heading));
+  font-size: 13px;
+}
+
+.sales-leads-search input::placeholder {
+  color: var(--text-light, var(--muted));
+}
+
+.sales-leads-select-label select {
+  min-width: 136px;
+  padding: 0 30px 0 11px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sales-leads-table.data-table {
+  min-width: 960px;
+}
+
+.sales-leads-table.data-table th:first-child,
+.sales-leads-table.data-table td:first-child {
+  padding-left: 22px;
+}
+
+.sales-leads-table.data-table th:last-child,
+.sales-leads-table.data-table td:last-child {
+  padding-right: 18px;
+  text-align: right;
+}
+
+.sales-leads-table.data-table td {
+  height: 76px;
+}
+
+.sales-leads-data-row {
+  cursor: pointer;
+}
+
+.sales-leads-data-row:hover td {
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-leads-data-row:focus-visible {
+  outline: 2px solid var(--blue-primary, var(--blue));
+  outline-offset: -2px;
+}
+
+.sales-leads-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sales-leads-avatar {
+  display: inline-flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: 50%;
+  background: var(--bg-card-subtle, var(--background));
+  color: var(--blue-primary, var(--blue));
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sales-leads-person-copy,
+.sales-leads-company-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sales-leads-name,
+.sales-leads-company {
+  color: var(--text-main, var(--heading));
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sales-leads-secondary {
+  display: block;
+  color: var(--text-muted, var(--body));
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sales-leads-source {
+  color: var(--text-muted, var(--body));
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sales-leads-last-contact {
+  color: var(--text-main, var(--heading));
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.sales-leads-row-action,
+.sales-leads-page-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--text-muted, var(--body));
+  cursor: pointer;
+}
+
+.sales-leads-actions {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sales-leads-row-action:hover {
+  border-color: var(--border-light, var(--border));
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-leads-row-action:focus-visible,
+.sales-leads-menu-item:focus-visible,
+.sales-leads-dialog-actions button:focus-visible {
+  outline: 2px solid var(--blue-primary, var(--blue));
+  outline-offset: 2px;
+}
+
+.sales-leads-action-menu {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: calc(100% + 4px);
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card, var(--white));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.sales-leads-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--text-main, var(--heading));
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sales-leads-menu-item > svg {
+  flex: 0 0 auto;
+  color: var(--red-accent, #b42318);
+}
+
+.sales-leads-menu-item:hover {
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-leads-menu-item {
+  color: var(--red-accent, #b42318);
+}
+
+.sales-leads-dialog-backdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 20, 28, 0.42);
+}
+
+.sales-leads-delete-dialog {
+  width: min(100%, 440px);
+  padding: 24px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card, var(--white));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.sales-leads-delete-dialog h2 {
+  margin: 0;
+  color: var(--text-main, var(--heading));
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sales-leads-delete-dialog p {
+  margin: 10px 0 22px;
+  color: var(--text-muted, var(--body));
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sales-leads-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sales-leads-dialog-actions button {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: var(--radius-sm, 6px);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sales-leads-dialog-cancel {
+  border: 1px solid var(--border-light, var(--border));
+  background: var(--bg-card, var(--white));
+  color: var(--text-main, var(--heading));
+}
+
+.sales-leads-dialog-cancel:hover {
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-leads-dialog-delete {
+  border: 1px solid var(--red-accent, #b42318);
+  background: var(--red-accent, #b42318);
+  color: var(--white);
+}
+
+.sales-leads-dialog-delete:hover {
+  filter: brightness(0.94);
+}
+
+.sales-leads-table.data-table .data-table-empty {
+  height: 120px;
+}
+
+
+
+.sales-leads-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sales-leads-page-controls span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card, var(--white));
+  color: var(--text-main, var(--heading));
+  font-weight: 500;
+}
+
+.sales-leads-page-controls button:disabled {
+  color: var(--text-light, var(--muted));
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .sales-leads-page {
+    padding: 22px 16px;
+  }
+
+  .sales-leads-header {
+    align-items: flex-start;
+  }
+
+  .sales-leads-header h1 {
+    font-size: 25px;
+  }
+
+  .sales-leads-toolbar {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .sales-leads-tabs {
+    gap: 18px;
+  }
+
+  .sales-leads-search {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .sales-leads-select-label {
+    flex: 1;
+  }
+
+  .sales-leads-select-label select {
+    width: 100%;
+  }
+
+  .sales-leads-pagination {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+@media (max-width: 460px) {
+  .sales-leads-header {
+    gap: 10px;
+  }
+}

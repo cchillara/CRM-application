@@ -1,0 +1,73 @@
+.sales-stat-card {
+  padding: 20px;
+  background: var(--bg-card, var(--white));
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+  transition: border-color 0.2s ease;
+  font-family: var(--font-family);
+}
+
+.sales-stat-card:hover {
+  border-color: var(--blue-primary, var(--blue));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.sales-stat-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sales-stat-card-top > span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sales-stat-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-subtle);
+  color: var(--blue-primary);
+}
+
+.sales-stat-card-value {
+  margin-top: 6px;
+  color: var(--text-main);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sales-stat-card-change {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 8px;
+  color: var(--green-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sales-stat-card-change.down {
+  color: var(--red-accent);
+}
+
+.sales-stat-card-change .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.sales-stat-card-period {
+  margin-left: 3px;
+  color: var(--text-light);
+  font-size: 10px;
+  font-weight: 400;
+}

@@ -1,0 +1,19 @@
+.detail-section {
+  min-width: 0;
+  padding: 19px 20px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-card, var(--white));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.detail-section-title {
+  margin: 0 0 17px;
+  color: var(--text-main, var(--heading));
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.detail-section-content {
+  min-width: 0;
+}

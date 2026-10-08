@@ -1,0 +1,309 @@
+.sales-lead-details-main-stack,
+.sales-lead-details-side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sales-lead-details-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.sales-lead-details-actions select,
+.sales-lead-details-actions button {
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card, var(--white));
+  color: var(--text-main, var(--heading));
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sales-lead-details-actions select {
+  max-width: 175px;
+}
+
+.sales-lead-details-actions .sales-lead-convert-button {
+  border-color: var(--blue-primary, var(--blue));
+  background: var(--blue-primary, var(--blue));
+  color: var(--white);
+}
+
+.sales-lead-details-actions .sales-lead-delete-button {
+  border-color: var(--red-accent, #b42318);
+  color: var(--red-accent, #b42318);
+}
+
+.sales-lead-details-actions button:hover,
+.sales-lead-details-actions select:hover {
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-lead-details-actions .sales-lead-convert-button:hover {
+  filter: brightness(0.94);
+}
+
+.sales-lead-details-actions .sales-lead-delete-button:hover {
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-lead-details-actions :focus-visible {
+  outline: 2px solid var(--blue-primary, var(--blue));
+  outline-offset: 2px;
+}
+
+.sales-lead-dialog-backdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 20, 28, 0.42);
+}
+
+.sales-lead-confirm-dialog {
+  width: min(100%, 440px);
+  padding: 24px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card, var(--white));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.sales-lead-confirm-dialog h2 {
+  margin: 0;
+  color: var(--text-main, var(--heading));
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sales-lead-confirm-dialog p {
+  margin: 10px 0 22px;
+  color: var(--text-muted, var(--body));
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sales-lead-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sales-lead-confirm-actions button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-sm, 6px);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sales-lead-confirm-cancel {
+  background: var(--bg-card, var(--white));
+  color: var(--text-main, var(--heading));
+}
+
+.sales-lead-confirm-cancel:hover {
+  background: var(--bg-card-subtle, var(--background));
+}
+
+.sales-lead-confirm-delete {
+  border-color: var(--red-accent, #b42318) !important;
+  background: var(--red-accent, #b42318);
+  color: var(--white);
+}
+
+.sales-lead-confirm-convert {
+  border-color: var(--blue-primary, var(--blue)) !important;
+  background: var(--blue-primary, var(--blue));
+  color: var(--white);
+}
+
+.sales-lead-confirm-delete:hover,
+.sales-lead-confirm-convert:hover {
+  filter: brightness(0.94);
+}
+
+.sales-lead-confirm-actions :focus-visible {
+  outline: 2px solid var(--blue-primary, var(--blue));
+  outline-offset: 2px;
+}
+
+.sales-lead-detail-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+}
+
+.sales-lead-detail-description {
+  grid-column: 1 / -1;
+}
+
+.sales-lead-empty-state {
+  margin: 0;
+  color: var(--text-muted, var(--body));
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sales-lead-task-list,
+.sales-lead-activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sales-lead-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.sales-lead-task-item:first-child,
+.sales-lead-activity-item:first-child {
+  padding-top: 0;
+}
+
+.sales-lead-task-item:last-child,
+.sales-lead-activity-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.sales-lead-task-icon {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card-subtle, var(--background));
+  color: var(--blue-primary, var(--blue));
+}
+
+.sales-lead-task-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sales-lead-task-copy strong {
+  color: var(--text-main, var(--heading));
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sales-lead-task-copy p,
+.sales-lead-activity-copy p {
+  margin: 0;
+  color: var(--text-muted, var(--body));
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sales-lead-task-copy > span {
+  color: var(--text-light, var(--muted));
+  font-size: 11px;
+}
+
+.sales-lead-task-item > .status-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.sales-lead-activity-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.sales-lead-activity-icon {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: 50%;
+  background: var(--bg-card-subtle, var(--background));
+  color: var(--blue-primary, var(--blue));
+}
+
+.sales-lead-activity-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sales-lead-activity-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+
+.sales-lead-activity-heading strong {
+  color: var(--text-main, var(--heading));
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sales-lead-activity-heading time {
+  color: var(--text-light, var(--muted));
+  font-size: 11px;
+}
+
+.sales-lead-related-link {
+  color: var(--blue-primary, var(--blue));
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.sales-lead-related-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .sales-lead-detail-fields {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .sales-lead-detail-description {
+    grid-column: auto;
+  }
+
+  .sales-lead-details-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .sales-lead-task-item {
+    flex-wrap: wrap;
+  }
+
+  .sales-lead-task-item > .status-badge {
+    margin-left: 40px;
+  }
+}

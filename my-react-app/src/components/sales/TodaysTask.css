@@ -1,0 +1,140 @@
+.sales-today-tasks {
+  padding: 22px;
+  background: var(--bg-card, var(--white));
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+  font-family: var(--font-family);
+}
+
+.sales-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sales-section-header h2 {
+  margin: 0;
+  color: #0F141C;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sales-section-header p {
+  margin: 4px 0 0;
+  color: #66717F;
+  font-size: 14px;
+}
+
+.sales-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sales-task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.sales-task-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sales-task-item:first-child {
+  padding-top: 0;
+}
+
+.sales-task-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: 6px;
+  color: var(--blue-primary, var(--blue));
+}
+
+.sales-task-check.checked {
+  border-color: #10B981;
+  background: #ECFDF5;
+}
+
+.sales-task-check span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue-primary, var(--blue));
+  opacity: 1;
+  transform: scale(1);
+  transition: transform 0.15s ease;
+}
+
+.sales-task-check.checked span {
+  transform: scale(0.3);
+  background: #10B981;
+  opacity: 1;
+}
+
+.sales-task-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sales-task-content h3 {
+  margin: 0 0 2px;
+  color: #0F141C;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sales-task-content span {
+  color: #66717F;
+  font-size: 12px;
+}
+
+.sales-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  color: #66717F;
+  font-size: 12px;
+}
+
+.sales-task-divider {
+  color: #9CA3AF;
+}
+
+.sales-task-priority {
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sales-task-priority.high {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
+.sales-task-priority.medium {
+  background: #FFF7ED;
+  color: #F97316;
+}
+
+.sales-task-priority.low {
+  background: #ECFDF5;
+  color: #10B981;
+}
