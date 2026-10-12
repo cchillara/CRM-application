@@ -9,6 +9,7 @@ import SalesLeads from "./pages/sales/SalesLeads.jsx";
 import SalesLeadDetails from "./pages/sales/SalesLeadDetails.jsx";
 import SalesCustomers from "./pages/sales/SalesCustomers.jsx";
 import SalesTasks from "./pages/sales/SalesTasks.jsx";
+import SalesCalendar from "./pages/sales/SalesCalendar.jsx";
 
 function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -591,6 +592,7 @@ function App() {
           <Route path="/leads" element={<SalesLeads />} />
           <Route path="/customers" element={<SalesCustomers />} />
           <Route path="/tasks" element={<SalesTasks />} />
+          <Route path="/calendar" element={<SalesCalendar />} />
         </Route>
       </Routes>
     </BrowserRouter>

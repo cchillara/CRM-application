@@ -2,13 +2,16 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
+import AddButton from "../../components/sales/AddButton.jsx";
+import CustomerForm from "../../components/sales/CustomerForm.jsx";
 import { useSalesData } from "../../components/sales/SalesDataContext.jsx";
 import "./SalesCustomers.css";
 
 const CURRENT_USER = "Subham Sharma";
 
 function SalesCustomers() {
-  const { customers: allCustomers } = useSalesData();
+  const { customers: allCustomers, addCustomer } = useSalesData();
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [ownershipFilter, setOwnershipFilter] = useState("ALL");
@@ -45,6 +48,7 @@ function SalesCustomers() {
           <h1>Customers</h1>
           <p>Manage your customer relationships and accounts.</p>
         </div>
+        <AddButton onClick={() => setShowCustomerForm(true)}>Add Customer</AddButton>
       </header>
 
       <section className="sales-customers-summary" aria-label="Customer summary">
@@ -124,6 +128,7 @@ function SalesCustomers() {
           ))}
         </DataTable>
       </section>
+      {showCustomerForm && <CustomerForm onClose={() => setShowCustomerForm(false)} onSubmit={(values) => { addCustomer(values); setShowCustomerForm(false); }} />}
     </div>
   );
 }

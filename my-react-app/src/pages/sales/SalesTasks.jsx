@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { Ellipsis, Search, Trash2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
+import AddButton from "../../components/sales/AddButton.jsx";
+import TaskForm from "../../components/sales/TaskForm.jsx";
+import { getLeadContactName, useSalesData } from "../../components/sales/SalesDataContext.jsx";
 import { salesTasks } from "../../data/salesTasksData.js";
 import "./SalesTasks.css";
 
@@ -30,11 +33,19 @@ function getTodayString() {
 }
 
 function SalesTasks() {
+  const { leads, customers } = useSalesData();
   const [tasks, setTasks] = useState(salesTasks);
   const [activeTab, setActiveTab] = useState("ALL");
   const [search, setSearch] = useState("");
   const [dueDateFilter, setDueDateFilter] = useState("ALL");
   const [openMenuTaskId, setOpenMenuTaskId] = useState(null);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const relatedOptions = [
+    ...leads.map((lead) => ({ id: lead.id, type: "Lead", name: getLeadContactName(lead) })),
+    ...customers.map((customer) => ({ id: customer.id, type: "Customer", name: customer.name })),
+    ...Array.from(new Set(salesTasks.filter((task) => task.relatedTo?.type === "Deal").map((task) => task.relatedTo.name)))
+      .map((name) => ({ id: `deal-${name}`, type: "Deal", name })),
+  ];
 
   const handleTaskCompletion = (taskId, isCompleted) => {
     setTasks((currentTasks) =>
@@ -96,6 +107,7 @@ function SalesTasks() {
           <h1>Tasks</h1>
           <p>Manage your upcoming and pending work.</p>
         </div>
+        <AddButton onClick={() => setShowTaskForm(true)}>Add Task</AddButton>
       </header>
 
       <section className="sales-tasks-card" aria-label="Tasks">
@@ -212,6 +224,7 @@ function SalesTasks() {
           ))}
         </DataTable>
       </section>
+      {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} relatedOptions={relatedOptions} onSubmit={(values) => { setTasks((currentTasks) => [{ id: `task-${Date.now()}`, ...values, status: "TODO" }, ...currentTasks]); setShowTaskForm(false); }} />}
     </div>
   );
 }

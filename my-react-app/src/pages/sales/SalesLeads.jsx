@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Ellipsis, Search, Trash2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
+import AddButton from "../../components/sales/AddButton.jsx";
+import LeadForm from "../../components/sales/LeadForm.jsx";
 import { getLeadContactName, getLeadLastContact, useSalesData } from "../../components/sales/SalesDataContext.jsx";
 import "./SalesLeads.css";
 
@@ -26,12 +28,13 @@ const tabs = [
 
 function SalesLeads() {
   const navigate = useNavigate();
-  const { leads, deleteLead } = useSalesData();
+  const { leads, addLead, deleteLead } = useSalesData();
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [openMenuLeadId, setOpenMenuLeadId] = useState(null);
   const [leadToDelete, setLeadToDelete] = useState(null);
+  const [showLeadForm, setShowLeadForm] = useState(false);
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredLeads = leads.filter((lead) => {
@@ -65,6 +68,7 @@ function SalesLeads() {
           <h1>Leads</h1>
           <p>Manage and track your sales leads.</p>
         </div>
+        <AddButton onClick={() => setShowLeadForm(true)}>Add Lead</AddButton>
       </header>
 
       <section className="sales-leads-card" aria-label="Leads">
@@ -214,6 +218,7 @@ function SalesLeads() {
           </section>
         </div>
       )}
+      {showLeadForm && <LeadForm onClose={() => setShowLeadForm(false)} onSubmit={(values) => { addLead(values); setShowLeadForm(false); }} />}
     </div>
   );
 }

@@ -27,6 +27,71 @@ export function SalesDataProvider({ children }) {
   const [leads, setLeads] = useState(salesLeads);
   const [customers, setCustomers] = useState(salesCustomers);
 
+  const addLead = (values) => {
+    const now = new Date().toISOString();
+    const id = `lead-${Date.now()}`;
+    const contactId = `contact-${id}`;
+    const companyId = values.company.trim() ? `company-${id}` : null;
+    const company = companyId ? {
+      id: companyId,
+      name: values.company.trim(),
+      email: null,
+      phone: null,
+      website: null,
+      address: "",
+      city: "",
+      state: "",
+      country: "",
+      createdAt: now,
+      updatedAt: now,
+    } : null;
+    const lead = {
+      id,
+      title: values.title.trim(),
+      description: values.description.trim(),
+      status: "NEW",
+      source: values.source,
+      companyId,
+      contactId,
+      assignedToId: "user-001",
+      convertedAt: null,
+      convertedById: null,
+      customerId: null,
+      createdAt: now,
+      updatedAt: now,
+      assignedTo: { id: "user-001", firstName: "Subham", lastName: "Sharma" },
+      contact: {
+        id: contactId,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        email: values.email.trim() || null,
+        phone: values.phone.trim() || null,
+        jobTitle: values.jobTitle.trim() || null,
+      },
+      company,
+      tasks: [],
+      activities: [],
+    };
+    setLeads((currentLeads) => [lead, ...currentLeads]);
+  };
+
+  const addCustomer = (values) => {
+    const today = new Date();
+    const createdAt = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const customer = {
+      id: `customer-${Date.now()}`,
+      name: values.name.trim(),
+      company: values.company.trim(),
+      email: values.email.trim(),
+      phone: values.phone.trim(),
+      status: values.status,
+      lastContact: "No contact yet",
+      assignedTo: "Subham Sharma",
+      createdAt,
+    };
+    setCustomers((currentCustomers) => [customer, ...currentCustomers]);
+  };
+
   const updateLeadStatus = (leadId, status) => {
     setLeads((currentLeads) =>
       currentLeads.map((lead) => lead.id === leadId ? { ...lead, status } : lead)
@@ -93,7 +158,7 @@ export function SalesDataProvider({ children }) {
   };
 
   return (
-    <SalesDataContext.Provider value={{ leads, customers, updateLeadStatus, deleteLead, convertLeadToCustomer }}>
+    <SalesDataContext.Provider value={{ leads, customers, addLead, addCustomer, updateLeadStatus, deleteLead, convertLeadToCustomer }}>
       {children}
     </SalesDataContext.Provider>
   );
