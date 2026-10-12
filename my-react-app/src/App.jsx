@@ -2,8 +2,8 @@ import { useState } from "react";
 import "./App.css";
 import Login from "./auth/Login";
 import Signup from "./auth/Signup";
-import ClientAdmin from "./Admin/ClientAdmin";
 import { Routes, Route } from "react-router-dom";
+import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes"
 
 
 function App() {
@@ -28,13 +28,12 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/client-admin/*" element={<ClientAdmin />} />
+      <Route path="/client-admin/*" element={<ClientAdminRoutes/>} />
       
       
 
       <Route path="/*" element={
         <div className="site">
-          {/* ================= HEADER ================= */}
           <header className="navbar">
             <a href="#home" className="logo" onClick={closeMenu}>
               SHNOOR<span>.</span>

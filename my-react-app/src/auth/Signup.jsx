@@ -34,6 +34,7 @@ function Signup() {
         setLoading(true);
 
         try {
+            // 1. Create Firebase user
             const userCredential =
                 await createUserWithEmailAndPassword(
                     auth,
@@ -41,8 +42,30 @@ function Signup() {
                     password
                 );
 
-            await updateProfile(
-                userCredential.user,
+            const firebaseUser = userCredential.user;
+
+            // 2. Set Firebase display name
+            await updateProfile(firebaseUser, {
+                displayName: name,
+            });
+
+            // 3. Get Firebase ID token
+            const idToken = await firebaseUser.getIdToken();
+
+            console.log("Firebase UID:", firebaseUser.uid);
+
+            // 4. Split full name
+            const nameParts = name.trim().split(/\s+/);
+
+            const firstName = nameParts[0];
+
+            const lastName =
+                nameParts.slice(1).join(" ") || null;
+
+            // 5. Send only the fields expected by backend
+            // DO NOT send organizationId.
+            const response = await fetch(
+                "http://localhost:5000/api/v1/auth/register",
                 {
                     method: "POST",
 
@@ -87,55 +110,6 @@ function Signup() {
                 );
             }
 
-
-            const idToken =
-                await userCredential.user.getIdToken();
-
-            console.log(
-                "Firebase UID:",
-                userCredential.user.uid
-            );
-
-
-            const nameParts = name.trim().split(" ");
-
-            const firstName = nameParts[0];
-
-            const lastName =
-                nameParts.slice(1).join(" ") || null;
-
-
-            const organizationId = "52a39a42-bdbf-45a7-842e-ff6909e53a12";
-
-            // 6. Send user information to backend
-            const response = await fetch(
-                "http://localhost:5000/api/v1/auth/register",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${idToken}`,
-                    },
-
-                    body: JSON.stringify({
-                        firstName,
-                        lastName,
-                        organizationId,
-                    }),
-                }
-            );
-
-            const data = await response.json();
-
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message ||
-                    "Failed to create CRM user"
-                );
-            }
-
             console.log(
                 "CRM User created:",
                 data
@@ -145,14 +119,17 @@ function Signup() {
                 "Account created successfully!"
             );
 
-
             // 8. Go to login
             window.location.href = "/login";
 
         } catch (error) {
             console.error(error);
 
-            setError(error.message);
+            setError(
+                error.message ||
+                "Something went wrong while creating the account."
+            );
+
         } finally {
             setLoading(false);
         }

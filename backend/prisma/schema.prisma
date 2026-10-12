@@ -7,6 +7,274 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organization {
+  id          String                   @id @default(uuid())
+  name        String
+  status      OrganizationStatus       @default(ACTIVE)
+  email       String?
+  phone       String?
+  website     String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  activities  Activity[]
+  auditLogs   AuditLog[]
+  companies   Company[]
+  customers   Customer[]
+  deals       Deal[]
+  leads       Lead[]
+  invitations OrganizationInvitation[]
+  tasks       Task[]
+  teams       Team[]
+  users       User[]
+}
+
+model User {
+  id                  String           @id @default(uuid())
+  firebaseUid         String           @unique
+  email               String           @unique
+  firstName           String
+  lastName            String?
+  role                UserRole         @default(SALES)
+  status              UserStatus       @default(INVITED)
+  lastLoginAt         DateTime?
+  organizationId      String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  performedActivities Activity[]       @relation("ActivityPerformedBy")
+  auditLogs           AuditLog[]
+  assignedDeals       Deal[]           @relation("DealAssignedTo")
+  assignedLeads       Lead[]           @relation("LeadAssignedTo")
+  convertedLeads      Lead[]           @relation("LeadConvertedBy")
+  assignedTasks       Task[]           @relation("TaskAssignedTo")
+  teamMemberships     TeamMembership[]
+  organization        Organization?    @relation(fields: [organizationId], references: [id])
+}
+
+model Team {
+  id             String           @id @default(uuid())
+  name           String
+  organizationId String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  members        TeamMembership[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model TeamMembership {
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@id([teamId, userId])
+  @@index([userId])
+}
+
+model OrganizationInvitation {
+  id             String       @id @default(uuid())
+  organizationId String
+  email          String
+  role           UserRole
+  tokenHash      String       @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Company {
+  id             String       @id @default(uuid())
+  name           String
+  email          String?
+  phone          String?
+  website        String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contacts       Contact[]
+  customers      Customer[]
+  leads          Lead[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String?
+  email     String?
+  phone     String?
+  jobTitle  String?
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id])
+  leads     Lead[]
+
+  @@index([companyId])
+}
+
+model Lead {
+  id             String       @id @default(uuid())
+  title          String
+  description    String?
+  status         LeadStatus   @default(NEW)
+  source         LeadSource   @default(OTHER)
+  organizationId String
+  companyId      String?
+  contactId      String?
+  assignedToId   String?
+  convertedAt    DateTime?
+  convertedById  String?
+  customerId     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  activities     Activity[]
+  assignedTo     User?        @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  company        Company?     @relation(fields: [companyId], references: [id])
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  convertedBy    User?        @relation("LeadConvertedBy", fields: [convertedById], references: [id])
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  tasks          Task[]
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([companyId])
+  @@index([contactId])
+  @@index([customerId])
+}
+
+model Customer {
+  id             String       @id @default(uuid())
+  organizationId String
+  companyId      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  activities     Activity[]
+  company        Company      @relation(fields: [companyId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  deals          Deal[]
+  leads          Lead[]
+  tasks          Task[]
+
+  @@unique([organizationId, companyId])
+  @@index([organizationId])
+  @@index([companyId])
+}
+
+model Deal {
+  id             String       @id @default(uuid())
+  title          String
+  description    String?
+  value          Decimal?
+  stage          DealStage    @default(PROSPECTING)
+  organizationId String
+  customerId     String
+  assignedToId   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  activities     Activity[]
+  assignedTo     User?        @relation("DealAssignedTo", fields: [assignedToId], references: [id])
+  customer       Customer     @relation(fields: [customerId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  tasks          Task[]
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([customerId])
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  dueDate        DateTime?
+  organizationId String
+  assignedToId   String
+  leadId         String?
+  customerId     String?
+  dealId         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  assignedTo     User         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  deal           Deal?        @relation(fields: [dealId], references: [id])
+  lead           Lead?        @relation(fields: [leadId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([dealId])
+}
+
+model Activity {
+  id             String       @id @default(uuid())
+  type           ActivityType
+  description    String
+  organizationId String
+  performedById  String
+  leadId         String?
+  customerId     String?
+  dealId         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  deal           Deal?        @relation(fields: [dealId], references: [id])
+  lead           Lead?        @relation(fields: [leadId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  performedBy    User         @relation("ActivityPerformedBy", fields: [performedById], references: [id])
+
+  @@index([organizationId])
+  @@index([performedById])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([dealId])
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  organizationId String?
+  actorId        String?
+  action         String
+  entityType     String
+  entityId       String
+  oldValues      Json?
+  newValues      Json?
+  createdAt      DateTime      @default(now())
+  actor          User?         @relation(fields: [actorId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([actorId])
+  @@index([entityType, entityId])
+}
+
+model SuperAdmin {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique
+  email       String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 enum UserRole {
   ORGANIZATION_ADMIN
   MANAGER
@@ -66,330 +334,4 @@ enum ActivityType {
   MEETING
   NOTE
   FOLLOW_UP
-}
-
-model Organization {
-  id      String             @id @default(uuid())
-  name    String
-  status  OrganizationStatus @default(ACTIVE)
-  email   String?
-  phone   String?
-  website String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users       User[]
-  teams       Team[]
-  invitations OrganizationInvitation[]
-  companies   Company[]
-  customers   Customer[]
-  leads       Lead[]
-  deals       Deal[]
-  tasks       Task[]
-  activities  Activity[]
-  auditLogs   AuditLog[]
-}
-
-model User {
-  id          String     @id @default(uuid())
-  firebaseUid String     @unique
-  email       String     @unique
-  firstName   String
-  lastName    String?
-  role        UserRole   @default(SALES)
-  status      UserStatus @default(INVITED)
-  lastLoginAt DateTime?
-
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  teamMemberships     TeamMembership[]
-  assignedLeads       Lead[]           @relation("LeadAssignedTo")
-  convertedLeads      Lead[]           @relation("LeadConvertedBy")
-  assignedDeals       Deal[]           @relation("DealAssignedTo")
-  assignedTasks       Task[]           @relation("TaskAssignedTo")
-  performedActivities Activity[]       @relation("ActivityPerformedBy")
-  auditLogs           AuditLog[]
-}
-
-model Team {
-  id   String @id @default(uuid())
-  name String
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  members TeamMembership[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([organizationId, name])
-  @@index([organizationId])
-}
-
-model TeamMembership {
-  teamId String
-  team   Team   @relation(fields: [teamId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@id([teamId, userId])
-  @@index([userId])
-}
-
-model OrganizationInvitation {
-  id String @id @default(uuid())
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  email       String
-  role        UserRole
-  tokenHash   String   @unique
-  invitedById String
-
-  expiresAt  DateTime
-  acceptedAt DateTime?
-  createdAt  DateTime  @default(now())
-
-  @@index([organizationId])
-  @@index([email])
-}
-
-model Company {
-  id      String  @id @default(uuid())
-  name    String
-  email   String?
-  phone   String?
-  website String?
-
-  address String?
-  city    String?
-  state   String?
-  country String?
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  contacts  Contact[]
-  leads     Lead[]
-  customers Customer[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([organizationId, name])
-  @@index([organizationId])
-}
-
-model Contact {
-  id        String  @id @default(uuid())
-  firstName String
-  lastName  String?
-  email     String?
-  phone     String?
-  jobTitle  String?
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  leads Lead[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([companyId])
-}
-
-model Lead {
-  id          String  @id @default(uuid())
-  title       String
-  description String?
-
-  status LeadStatus @default(NEW)
-  source LeadSource @default(OTHER)
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id])
-
-  contactId String?
-  contact   Contact? @relation(fields: [contactId], references: [id])
-
-  assignedToId String?
-  assignedTo   User?   @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
-
-  convertedAt   DateTime?
-  convertedById String?
-  convertedBy   User?     @relation("LeadConvertedBy", fields: [convertedById], references: [id])
-
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
-
-  tasks      Task[]
-  activities Activity[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId])
-  @@index([assignedToId])
-  @@index([companyId])
-  @@index([contactId])
-  @@index([customerId])
-}
-
-model Customer {
-  id String @id @default(uuid())
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  leads      Lead[]
-  deals      Deal[]
-  tasks      Task[]
-  activities Activity[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([organizationId, companyId])
-  @@index([organizationId])
-  @@index([companyId])
-}
-
-model Deal {
-  id          String  @id @default(uuid())
-  title       String
-  description String?
-
-  value Decimal?
-  stage DealStage @default(PROSPECTING)
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
-
-  assignedToId String?
-  assignedTo   User?   @relation("DealAssignedTo", fields: [assignedToId], references: [id])
-
-  tasks      Task[]
-  activities Activity[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId])
-  @@index([assignedToId])
-  @@index([customerId])
-}
-
-model Task {
-  id          String  @id @default(uuid())
-  title       String
-  description String?
-
-  status  TaskStatus @default(TODO)
-  dueDate DateTime?
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  assignedToId String
-  assignedTo   User   @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
-
-  leadId String?
-  lead   Lead?   @relation(fields: [leadId], references: [id])
-
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
-
-  dealId String?
-  deal   Deal?   @relation(fields: [dealId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId])
-  @@index([assignedToId])
-  @@index([leadId])
-  @@index([customerId])
-  @@index([dealId])
-}
-
-model Activity {
-  id          String       @id @default(uuid())
-  type        ActivityType
-  description String
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  performedById String
-  performedBy   User   @relation("ActivityPerformedBy", fields: [performedById], references: [id])
-
-  leadId String?
-  lead   Lead?   @relation(fields: [leadId], references: [id])
-
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
-
-  dealId String?
-  deal   Deal?   @relation(fields: [dealId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId])
-  @@index([performedById])
-  @@index([leadId])
-  @@index([customerId])
-  @@index([dealId])
-}
-
-model AuditLog {
-  id String @id @default(uuid())
-
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-
-  actorId String?
-  actor   User?   @relation(fields: [actorId], references: [id])
-
-  action     String
-  entityType String
-  entityId   String
-
-  oldValues Json?
-  newValues Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([organizationId])
-  @@index([actorId])
-  @@index([entityType, entityId])
-}
-
-model SuperAdmin {
-  id          String @id @default(uuid())
-  firebaseUid String @unique
-  email       String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
