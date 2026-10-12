@@ -1,0 +1,27 @@
+.sales-notifications-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-main, var(--background));
+  color: var(--text-main, var(--heading));
+  font-family: var(--font-family);
+}
+
+.sales-notifications-card {
+  overflow: hidden;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-card, var(--white));
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+}
+
+.sales-notifications-table.data-table { min-width: 540px; }
+.sales-notifications-table.data-table th:first-child,
+.sales-notifications-table.data-table td:first-child { padding-left: 22px; }
+.sales-notifications-table.data-table td:last-child { color: var(--text-muted, var(--body)); font-size: 12px; }
+.sales-notifications-copy { display: flex; flex-direction: column; gap: 4px; white-space: normal; }
+.sales-notifications-copy strong { color: var(--text-main, var(--heading)); font-size: 13px; font-weight: 500; }
+.sales-notifications-copy span { color: var(--text-muted, var(--body)); font-size: 12px; line-height: 1.45; }
+
+@media (max-width: 640px) {
+  .sales-notifications-page { padding: 22px 16px; }
+}

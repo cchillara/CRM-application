@@ -1,6 +1,6 @@
 /* Edited by subham sharma on 06-10-2026*/
 import { useState } from "react";
-import { LayoutDashboard,  Users,UserRound,CheckSquare,Calendar, NotebookPen, Package, FileText, BarChart3,
+import { LayoutDashboard,  Users,UserRound,CheckSquare,Calendar, NotebookPen, Package, BarChart3,
     Bell, CircleUserRound
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -13,7 +13,6 @@ const navigationItems = [
 {label:"Calendar", icon:Calendar , path:"/calendar"},
 {label:"Notes", icon:NotebookPen , path:"/notes"},
 {label:"Products", icon:Package , path:"/products"},
-{label:"Ouotes", icon:FileText , path:"/quotes"},
 {label:"Analytics", icon:BarChart3 , path:"/analytics"},
 {label:"Notifications", icon:Bell , path:"/notifications"},
 {label:"Profile", icon:CircleUserRound , path:"/profile"}

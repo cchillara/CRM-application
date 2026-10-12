@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Ellipsis, Search, Trash2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
+import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import LeadForm from "../../components/sales/LeadForm.jsx";
@@ -190,34 +191,7 @@ function SalesLeads() {
         </DataTable>
       </section>
 
-      {leadToDelete && (
-        <div className="sales-leads-dialog-backdrop" onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            setLeadToDelete(null);
-          }
-        }}>
-          <section
-            className="sales-leads-delete-dialog"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="sales-leads-delete-title"
-            aria-describedby="sales-leads-delete-description"
-          >
-            <h2 id="sales-leads-delete-title">Delete lead?</h2>
-            <p id="sales-leads-delete-description">
-              Are you sure you want to delete {getLeadContactName(leadToDelete)}? This action cannot be undone.
-            </p>
-            <div className="sales-leads-dialog-actions">
-              <button className="sales-leads-dialog-cancel" type="button" onClick={() => setLeadToDelete(null)}>
-                Cancel
-              </button>
-              <button className="sales-leads-dialog-delete" type="button" onClick={confirmDeleteLead}>
-                Delete Lead
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      {leadToDelete && <ConfirmDialog title="Delete lead?" message={`Are you sure you want to delete ${getLeadContactName(leadToDelete)}? This action cannot be undone.`} onCancel={() => setLeadToDelete(null)} onConfirm={confirmDeleteLead} confirmLabel="Delete Lead" />}
       {showLeadForm && <LeadForm onClose={() => setShowLeadForm(false)} onSubmit={(values) => { addLead(values); setShowLeadForm(false); }} />}
     </div>
   );

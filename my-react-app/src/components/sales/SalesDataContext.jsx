@@ -23,9 +23,112 @@ export function getLeadLastContact(lead) {
   return latestActivity.createdAt;
 }
 
+function formatNoteActivity(activity, relatedTo) {
+  const description = activity.description || "";
+  const [firstLine, ...body] = description.split("\n");
+  const hasTitle = body.length > 0;
+
+  return {
+    ...activity,
+    title: hasTitle ? firstLine : "Note",
+    content: hasTitle ? body.join("\n") : description,
+    relatedTo,
+  };
+}
+
 export function SalesDataProvider({ children }) {
   const [leads, setLeads] = useState(salesLeads);
   const [customers, setCustomers] = useState(salesCustomers);
+  const [unlinkedNotes, setUnlinkedNotes] = useState([]);
+
+  const notes = [
+    ...leads.flatMap((lead) => (lead.activities || [])
+      .filter((activity) => activity.type === "NOTE")
+      .map((activity) => formatNoteActivity(activity, {
+        type: "Lead",
+        id: lead.id,
+        name: getLeadContactName(lead),
+      }))),
+    ...customers.flatMap((customer) => (customer.activities || [])
+      .filter((activity) => activity.type === "NOTE")
+      .map((activity) => formatNoteActivity(activity, {
+        type: "Customer",
+        id: customer.id,
+        name: customer.name,
+      }))),
+    ...unlinkedNotes.map((activity) => formatNoteActivity(activity, null)),
+  ];
+
+  const addNote = (values) => {
+    const now = new Date().toISOString();
+    const activity = {
+      id: `note-${Date.now()}`,
+      type: "NOTE",
+      description: `${values.title.trim()}\n${values.content.trim()}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (values.relatedType === "Lead") {
+      setLeads((currentLeads) => currentLeads.map((lead) => lead.id === values.relatedId
+        ? { ...lead, activities: [...(lead.activities || []), activity] }
+        : lead));
+    } else if (values.relatedType === "Customer") {
+      setCustomers((currentCustomers) => currentCustomers.map((customer) => customer.id === values.relatedId
+        ? { ...customer, activities: [...(customer.activities || []), activity] }
+        : customer));
+    } else {
+      setUnlinkedNotes((currentNotes) => [activity, ...currentNotes]);
+    }
+  };
+
+  const updateNote = (note, values) => {
+    const activity = {
+      id: note.id,
+      type: "NOTE",
+      description: `${values.title.trim()}\n${values.content.trim()}`,
+      createdAt: note.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    const oldRelated = note.relatedTo;
+
+    setLeads((currentLeads) => currentLeads.map((lead) => {
+      const isSource = oldRelated?.type === "Lead" && lead.id === oldRelated.id;
+      const isTarget = values.relatedType === "Lead" && lead.id === values.relatedId;
+      if (!isSource && !isTarget) return lead;
+      const activities = (lead.activities || []).filter((item) => item.id !== note.id);
+      if (isTarget) activities.push(activity);
+      return { ...lead, activities };
+    }));
+
+    setCustomers((currentCustomers) => currentCustomers.map((customer) => {
+      const isSource = oldRelated?.type === "Customer" && customer.id === oldRelated.id;
+      const isTarget = values.relatedType === "Customer" && customer.id === values.relatedId;
+      if (!isSource && !isTarget) return customer;
+      const activities = (customer.activities || []).filter((item) => item.id !== note.id);
+      if (isTarget) activities.push(activity);
+      return { ...customer, activities };
+    }));
+
+    setUnlinkedNotes((currentNotes) => {
+      const remaining = currentNotes.filter((item) => item.id !== note.id);
+      return values.relatedType ? remaining : [activity, ...remaining];
+    });
+  };
+
+  const deleteNote = (note) => {
+    if (note.relatedTo?.type === "Lead") {
+      setLeads((currentLeads) => currentLeads.map((lead) => lead.id === note.relatedTo.id
+        ? { ...lead, activities: (lead.activities || []).filter((activity) => activity.id !== note.id) }
+        : lead));
+    } else if (note.relatedTo?.type === "Customer") {
+      setCustomers((currentCustomers) => currentCustomers.map((customer) => customer.id === note.relatedTo.id
+        ? { ...customer, activities: (customer.activities || []).filter((activity) => activity.id !== note.id) }
+        : customer));
+    } else {
+      setUnlinkedNotes((currentNotes) => currentNotes.filter((activity) => activity.id !== note.id));
+    }
+  };
 
   const addLead = (values) => {
     const now = new Date().toISOString();
@@ -158,7 +261,7 @@ export function SalesDataProvider({ children }) {
   };
 
   return (
-    <SalesDataContext.Provider value={{ leads, customers, addLead, addCustomer, updateLeadStatus, deleteLead, convertLeadToCustomer }}>
+    <SalesDataContext.Provider value={{ leads, customers, notes, addNote, updateNote, deleteNote, addLead, addCustomer, updateLeadStatus, deleteLead, convertLeadToCustomer }}>
       {children}
     </SalesDataContext.Provider>
   );

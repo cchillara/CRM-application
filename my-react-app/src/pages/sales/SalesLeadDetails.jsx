@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import DetailField from "../../components/common/DetailField.jsx";
 import DetailSection from "../../components/common/DetailSection.jsx";
+import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import RecordDetailsLayout from "../../components/common/RecordDetailsLayout.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import { useSalesData } from "../../components/sales/SalesDataContext.jsx";
@@ -249,7 +250,8 @@ function SalesLeadDetails() {
           </DetailSection>
         )}
       </div>
-      {confirmation && (
+      {confirmation === "delete" && <ConfirmDialog title="Delete lead?" message={`Are you sure you want to delete ${contactName}? This action cannot be undone.`} onCancel={() => setConfirmation(null)} onConfirm={confirmAction} confirmLabel="Delete Lead" />}
+      {confirmation === "convert" && (
         <div className="sales-lead-dialog-backdrop" onClick={(event) => {
           if (event.target === event.currentTarget) {
             setConfirmation(null);
@@ -263,23 +265,21 @@ function SalesLeadDetails() {
             aria-describedby="sales-lead-confirm-description"
           >
             <h2 id="sales-lead-confirm-title">
-              {confirmation === "delete" ? "Delete lead?" : "Convert lead to customer?"}
+              Convert lead to customer?
             </h2>
             <p id="sales-lead-confirm-description">
-              {confirmation === "delete"
-                ? `Are you sure you want to delete ${contactName}? This action cannot be undone.`
-                : `Convert ${contactName} into a customer? The lead will be removed from Leads and added to Customers.`}
+              {`Convert ${contactName} into a customer? The lead will be removed from Leads and added to Customers.`}
             </p>
             <div className="sales-lead-confirm-actions">
               <button className="sales-lead-confirm-cancel" type="button" onClick={() => setConfirmation(null)}>
                 Cancel
               </button>
               <button
-                className={confirmation === "delete" ? "sales-lead-confirm-delete" : "sales-lead-confirm-convert"}
+                className="sales-lead-confirm-convert"
                 type="button"
                 onClick={confirmAction}
               >
-                {confirmation === "delete" ? "Delete Lead" : "Convert to Customer"}
+                Convert to Customer
               </button>
             </div>
           </section>

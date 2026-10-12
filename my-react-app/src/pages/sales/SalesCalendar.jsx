@@ -5,6 +5,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Pencil, Plus, Trash2, X } from "lucide-react";
+import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import { getLeadContactName, useSalesData } from "../../components/sales/SalesDataContext.jsx";
 import { salesCalendarEvents } from "../../data/salesCalendarData.js";
 import "./SalesCalendar.css";
@@ -177,7 +178,7 @@ function SalesCalendar() {
           </div>
           <div className="sales-calendar-grid">
             <FullCalendar
-              plugins={plugins} initialView="timeGridWeek" initialDate="2026-10-09" headerToolbar={false} height="auto" allDaySlot
+              plugins={plugins} initialView="dayGridMonth" initialDate="2026-10-09" headerToolbar={false} height="auto" allDaySlot
               nowIndicator
               selectable
               selectMirror
@@ -279,14 +280,7 @@ function SalesCalendar() {
         </div>
       )}
 
-      {deleteConfirmation && selectedEvent && (
-        <div className="sales-calendar-backdrop sales-calendar-confirm-backdrop">
-          <section className="sales-calendar-confirm" role="alertdialog" aria-modal="true" aria-labelledby="sales-calendar-delete-title">
-            <h2 id="sales-calendar-delete-title">Delete this event?</h2><p>“{selectedEvent.title}” will be removed from your calendar.</p>
-            <div className="sales-calendar-dialog-actions"><button type="button" className="sales-calendar-secondary-button" onClick={() => setDeleteConfirmation(false)}>Cancel</button><button type="button" className="sales-calendar-delete-confirm" onClick={deleteEvent}>Delete event</button></div>
-          </section>
-        </div>
-      )}
+      {deleteConfirmation && selectedEvent && <ConfirmDialog title="Delete this event?" message={`“${selectedEvent.title}” will be removed from your calendar.`} onCancel={() => setDeleteConfirmation(false)} onConfirm={deleteEvent} confirmLabel="Delete event" />}
     </div>
   );
 }

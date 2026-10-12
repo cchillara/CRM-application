@@ -10,6 +10,11 @@ import SalesLeadDetails from "./pages/sales/SalesLeadDetails.jsx";
 import SalesCustomers from "./pages/sales/SalesCustomers.jsx";
 import SalesTasks from "./pages/sales/SalesTasks.jsx";
 import SalesCalendar from "./pages/sales/SalesCalendar.jsx";
+import SalesNotes from "./pages/sales/SalesNotes.jsx";
+import SalesProducts from "./pages/sales/SalesProducts.jsx";
+import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
+import SalesNotifications from "./pages/sales/SalesNotifications.jsx";
+import SalesProfile from "./pages/sales/SalesProfile.jsx";
 
 function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -593,6 +598,11 @@ function App() {
           <Route path="/customers" element={<SalesCustomers />} />
           <Route path="/tasks" element={<SalesTasks />} />
           <Route path="/calendar" element={<SalesCalendar />} />
+          <Route path="/notes" element={<SalesNotes />} />
+          <Route path="/products" element={<SalesProducts />} />
+          <Route path="/analytics" element={<SalesAnalytics />} />
+          <Route path="/notifications" element={<SalesNotifications />} />
+          <Route path="/profile" element={<SalesProfile />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -118,19 +118,12 @@
   background: var(--bg-card-subtle, var(--background));
 }
 
-.sales-lead-confirm-delete {
-  border-color: var(--red-accent, #b42318) !important;
-  background: var(--red-accent, #b42318);
-  color: var(--white);
-}
-
 .sales-lead-confirm-convert {
   border-color: var(--blue-primary, var(--blue)) !important;
   background: var(--blue-primary, var(--blue));
   color: var(--white);
 }
 
-.sales-lead-confirm-delete:hover,
 .sales-lead-confirm-convert:hover {
   filter: brightness(0.94);
 }

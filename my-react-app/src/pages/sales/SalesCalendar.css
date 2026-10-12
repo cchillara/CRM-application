@@ -19,8 +19,7 @@
 .sales-calendar-header p { margin: 5px 0 0; color: var(--text-muted, var(--body)); font-size: 14px; }
 .sales-calendar-primary-button,
 .sales-calendar-secondary-button,
-.sales-calendar-delete-button,
-.sales-calendar-delete-confirm {
+.sales-calendar-delete-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -88,9 +87,9 @@
 .sales-calendar-agenda-copy strong { overflow: hidden; color: var(--text-main, var(--heading)); font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .sales-calendar-empty { margin: 12px 0 2px; padding: 14px 0; border-top: 1px solid var(--border-light, var(--border)); color: var(--text-muted, var(--body)); font-size: 12px; }
 .sales-calendar-backdrop { position: fixed; z-index: 1100; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 20, 28, .42); }
-.sales-calendar-dialog, .sales-calendar-confirm { width: min(100%, 520px); max-height: min(90vh, 800px); overflow-y: auto; padding: 24px; border: 1px solid var(--border-light, var(--border)); border-radius: var(--radius-md, 10px); background: var(--bg-card, var(--white)); box-shadow: var(--shadow-card, var(--shadow-sm)); }
+.sales-calendar-dialog { width: min(100%, 520px); max-height: min(90vh, 800px); overflow-y: auto; padding: 24px; border: 1px solid var(--border-light, var(--border)); border-radius: var(--radius-md, 10px); background: var(--bg-card, var(--white)); box-shadow: var(--shadow-card, var(--shadow-sm)); }
 .sales-calendar-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 21px; }
-.sales-calendar-dialog-heading h2, .sales-calendar-confirm h2 { margin: 0; color: var(--text-main, var(--heading)); font-size: 19px; font-weight: 600; }
+.sales-calendar-dialog-heading h2 { margin: 0; color: var(--text-main, var(--heading)); font-size: 19px; font-weight: 600; }
 .sales-calendar-dialog-heading p { margin: 5px 0 0; color: var(--text-muted, var(--body)); font-size: 13px; }
 .sales-calendar-icon-button { flex: 0 0 34px; padding: 0; border-color: transparent; }
 .sales-calendar-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -114,11 +113,6 @@
 .sales-calendar-detail-actions { justify-content: space-between; margin-top: 13px; }
 .sales-calendar-delete-button { border-color: transparent; background: transparent; color: #b42318; }
 .sales-calendar-delete-button:hover { background: #fff1f0; }
-.sales-calendar-confirm-backdrop { z-index: 1110; }
-.sales-calendar-confirm { width: min(100%, 400px); }
-.sales-calendar-confirm p { margin: 10px 0 22px; color: var(--text-muted, var(--body)); font-size: 13px; line-height: 1.5; }
-.sales-calendar-delete-confirm { border-color: #b42318; background: #b42318; }
-.sales-calendar-delete-confirm:hover { filter: brightness(.94); }
 
 @media (max-width: 1100px) {
   .sales-calendar-layout { grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; }
@@ -145,5 +139,5 @@
   .sales-calendar-grid .fc .fc-timegrid-slot { height: 2em; }
   .sales-calendar-agenda-list { grid-template-columns: 1fr; }
   .sales-calendar-form-row { grid-template-columns: 1fr; gap: 0; }
-  .sales-calendar-dialog, .sales-calendar-confirm { padding: 19px; }
+  .sales-calendar-dialog { padding: 19px; }
 }

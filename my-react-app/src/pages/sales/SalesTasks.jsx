@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Ellipsis, Search, Trash2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
+import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import TaskForm from "../../components/sales/TaskForm.jsx";
@@ -40,6 +41,7 @@ function SalesTasks() {
   const [dueDateFilter, setDueDateFilter] = useState("ALL");
   const [openMenuTaskId, setOpenMenuTaskId] = useState(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
   const relatedOptions = [
     ...leads.map((lead) => ({ id: lead.id, type: "Lead", name: getLeadContactName(lead) })),
     ...customers.map((customer) => ({ id: customer.id, type: "Customer", name: customer.name })),
@@ -57,9 +59,10 @@ function SalesTasks() {
     );
   };
 
-  const handleDeleteTask = (taskId) => {
-    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+  const handleDeleteTask = () => {
+    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskToDelete.id));
     setOpenMenuTaskId(null);
+    setTaskToDelete(null);
   };
 
   const filteredTasks = useMemo(() => {
@@ -211,7 +214,7 @@ function SalesTasks() {
                         className="sales-tasks-delete-action"
                         type="button"
                         role="menuitem"
-                        onClick={() => handleDeleteTask(task.id)}
+                        onClick={() => { setTaskToDelete(task); setOpenMenuTaskId(null); }}
                       >
                         <Trash2 size={15} strokeWidth={1.8} />
                         Delete
@@ -225,6 +228,7 @@ function SalesTasks() {
         </DataTable>
       </section>
       {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} relatedOptions={relatedOptions} onSubmit={(values) => { setTasks((currentTasks) => [{ id: `task-${Date.now()}`, ...values, status: "TODO" }, ...currentTasks]); setShowTaskForm(false); }} />}
+      {taskToDelete && <ConfirmDialog title="Delete task?" message={`Are you sure you want to delete “${taskToDelete.title}”? This action cannot be undone.`} onCancel={() => setTaskToDelete(null)} onConfirm={handleDeleteTask} />}
     </div>
   );
 }
