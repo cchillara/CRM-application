@@ -1,5 +1,4 @@
 .sales-profile-page {
-  min-height: 100vh;
   padding: 28px;
   overflow-x: clip;
   background: var(--bg-main, var(--background));
@@ -12,7 +11,7 @@
 .sales-profile-page-heading p { margin: 5px 0 0; color: var(--text-muted, var(--body)); font-size: 14px; }
 
 .sales-profile-card {
-  width: min(100%, 900px);
+  width: 100%;
   overflow: hidden;
   border: 1px solid var(--border-light, var(--border));
   border-radius: var(--radius-md, 10px);
@@ -25,8 +24,8 @@
 .sales-profile-identity { min-width: 0; }
 .sales-profile-identity h2 { overflow: hidden; margin: 0; color: var(--text-main, var(--heading)); font-size: 18px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .sales-profile-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-.sales-profile-organization-name { color: var(--text-muted, var(--body)); font-size: 12px; }
-.sales-profile-identity p { overflow: hidden; margin: 4px 0 0; color: var(--text-muted, var(--body)); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.sales-profile-organization-name { min-width: 0; color: var(--text-muted, var(--body)); font-size: 12px; overflow-wrap: anywhere; }
+.sales-profile-identity p { margin: 4px 0 0; color: var(--text-muted, var(--body)); font-size: 12px; overflow-wrap: anywhere; }
 .sales-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .sales-profile-edit,
 .sales-profile-password-button { min-height: 38px; padding: 0 13px; border: 1px solid var(--border-light, var(--border)); border-radius: var(--radius-sm, 6px); font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
@@ -35,25 +34,37 @@
 .sales-profile-password-button { background: var(--bg-card, var(--white)); color: var(--text-main, var(--heading)); }
 .sales-profile-password-button:hover { background: var(--bg-card-subtle, var(--background)); }
 
-.sales-profile-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 22px 24px 26px; }
-.sales-profile-information { padding: 18px; }
-.sales-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
-.sales-profile-unavailable { margin: 0; color: var(--text-muted, var(--body)); font-size: 13px; }
+.sales-profile-sections { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 16px; }
+.sales-profile-sections .sales-profile-information { min-width: 0; padding: 19px 20px; }
+.sales-profile-information .detail-section-title { margin-bottom: 16px; }
+.sales-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; }
+.sales-profile-information:last-child .sales-profile-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sales-profile-security { display: flex; align-items: center; gap: 13px; width: 100%; margin-top: 16px; padding: 17px 19px; border: 1px solid var(--border-light, var(--border)); border-radius: var(--radius-md, 10px); background: var(--bg-card, var(--white)); box-shadow: var(--shadow-card, var(--shadow-sm)); }
+.sales-profile-security-icon { display: flex; flex: 0 0 38px; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: var(--radius-sm, 6px); background: var(--bg-card-subtle, var(--background)); color: var(--blue-primary, var(--blue)); }
+.sales-profile-security-copy { min-width: 0; }
+.sales-profile-security-copy h2 { margin: 0; color: var(--text-main, var(--heading)); font-size: 14px; font-weight: 600; }
+.sales-profile-security-copy p { margin: 4px 0 0; color: var(--text-muted, var(--body)); font-size: 12px; }
+.sales-profile-security > button { margin-left: auto; }
+.sales-profile-password-button { white-space: nowrap; }
 .sales-profile-message { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #cbe8d6; border-radius: var(--radius-sm, 6px); background: #eaf5ef; color: var(--green-accent, #16845b); font-size: 12px; line-height: 1.5; }
 .sales-profile-password-notice { margin-top: 12px; border-color: var(--border-light, var(--border)); background: var(--bg-card-subtle, var(--background)); color: var(--text-muted, var(--body)); }
 
-@media (max-width: 740px) {
+@media (max-width: 900px) {
   .sales-profile-page { padding: 22px 16px; }
   .sales-profile-page-heading h1 { font-size: 25px; }
   .sales-profile-header { align-items: flex-start; flex-wrap: wrap; padding: 20px; }
   .sales-profile-actions { width: 100%; margin-left: 0; }
-  .sales-profile-sections { grid-template-columns: 1fr; padding: 18px; }
+  .sales-profile-sections { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
   .sales-profile-header { gap: 13px; }
   .sales-profile-avatar { flex-basis: 54px; width: 54px; height: 54px; }
+  .sales-profile-identity h2 { font-size: 19px; }
   .sales-profile-actions button { flex: 1; }
-  .sales-profile-information { padding: 16px; }
+  .sales-profile-sections .sales-profile-information { padding: 17px; }
   .sales-profile-fields { grid-template-columns: 1fr; gap: 16px; }
+  .sales-profile-information:last-child .sales-profile-fields { grid-template-columns: 1fr; }
+  .sales-profile-security { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; }
+  .sales-profile-security > button { grid-column: 1 / -1; width: 100%; margin-left: 0; }
 }

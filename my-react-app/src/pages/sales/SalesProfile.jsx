@@ -1,82 +1,51 @@
-import { useEffect, useState } from "react";
-import { UserRound } from "lucide-react";
-import { onAuthStateChanged } from "firebase/auth";
+import { useState } from "react";
+import { LockKeyhole, UserRound } from "lucide-react";
 import FormModal from "../../components/common/FormModal.jsx";
 import DetailSection from "../../components/common/DetailSection.jsx";
 import DetailField from "../../components/common/DetailField.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
-import { auth } from "../../firebase.js";
 import "./SalesProfile.css";
 
+const mockProfile = {
+  firstName: "Subham",
+  lastName: "Sharma",
+  email: "subham@acmesolutions.example",
+  phone: "+91 98765 43210",
+  role: "Sales Executive",
+  organizationName: "Acme Solutions Pvt. Ltd.",
+  organizationEmail: "contact@acmesolutions.example",
+  organizationPhone: "+91 44 4000 1234",
+  organizationWebsite: "https://acmesolutions.example",
+  team: "Sales Team",
+  accountStatus: "Active",
+  accountCreated: "2026-03-15T00:00:00.000Z",
+  lastUpdated: "2026-10-06T00:00:00.000Z",
+};
+
 function SalesProfile() {
-  const [user, setUser] = useState(auth.currentUser);
-  const [profile, setProfile] = useState({ firstName: "", lastName: "", phone: "" });
-  const [profileValues, setProfileValues] = useState({ firstName: "", lastName: "", phone: "" });
+  const [profile, setProfile] = useState(mockProfile);
+  const [profileValues, setProfileValues] = useState({ firstName: mockProfile.firstName, lastName: mockProfile.lastName, phone: mockProfile.phone });
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
-  const [accountDetails, setAccountDetails] = useState(null);
-  const [detailsLoading, setDetailsLoading] = useState(true);
   const [passwordValues, setPasswordValues] = useState({ current: "", next: "", confirm: "" });
   const [passwordError, setPasswordError] = useState(null);
   const [passwordMessage, setPasswordMessage] = useState("");
 
-  useEffect(() => onAuthStateChanged(auth, async (currentUser) => {
-    setUser(currentUser);
-    const nameParts = (currentUser?.displayName || "").trim().split(/\s+/).filter(Boolean);
-    setProfile({
-      firstName: nameParts[0] || "",
-      lastName: nameParts.slice(1).join(" "),
-      phone: currentUser?.phoneNumber || "",
-    });
-    setAccountDetails(null);
-    if (!currentUser) {
-      setDetailsLoading(false);
-      return;
-    }
-    setDetailsLoading(true);
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch("http://localhost:5000/api/v1/auth/protected", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Profile information is unavailable.");
-      const data = result.data;
-      setAccountDetails({
-        firstName: data.firstName || "",
-        lastName: data.lastName || "",
-        role: data.role || "",
-        status: data.status || "",
-        createdAt: data.createdAt || "",
-        updatedAt: data.updatedAt || "",
-        organization: data.organization ? {
-          name: data.organization.name || "",
-          email: data.organization.email || "",
-          phone: data.organization.phone || "",
-          website: data.organization.website || "",
-        } : null,
-      });
-      setProfile((currentProfile) => ({
-        ...currentProfile,
-        firstName: data.firstName || currentProfile.firstName,
-        lastName: data.lastName || currentProfile.lastName,
-      }));
-    } catch {
-      setAccountDetails(null);
-    } finally {
-      setDetailsLoading(false);
-    }
-  }), []);
-
-  const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Not available";
-  const initials = [profile.firstName[0], profile.lastName[0]].filter(Boolean).join("").toUpperCase();
-  const displayRole = "Sales Executive";
+  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+  const initials = `${profile.firstName[0] || ""}${profile.lastName[0] || ""}`.toUpperCase();
   const formatDate = (value) => {
-    if (!value) return "Not available";
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "Not available" : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    return value && !Number.isNaN(date.getTime())
+      ? date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+      : "Not available";
+  };
+
+  const openPasswordForm = () => {
+    setPasswordError(null);
+    setPasswordMessage("");
+    setShowPasswordForm(true);
   };
 
   const closePasswordForm = () => {
@@ -92,12 +61,7 @@ function SalesProfile() {
       setProfileError("First name is required.");
       return;
     }
-    setProfile((currentProfile) => ({
-      ...currentProfile,
-      firstName: profileValues.firstName.trim(),
-      lastName: profileValues.lastName.trim(),
-      phone: profileValues.phone.trim(),
-    }));
+    setProfile({ ...profile, firstName: profileValues.firstName.trim(), lastName: profileValues.lastName.trim(), phone: profileValues.phone.trim() });
     setProfileError("");
     setShowProfileForm(false);
     setProfileMessage("Profile preview updated for this session only. Changes are not saved permanently.");
@@ -128,64 +92,70 @@ function SalesProfile() {
     <div className="sales-profile-page">
       <header className="sales-profile-page-heading">
         <h1>My Profile</h1>
-        <p>View and manage your personal information.</p>
+        <p>Manage your personal information, work details and account security.</p>
       </header>
 
       {profileMessage && <p className="sales-profile-message" role="status">{profileMessage}</p>}
 
       <section className="sales-profile-card" aria-label="My profile">
         <div className="sales-profile-header">
-          <div className="sales-profile-avatar">{initials || <UserRound size={27} strokeWidth={1.7} />}</div>
+          <div className="sales-profile-avatar">{initials || <UserRound size={30} strokeWidth={1.7} />}</div>
           <div className="sales-profile-identity">
             <h2>{fullName}</h2>
             <div className="sales-profile-badges">
-              <StatusBadge status={displayRole} variant="info" />
-              {accountDetails?.organization?.name && <span className="sales-profile-organization-name">{accountDetails.organization.name}</span>}
+              <StatusBadge status={profile.role} variant="info" />
+              <span className="sales-profile-organization-name">{profile.organizationName}</span>
+              <StatusBadge status={profile.accountStatus} variant="success" />
             </div>
-            <p>{user?.email || "Not available"}</p>
+            <p>{profile.email}</p>
           </div>
           <div className="sales-profile-actions">
-            <button className="sales-profile-edit" type="button" onClick={() => { setProfileValues({ ...profile }); setProfileError(""); setProfileMessage(""); setShowProfileForm(true); }}>Edit Profile</button>
-            <button className="sales-profile-password-button" type="button" onClick={() => { setPasswordError(null); setPasswordMessage(""); setShowPasswordForm(true); }}>Update Password</button>
+            <button className="sales-profile-edit" type="button" onClick={() => { setProfileValues({ firstName: profile.firstName, lastName: profile.lastName, phone: profile.phone }); setProfileError(""); setProfileMessage(""); setShowProfileForm(true); }}>Edit Profile</button>
           </div>
         </div>
+      </section>
 
-        <div className="sales-profile-sections">
+      <div className="sales-profile-sections">
           <DetailSection title="Personal Information" className="sales-profile-information">
             <div className="sales-profile-fields">
-              <DetailField label="First Name" value={profile.firstName} emptyValue="Not available" />
-              <DetailField label="Last Name" value={profile.lastName} emptyValue="Not available" />
-              <DetailField label="Email Address" value={user?.email} emptyValue="Not available" />
-              <DetailField label="Phone Number" value={profile.phone} emptyValue="Not available" />
+              <DetailField label="First Name" value={profile.firstName} />
+              <DetailField label="Last Name" value={profile.lastName} />
+              <DetailField label="Work Email" value={profile.email} />
+              <DetailField label="Phone Number" value={profile.phone} />
             </div>
           </DetailSection>
 
           <DetailSection title="Organisation Information" className="sales-profile-information">
-            {detailsLoading ? <p className="sales-profile-unavailable">Loading organisation information…</p> : accountDetails?.organization ? (
-              <div className="sales-profile-fields">
-                <DetailField label="Organisation Name" value={accountDetails.organization.name} emptyValue="Not available" />
-                <DetailField label="Official Email" value={accountDetails.organization.email} emptyValue="Not available" />
-                <DetailField label="Contact Phone" value={accountDetails.organization.phone} emptyValue="Not available" />
-                <DetailField label="Website" value={accountDetails.organization.website} emptyValue="Not available" />
-              </div>
-            ) : <p className="sales-profile-unavailable">Organisation information is not available.</p>}
+            <div className="sales-profile-fields">
+              <DetailField label="Organisation Name" value={profile.organizationName} />
+              <DetailField label="Organisation Email" value={profile.organizationEmail} />
+              <DetailField label="Organisation Phone" value={profile.organizationPhone} />
+              <DetailField label="Organisation Website" value={profile.organizationWebsite} />
+            </div>
           </DetailSection>
 
-          <DetailSection title="Work and Team Information" className="sales-profile-information">
+          <DetailSection title="Work & Team Information" className="sales-profile-information">
             <div className="sales-profile-fields">
-              <DetailField label="Role" value={displayRole} />
-              <DetailField label="Account Status" value={accountDetails?.status ? <StatusBadge status={accountDetails.status} variant={accountDetails.status === "ACTIVE" ? "success" : "neutral"} /> : null} emptyValue={detailsLoading ? "Loading…" : "Not available"} />
-              <DetailField label="Team" value={detailsLoading ? "Loading…" : "Not available"} />
+              <DetailField label="Role" value={profile.role} />
+              <DetailField label="Team" value={profile.team} />
             </div>
           </DetailSection>
 
           <DetailSection title="Account Information" className="sales-profile-information">
             <div className="sales-profile-fields">
-              <DetailField label="Account Created" value={formatDate(accountDetails?.createdAt)} />
-              <DetailField label="Last Updated" value={formatDate(accountDetails?.updatedAt)} />
+              <DetailField label="Account Status" value={<StatusBadge status={profile.accountStatus} variant="success" />} />
+              <DetailField label="Member Since" value={formatDate(profile.accountCreated)} />
+              <DetailField label="Last Updated" value={formatDate(profile.lastUpdated)} />
             </div>
           </DetailSection>
-          </div>
+      </div>
+      <section className="sales-profile-security" aria-label="Password and security">
+        <div className="sales-profile-security-icon"><LockKeyhole size={18} /></div>
+        <div className="sales-profile-security-copy">
+          <h2>Password &amp; Security</h2>
+          <p>Keep your account secure.</p>
+        </div>
+        <button className="sales-profile-password-button" type="button" onClick={openPasswordForm}>Update Password</button>
       </section>
 
       {showProfileForm && (
