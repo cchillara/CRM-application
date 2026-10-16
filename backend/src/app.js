@@ -5,6 +5,7 @@ import authRouter from "./routes/auth.routes.js";
 import superAdminRouter from "./routes/superAdmin.routes.js";
 import { errorHandler } from "./middleware/errormiddleware.js";
 import clientAdminRouter from "./routes/clientAdmin.routes.js";
+import salesRouter from "./routes/sales.routes.js";
 
 const app = express();
 
@@ -27,19 +28,12 @@ app.get("/health", (req, res) => {
 });
 
 
-app.use(
-  "/api/v1/auth",
-  authRouter
-);
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/super-admin", superAdminRouter);
+app.use("/api/v1/client-admin",clientAdminRouter);
+app.use("/api/v1/sales", salesRouter);
 
 app.use(errorHandler);
-
-
-app.use(
-  "/api/v1/client-admin",
-  clientAdminRouter
-);
 
 
 export default app;

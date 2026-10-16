@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Auth.css";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
 function Login() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -29,8 +31,6 @@ function Login() {
             const idToken =
                 await userCredential.user.getIdToken();
 
-            console.log("Firebase ID Token:", idToken);
-
             const response = await fetch(
                 "http://localhost:5000/api/v1/auth/protected",
                 {
@@ -51,9 +51,15 @@ function Login() {
                 );
             }
 
-            console.log("Backend response:", data);
+            const role = data?.data?.role;
 
-            alert("Login successful!");
+            if (role === "SALES") {
+                navigate("/dashboard", { replace: true });
+            } else if (role === "ORGANIZATION_ADMIN" || role === "MANAGER") {
+                alert("Login successful!");
+            } else {
+                throw new Error("Your account profile is missing a supported role.");
+            }
         } catch (error) {
             console.error(error);
 
