@@ -1,10 +1,17 @@
-class ApiResponse{
-    constructor( statusCode = 200,errors=[],data=null, message = 'Success', ) {
+
+class ApiResponse {
+    constructor(
+        statusCode = 200,
+        errors = [],
+        data = null,
+        message = "Success"
+    ) {
         this.statusCode = statusCode;
         this.message = message;
         this.data = data;
         this.success = statusCode >= 200 && statusCode < 300;
-        this.errors = errors;
+        this.errors = Array.isArray(errors) ? errors : [];
     }
 }
-export {ApiResponse}
+
+export { ApiResponse };

@@ -1,39 +1,59 @@
-import { initializeApp, cert } from "firebase-admin/app";
+
+import "dotenv/config";
+
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import dotenv from "dotenv";
-import fs from "fs";
 
-dotenv.config();
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 
-let authInstance;
+const configuredPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 
-const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-
-if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
-  try {
-    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
-    authInstance = getAuth();
-    console.log("Firebase Admin initialized successfully");
-  } catch (err) {
-    console.warn("Failed to initialize Firebase Admin with service account:", err.message);
-  }
-} else {
-  console.warn(
-    `[Firebase Admin] Notice: Service account file not found at "${serviceAccountPath}". Dev auth fallback mode is active.`
+if (!configuredPath) {
+  throw new Error(
+    "FIREBASE_SERVICE_ACCOUNT_PATH is missing from the backend environment"
   );
-  authInstance = {
-    verifyIdToken: async (token) => {
-      // In dev mode, return dummy token payload or allow passing uid directly
-      return {
-        uid: token && token !== "undefined" ? token : "dev-client-admin",
-        email: "admin@client.com",
-        role: "ORGANIZATION_ADMIN",
-      };
-    },
-  };
 }
 
-export const auth = authInstance;
+const serviceAccountPath = path.isAbsolute(configuredPath)
+  ? configuredPath
+  : path.resolve(currentDirectory, configuredPath);
+
+if (!fs.existsSync(serviceAccountPath)) {
+  throw new Error(
+    `Firebase service account file was not found: ${serviceAccountPath}`
+  );
+}
+
+let serviceAccount;
+
+try {
+  serviceAccount = JSON.parse(
+    fs.readFileSync(serviceAccountPath, "utf8")
+  );
+} catch {
+  throw new Error(
+    "Firebase service account file is not valid JSON"
+  );
+}
+
+if (
+  !serviceAccount.project_id ||
+  !serviceAccount.client_email ||
+  !serviceAccount.private_key
+) {
+  throw new Error(
+    "Firebase service account configuration is incomplete"
+  );
+}
+
+const firebaseApp = getApps().length
+  ? getApp()
+  : initializeApp({
+    credential: cert(serviceAccount),
+  });
+
+export const auth = getAuth(firebaseApp);

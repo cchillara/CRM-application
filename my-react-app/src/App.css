@@ -75,37 +75,25 @@ button {
 
 .navbar {
   height: 76px;
-
   padding: 0 7%;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   gap: 30px;
-
   background: rgba(15, 20, 28, 0.97);
-
-  border-bottom: 1px solid #1D2530;
-
+  border-bottom: 1px solid #2b3544;
   position: sticky;
   top: 0;
   z-index: 100;
-
   backdrop-filter: blur(14px);
 }
 
 .logo {
-  color: #0F141C;
-
+  color: #ffffff;
   font-size: 24px;
   font-weight: 800;
-
   letter-spacing: -0.8px;
-
-  transition:
-    transform 0.25s ease,
-    color 0.25s ease;
+  transition: transform 0.25s ease, color 0.25s ease;
 }
 
 .logo span {
@@ -128,22 +116,13 @@ button {
 
 .navbar nav a {
   position: relative;
-
   display: inline-block;
-
-  color: #202833;
-
+  color: #f3f4f6;
   font-size: 14px;
   font-weight: 500;
-
   letter-spacing: 0;
-
   padding: 8px 0;
-
-  transition:
-    color 0.25s ease,
-    transform 0.25s ease,
-    font-weight 0.25s ease;
+  transition: color 0.25s ease, transform 0.25s ease;
 }
 
 /* Animated underline */
@@ -172,10 +151,7 @@ button {
 
 .navbar nav a:hover {
   color: var(--red);
-
-  transform: translateY(-2px) scale(1.04);
-
-  font-weight: 600;
+  transform: translateY(-2px);
 }
 
 .navbar nav a:hover::after {
@@ -194,21 +170,15 @@ button {
 
 .nav-login {
   display: inline-block;
-
-  color: #0F141C;
-
+  color: #ffffff;
   font-size: 14px;
   font-weight: 600;
-
-  transition:
-    color 0.25s ease,
-    transform 0.25s ease;
+  transition: color 0.25s ease, transform 0.25s ease;
 }
 
 .nav-login:hover {
   color: var(--red);
-
-  transform: translateY(-2px) scale(1.04);
+  transform: translateY(-2px);
 }
 
 .nav-cta {
@@ -1931,4 +1901,13 @@ footer {
   .footer-main {
     grid-template-columns: 1fr;
   }
+}
+
+
+
+.navbar nav a:focus-visible,
+.nav-login:focus-visible,
+.nav-cta:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 4px;
 }
