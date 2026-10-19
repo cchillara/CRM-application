@@ -19,35 +19,24 @@ const getProtectedProfile = asyncHandler(async (req, res) => {
 });
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, organizationId, role } = req.body;
+  const { firstName, lastName } = req.body;
 
   const firebaseUid = req.user?.uid;
   const email = req.user?.email;
+
+  if (!firebaseUid) {
+    throw new ApiError(401, "Firebase authentication is required");
+  }
 
   if (!email) {
     throw new ApiError(400, "Email is required");
   }
 
-  if (!firstName) {
+  if (!firstName || !firstName.trim()) {
     throw new ApiError(400, "First name is required");
   }
 
-  if (!organizationId) {
-    throw new ApiError(400, "Organization ID is required for registration");
-  }
-
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
-  });
-
-  if (!organization) {
-    throw new ApiError(404, "Organization not found");
-  }
-
-  if (organization.status !== "ACTIVE") {
-    throw new ApiError(403, "Cannot register under a non-active organization");
-  }
-
+  // Check whether this Firebase user already exists.
   const existingUser = await prisma.user.findUnique({
     where: { firebaseUid },
   });
@@ -56,19 +45,22 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User already exists");
   }
 
+  // Organization is optional.
   const user = await prisma.user.create({
     data: {
       firebaseUid,
       email,
-      firstName,
-      lastName: lastName || null,
+      firstName: firstName.trim(),
+      lastName: lastName?.trim() || null,
       organizationId: null,
     },
   });
 
   return res
     .status(201)
-    .json(new ApiResponse(201, user, "User registered successfully"));
+    .json(
+      new ApiResponse(201, user, "User registered successfully"),
+    );
 });
 
 export { getProtectedProfile, registerUser };

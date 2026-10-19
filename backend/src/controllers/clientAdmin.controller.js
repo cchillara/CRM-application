@@ -1276,3 +1276,420 @@ export const updateSettings = async (req, res) => {
 };
 
 
+
+
+
+
+
+/* ==========================================================================
+   Users Management CRUD
+   ========================================================================== */
+
+export const listUsers = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const users = await prisma.user.findMany({
+            where: {
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true
+            },
+            orderBy: { createdAt: "desc" }
+        });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], users, "Users retrieved successfully")
+        );
+    } catch (error) {
+        console.error("List users error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve users")
+        );
+    }
+};
+
+export const getUser = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, [], user, "User retrieved successfully")
+        );
+    } catch (error) {
+        console.error("Get user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve user")
+        );
+    }
+};
+
+export const createUser = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const {
+            name,
+            firstName,
+            lastName,
+            email,
+            role = "SALES",
+            status = "ACTIVE"
+        } = req.body;
+
+        if (!email || typeof email !== "string") {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Email is required" }], null, "Email is required")
+            );
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const existing = await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        });
+
+        if (existing) {
+            return res.status(409).json(
+                new ApiResponse(409, [{ message: "Email already exists" }], null, "Email already exists")
+            );
+        }
+
+        let fName = firstName || "";
+        let lName = lastName || "";
+
+        if (name && !firstName) {
+            const parts = name.trim().split(/\s+/);
+            fName = parts[0] || "";
+            lName = parts.slice(1).join(" ");
+        }
+
+        const allowedRoles = ["SALES", "MANAGER"];
+        const allowedStatuses = ["ACTIVE", "INACTIVE", "INVITED"];
+
+        if (!allowedRoles.includes(role)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid role" }], null, "Invalid role")
+            );
+        }
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid status" }], null, "Invalid status")
+            );
+        }
+
+        if (!result.user.organizationId) {
+            return res.status(403).json(
+                new ApiResponse(
+                    403,
+                    [{ message: "Organization Admin is not assigned to an organization" }],
+                    null,
+                    "Organization Admin is not assigned to an organization"
+                )
+            );
+        }
+
+        const user = await prisma.user.create({
+            data: {
+                firebaseUid: `pending-${crypto.randomUUID()}`,
+                email: normalizedEmail,
+                firstName: fName,
+                lastName: lName,
+                role,
+                status,
+                organizationId: result.user.organizationId
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                createdAt: true
+            }
+        });
+
+        return res.status(201).json(
+            new ApiResponse(201, [], user, "User created successfully")
+        );
+    } catch (error) {
+        console.error("Create user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to create user")
+        );
+    }
+};
+
+export const updateUser = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const { id } = req.params;
+        const { name, firstName, lastName, email, role, status } = req.body;
+
+        const target = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            }
+        });
+
+        if (!target) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        if (
+            target.id === result.user.id ||
+            ["ADMIN", "SUPER_ADMIN", "ORGANIZATION_ADMIN"].includes(target.role)
+        ) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: "This account cannot be modified here" }], null, "Modification disallowed")
+            );
+        }
+
+        let fName = firstName;
+        let lName = lastName;
+
+        if (name !== undefined && firstName === undefined) {
+            const parts = name.trim().split(/\s+/);
+            fName = parts[0] || "";
+            lName = parts.slice(1).join(" ");
+        }
+
+        if (role !== undefined && !["SALES", "MANAGER"].includes(role)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid role" }], null, "Invalid role")
+            );
+        }
+
+        if (status !== undefined && !["ACTIVE", "INACTIVE", "INVITED"].includes(status)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid status" }], null, "Invalid status")
+            );
+        }
+
+        const normalizedEmail =
+            email !== undefined ? email.trim().toLowerCase() : undefined;
+
+        if (normalizedEmail && normalizedEmail !== target.email) {
+            const existing = await prisma.user.findUnique({
+                where: { email: normalizedEmail }
+            });
+
+            if (existing) {
+                return res.status(409).json(
+                    new ApiResponse(409, [{ message: "Email already exists" }], null, "Email already exists")
+                );
+            }
+        }
+
+        const updated = await prisma.user.update({
+            where: { id },
+            data: {
+                ...(fName !== undefined && { firstName: fName }),
+                ...(lName !== undefined && { lastName: lName }),
+                ...(normalizedEmail !== undefined && { email: normalizedEmail }),
+                ...(role !== undefined && { role }),
+                ...(status !== undefined && { status })
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                updatedAt: true
+            }
+        });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], updated, "User updated successfully")
+        );
+    } catch (error) {
+        console.error("Update user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to update user")
+        );
+    }
+};
+
+export const updateUserStatus = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!["ACTIVE", "INACTIVE", "INVITED"].includes(status)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid status" }], null, "Invalid status")
+            );
+        }
+
+        const target = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            }
+        });
+
+        if (!target) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        if (
+            target.id === result.user.id ||
+            ["ADMIN", "SUPER_ADMIN", "ORGANIZATION_ADMIN"].includes(target.role)
+        ) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: "This account status cannot be changed here" }], null, "Status change disallowed")
+            );
+        }
+
+        const updated = await prisma.user.update({
+            where: { id },
+            data: { status },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                status: true,
+                updatedAt: true
+            }
+        });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], updated, "User status updated successfully")
+        );
+    } catch (error) {
+        console.error("Update user status error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to update user status")
+        );
+    }
+};
+
+export const deleteUser = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const { id } = req.params;
+
+        const target = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            }
+        });
+
+        if (!target) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        if (
+            target.id === result.user.id ||
+            ["ADMIN", "SUPER_ADMIN", "ORGANIZATION_ADMIN"].includes(target.role)
+        ) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: "This account cannot be deleted here" }], null, "Deletion disallowed")
+            );
+        }
+
+        await prisma.user.delete({ where: { id } });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], null, "User deleted successfully")
+        );
+    } catch (error) {
+        console.error("Delete user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to delete user")
+        );
+    }
+};
