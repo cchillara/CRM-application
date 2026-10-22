@@ -60,7 +60,19 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum CalendarEventType {
+  CALL
+  MEETING
+  FOLLOW_UP
+  TASK
+}
+
 enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CustomerStatus {
   ACTIVE
   INACTIVE
 }
@@ -95,6 +107,7 @@ model Organization {
   activities  Activity[]
   auditLogs   AuditLog[]
   products    Product[]
+  notifications Notification[]
 }
 
 model User {
@@ -118,8 +131,10 @@ model User {
   convertedLeads      Lead[]           @relation("LeadConvertedBy")
   assignedDeals       Deal[]           @relation("DealAssignedTo")
   assignedTasks       Task[]           @relation("TaskAssignedTo")
+  assignedCustomers   Customer[]       @relation("CustomerAssignedTo")
   performedActivities Activity[]       @relation("ActivityPerformedBy")
   auditLogs           AuditLog[]
+  notifications       Notification[]
 }
 
 model Team {
@@ -215,6 +230,24 @@ model Product {
   @@index([organizationId])
 }
 
+model Notification {
+  id                 String @id @default(uuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id])
+  userId             String
+  user               User @relation(fields: [userId], references: [id])
+  type               String
+  title              String
+  message            String
+  isRead             Boolean @default(false)
+  relatedEntityType  String?
+  relatedEntityId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([organizationId, userId, isRead, createdAt])
+}
+
 model Contact {
   id        String  @id @default(uuid())
   firstName String
@@ -277,8 +310,13 @@ model Lead {
 model Customer {
   id String @id @default(uuid())
 
+  status CustomerStatus @default(ACTIVE)
+
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
+
+  assignedToId String?
+  assignedTo   User? @relation("CustomerAssignedTo", fields: [assignedToId], references: [id])
 
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
@@ -293,6 +331,7 @@ model Customer {
 
   @@unique([organizationId, companyId])
   @@index([organizationId])
+  @@index([assignedToId])
   @@index([companyId])
 }
 
@@ -331,6 +370,8 @@ model Task {
 
   status  TaskStatus @default(TODO)
   dueDate DateTime?
+  endDate DateTime?
+  eventType CalendarEventType @default(TASK)
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])

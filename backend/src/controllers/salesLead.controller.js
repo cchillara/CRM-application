@@ -245,7 +245,7 @@ export const convertSalesLead = asyncHandler(async (req, res) => {
     const result = await prisma.$transaction(async (tx) => {
         const lead = await tx.lead.findFirst({
             where: { id: req.params.leadId, organizationId: req.organizationId },
-            select: { id: true, status: true, companyId: true, customerId: true },
+            select: { id: true, status: true, companyId: true, customerId: true, assignedToId: true },
         });
         if (!lead) throw new ApiError(404, "Lead not found");
         if (!lead.companyId) throw new ApiError(400, "Associate a company before converting this lead");
@@ -280,7 +280,11 @@ export const convertSalesLead = asyncHandler(async (req, res) => {
                     companyId: company.id,
                 },
             },
-            create: { organizationId: req.organizationId, companyId: company.id },
+            create: {
+                organizationId: req.organizationId,
+                companyId: company.id,
+                assignedToId: lead.assignedToId,
+            },
             update: {},
             select: { id: true, companyId: true },
         });

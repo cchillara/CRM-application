@@ -5,11 +5,27 @@ import { createSalesTask, deleteSalesTask, getSalesTasks, updateSalesTaskStatus 
 import { getAllNotes,createNotes,editNotes,deleteNotes } from "../controllers/salesNotes.controller.js";
 import { getSalesProductById, getSalesProducts } from "../controllers/salesProduct.controller.js";
 import { getSalesAnalytics } from "../controllers/salesAnalytics.controller.js";
+import { getSalesNotifications, getSalesUnreadNotificationCount, markAllSalesNotificationsAsRead, markSalesNotificationAsRead } from "../controllers/salesNotification.controller.js";
+import { createSalesCustomer, getSalesCustomerById, getSalesCustomers, updateSalesCustomer } from "../controllers/salesCustomer.controller.js";
+import { createSalesCalendarEvent, deleteSalesCalendarEvent, getSalesCalendarEventById, getSalesCalendarEvents, updateSalesCalendarEvent } from "../controllers/salesCalendar.controller.js";
 const router = Router();
 
 router.use(requireUser, requireOrganization, requireRoles("SALES"));
 
 router.get("/analytics", getSalesAnalytics);
+router.get("/calendar/events", getSalesCalendarEvents);
+router.get("/calendar/events/:taskId", getSalesCalendarEventById);
+router.post("/calendar/events", createSalesCalendarEvent);
+router.patch("/calendar/events/:taskId", updateSalesCalendarEvent);
+router.delete("/calendar/events/:taskId", deleteSalesCalendarEvent);
+router.get("/notifications", getSalesNotifications);
+router.get("/notifications/unread-count", getSalesUnreadNotificationCount);
+router.patch("/notifications/read-all", markAllSalesNotificationsAsRead);
+router.patch("/notifications/:notificationId/read", markSalesNotificationAsRead);
+router.get("/customers", getSalesCustomers);
+router.get("/customers/:customerId", getSalesCustomerById);
+router.post("/customers", createSalesCustomer);
+router.patch("/customers/:customerId", updateSalesCustomer);
 router.get("/leads", getSalesLeads);
 router.post("/leads", createSalesLead);
 router.get("/leads/:leadId", getSalesLeadById);
