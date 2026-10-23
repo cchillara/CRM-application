@@ -38,6 +38,20 @@
   box-shadow: var(--shadow-card, var(--shadow-sm));
 }
 
+.sales-tasks-error,
+.sales-tasks-loading {
+  margin: 14px 22px;
+  font-size: 13px;
+}
+
+.sales-tasks-error {
+  color: var(--red-accent, #b42318);
+}
+
+.sales-tasks-loading {
+  color: var(--text-muted, var(--body));
+}
+
 .sales-tasks-toolbar {
   display: flex;
   flex-direction: column;

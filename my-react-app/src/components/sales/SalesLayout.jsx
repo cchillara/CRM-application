@@ -3,14 +3,14 @@ import Sidebar from "./Sidebar";
 import { SalesDataProvider } from "./SalesDataContext.jsx";
 import "./SalesLayout.css";
 
-function SalesLayout() {
+function SalesLayout({ children }) {
   return (
     <SalesDataProvider>
       <div className="sales-layout">
         <Sidebar />
 
         <main className="sales-layout-content">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </SalesDataProvider>

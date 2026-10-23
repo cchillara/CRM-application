@@ -30,9 +30,19 @@ export const verifyFirebaseToken = async (req, res, next) => {
 };
 
 export const requireUser = async (req, res, next) => {
+  let decodedToken;
   try {
-    const decodedToken = await extractAndVerifyToken(req);
-    const user = await prisma.user.findUnique({
+    decodedToken = await extractAndVerifyToken(req);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(401, "Invalid or expired authentication token");
+  }
+
+  let user;
+  try {
+    user = await prisma.user.findUnique({
       where: {
         firebaseUid: decodedToken.uid,
       },
@@ -40,36 +50,34 @@ export const requireUser = async (req, res, next) => {
         organization: true,
       },
     });
-
-    if (!user) {
-      throw new ApiError(403, "CRM user is not registered");
-    }
-
-    if (user.status === "SUSPENDED") {
-      throw new ApiError(403, "User account is suspended");
-    }
-    if (user.status === "DEACTIVATED") {
-      throw new ApiError(403, "User account is deactivated");
-    }
-
-    if (user.organization) {
-      if (user.organization.status === "SUSPENDED") {
-        throw new ApiError(403, "Organization account is suspended");
-      }
-      if (user.organization.status === "DEACTIVATED") {
-        throw new ApiError(403, "Organization account is deactivated");
-      }
-    }
-
-    req.user = user;
-    req.organizationId = user.organizationId;
-    next();
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(401, "Invalid or expired authentication token");
+    console.error("Authenticated user lookup failed:", error);
+    throw new ApiError(500, "Unable to load authenticated user");
   }
+
+  if (!user) {
+    throw new ApiError(403, "CRM user is not registered");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new ApiError(403, "User account is suspended");
+  }
+  if (user.status === "DEACTIVATED") {
+    throw new ApiError(403, "User account is deactivated");
+  }
+
+  if (user.organization) {
+    if (user.organization.status === "SUSPENDED") {
+      throw new ApiError(403, "Organization account is suspended");
+    }
+    if (user.organization.status === "DEACTIVATED") {
+      throw new ApiError(403, "Organization account is deactivated");
+    }
+  }
+
+  req.user = user;
+  req.organizationId = user.organizationId;
+  next();
 };
 
 export const requireOrganization = (req, res, next) => {

@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import { Ellipsis, Search, Trash2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
 import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import TaskForm from "../../components/sales/TaskForm.jsx";
-import { getLeadContactName, useSalesData } from "../../components/sales/SalesDataContext.jsx";
-import { salesTasks } from "../../data/salesTasksData.js";
+import { auth } from "../../firebase.js";
 import "./SalesTasks.css";
 
 const taskTabs = [
@@ -24,6 +24,25 @@ const statusVariants = {
   CANCELLED: "danger",
 };
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
+
+function mapTask(task) {
+  const relatedTo = task.lead
+    ? { type: "Lead", name: task.lead.title }
+    : task.customer
+      ? { type: "Customer", name: task.customer.company.name }
+      : task.deal
+        ? { type: "Deal", name: task.deal.title }
+        : null;
+
+  return {
+    ...task,
+    dueDate: task.dueDate ? task.dueDate.slice(0, 10) : null,
+    relatedTo,
+  };
+}
+
 function getTodayString() {
   const today = new Date();
   const year = today.getFullYear();
@@ -34,35 +53,167 @@ function getTodayString() {
 }
 
 function SalesTasks() {
-  const { leads, customers } = useSalesData();
-  const [tasks, setTasks] = useState(salesTasks);
+  const [tasks, setTasks] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [activeTab, setActiveTab] = useState("ALL");
   const [search, setSearch] = useState("");
   const [dueDateFilter, setDueDateFilter] = useState("ALL");
   const [openMenuTaskId, setOpenMenuTaskId] = useState(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
-  const relatedOptions = [
-    ...leads.map((lead) => ({ id: lead.id, type: "Lead", name: getLeadContactName(lead) })),
-    ...customers.map((customer) => ({ id: customer.id, type: "Customer", name: customer.name })),
-    ...Array.from(new Set(salesTasks.filter((task) => task.relatedTo?.type === "Deal").map((task) => task.relatedTo.name)))
-      .map((name) => ({ id: `deal-${name}`, type: "Deal", name })),
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleTaskCompletion = (taskId, isCompleted) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId
-          ? { ...task, status: isCompleted ? "COMPLETED" : "TODO" }
-          : task
-      )
-    );
+  const fetchTaskPageData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      };
+      const [tasksResponse, leadsResponse, customersResponse] = await Promise.all([
+        fetch(`${SALES_API_URL}/tasks`, { headers }),
+        fetch(`${SALES_API_URL}/leads`, { headers }),
+        fetch(`${SALES_API_URL}/customers`, { headers }),
+      ]);
+      const [tasksResult, leadsResult, customersResult] = await Promise.all([
+        tasksResponse.json(),
+        leadsResponse.json(),
+        customersResponse.json(),
+      ]);
+
+      if (!tasksResponse.ok || tasksResult.success === false) {
+        throw new Error(tasksResult.message || "Unable to load tasks.");
+      }
+      if (!leadsResponse.ok || leadsResult.success === false) {
+        throw new Error(leadsResult.message || "Unable to load leads.");
+      }
+      if (!customersResponse.ok || customersResult.success === false) {
+        throw new Error(customersResult.message || "Unable to load customers.");
+      }
+
+      setTasks(Array.isArray(tasksResult.data) ? tasksResult.data.map(mapTask) : []);
+      setLeads(Array.isArray(leadsResult.data) ? leadsResult.data : []);
+      setCustomers(Array.isArray(customersResult.data) ? customersResult.data : []);
+    } catch (requestError) {
+      setTasks([]);
+      setLeads([]);
+      setCustomers([]);
+      setError(requestError.message || "Unable to load tasks.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => onAuthStateChanged(auth, (user) => {
+    if (user) {
+      fetchTaskPageData();
+    } else {
+      setTasks([]);
+      setLeads([]);
+      setCustomers([]);
+      setLoading(false);
+    }
+  }), [fetchTaskPageData]);
+
+  const relatedOptions = useMemo(() => {
+    const leadOptions = leads.map((lead) => ({
+      id: lead.id,
+      type: "Lead",
+      name: [lead.contact?.firstName, lead.contact?.lastName].filter(Boolean).join(" ") || lead.title,
+    }));
+    const customerOptions = customers.map((customer) => ({
+      id: customer.id,
+      type: "Customer",
+      name: customer.name,
+    }));
+    const dealOptions = Array.from(new Map(tasks
+      .filter((task) => task.deal)
+      .map((task) => [task.deal.id, { id: task.deal.id, type: "Deal", name: task.deal.title }])).values());
+
+    return [...leadOptions, ...customerOptions, ...dealOptions];
+  }, [customers, leads, tasks]);
+
+  const handleCreateTask = async (values) => {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(values),
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Unable to create task.");
+      }
+
+      setTasks((currentTasks) => [mapTask(result.data), ...currentTasks]);
+      setShowTaskForm(false);
+      setError("");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to create task.");
+      throw requestError;
+    }
   };
 
-  const handleDeleteTask = () => {
-    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskToDelete.id));
-    setOpenMenuTaskId(null);
-    setTaskToDelete(null);
+  const handleTaskCompletion = async (taskId, isCompleted) => {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/tasks/${encodeURIComponent(taskId)}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ status: isCompleted ? "COMPLETED" : "TODO" }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Unable to update task status.");
+      }
+
+      const updatedTask = mapTask(result.data);
+      setTasks((currentTasks) => currentTasks.map((currentTask) =>
+        currentTask.id === taskId ? updatedTask : currentTask
+      ));
+      setError("");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to update task status.");
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/tasks/${encodeURIComponent(taskToDelete.id)}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Unable to delete task.");
+      }
+
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskToDelete.id));
+      setOpenMenuTaskId(null);
+      setTaskToDelete(null);
+      setError("");
+    } catch (requestError) {
+      setTaskToDelete(null);
+      setError(requestError.message || "Unable to delete task.");
+    }
   };
 
   const filteredTasks = useMemo(() => {
@@ -157,9 +308,11 @@ function SalesTasks() {
           </div>
         </div>
 
+        {error && <p className="sales-tasks-error" role="alert">{error}</p>}
+        {loading && <p className="sales-tasks-loading" role="status">Loading tasks…</p>}
         <DataTable
           headers={["Task", "Related To", "Due Date", "Status", "Actions"]}
-          emptyMessage="No tasks match your search or filters."
+          emptyMessage={loading ? "Loading tasks…" : error ? "Tasks could not be loaded." : "No tasks match your search or filters."}
           tableClassName="sales-tasks-table"
         >
           {filteredTasks.map((task) => (
@@ -227,7 +380,7 @@ function SalesTasks() {
           ))}
         </DataTable>
       </section>
-      {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} relatedOptions={relatedOptions} onSubmit={(values) => { setTasks((currentTasks) => [{ id: `task-${Date.now()}`, ...values, status: "TODO" }, ...currentTasks]); setShowTaskForm(false); }} />}
+      {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} relatedOptions={relatedOptions} onSubmit={handleCreateTask} />}
       {taskToDelete && <ConfirmDialog title="Delete task?" message={`Are you sure you want to delete “${taskToDelete.title}”? This action cannot be undone.`} onCancel={() => setTaskToDelete(null)} onConfirm={handleDeleteTask} />}
     </div>
   );

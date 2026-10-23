@@ -4,16 +4,25 @@ import FormModal from "../common/FormModal.jsx";
 function CustomerForm({ onClose, onSubmit }) {
   const [values, setValues] = useState({ name: "", company: "", email: "", phone: "", status: "ACTIVE" });
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const updateValue = (field, value) => setValues((current) => ({ ...current, [field]: value }));
 
-  const submitForm = (event) => {
+  const submitForm = async (event) => {
     event.preventDefault();
     if (!values.name.trim() || !values.company.trim()) {
       setError("Add a customer name and company.");
       return;
     }
-    onSubmit(values);
+    setSaving(true);
+    setError("");
+    try {
+      await onSubmit(values);
+    } catch (submitError) {
+      setError(submitError.message || "Unable to save the customer.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -21,7 +30,7 @@ function CustomerForm({ onClose, onSubmit }) {
       <FormModal
         title="Add Customer"
         onClose={onClose}
-        actions={<><button className="form-modal-cancel" type="button" onClick={onClose}>Cancel</button><button className="form-modal-submit" type="submit">Save Customer</button></>}
+        actions={<><button className="form-modal-cancel" type="button" onClick={onClose} disabled={saving}>Cancel</button><button className="form-modal-submit" type="submit" disabled={saving}>{saving ? "Saving…" : "Save Customer"}</button></>}
       >
         <div className="sales-form-grid">
           <label className="sales-form-field">Customer name *<input required value={values.name} onChange={(event) => updateValue("name", event.target.value)} /></label>

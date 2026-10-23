@@ -54,6 +54,7 @@ export const getSalesCustomers = asyncHandler(async (req, res) => {
         where: {
             organizationId: req.organizationId,
             company: { is: { organizationId: req.organizationId } },
+            ...(req.query.scope === "mine" ? { assignedToId: req.user.id } : {}),
         },
         include: customerRelations(req.organizationId),
         orderBy: { createdAt: "desc" },

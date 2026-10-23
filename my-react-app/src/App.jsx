@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import Login from "./auth/Login";
 import Signup from "./auth/Signup";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
 import SalesLayout from "./components/sales/SalesLayout.jsx";
 import SalesDashboard from "./pages/sales/SalesDashboard.jsx";
 import SalesLeads from "./pages/sales/SalesLeads.jsx";
@@ -15,6 +17,35 @@ import SalesProducts from "./pages/sales/SalesProducts.jsx";
 import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
 import SalesNotifications from "./pages/sales/SalesNotifications.jsx";
 import SalesProfile from "./pages/sales/SalesProfile.jsx";
+
+function RequireAuthentication({ authState }) {
+  if (authState.loading) return <div>Loading...</div>;
+  if (!authState.firebaseUser || !authState.crmUser) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Outlet />;
+}
+
+function RequireRole({ authState, role }) {
+  if (authState.crmUser?.role !== role) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
+function RoleDashboard({ authState }) {
+  const role = authState.crmUser?.role;
+
+  if (role === "SALES") {
+    return <SalesLayout><SalesDashboard /></SalesLayout>;
+  }
+
+  if (role === "MANAGER" || role === "ORGANIZATION_ADMIN") {
+    return <div role="status">The {role} dashboard is not available in this application yet.</div>;
+  }
+
+  return <Navigate to="/login" replace />;
+}
 
 function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -584,6 +615,53 @@ function LandingPage() {
 }
 /* Edited by subham sharma on 06-10-2026*/
 function App() {
+  const [authState, setAuthState] = useState({
+    loading: true,
+    firebaseUser: null,
+    crmUser: null,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!active) return;
+
+      if (!firebaseUser) {
+        setAuthState({ loading: false, firebaseUser: null, crmUser: null });
+        return;
+      }
+
+      setAuthState({ loading: true, firebaseUser, crmUser: null });
+
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const response = await fetch("http://localhost:5000/api/v1/auth/protected", {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || "Unable to load authenticated user");
+        }
+
+        if (active) {
+          setAuthState({ loading: false, firebaseUser, crmUser: result.data });
+        }
+      } catch (error) {
+        console.error(error);
+        if (active) {
+          setAuthState({ loading: false, firebaseUser, crmUser: null });
+        }
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -591,18 +669,22 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        <Route element={<SalesLayout />}>
-          <Route path="/dashboard" element={<SalesDashboard />} />
-          <Route path="/leads/:leadId" element={<SalesLeadDetails />} />
-          <Route path="/leads" element={<SalesLeads />} />
-          <Route path="/customers" element={<SalesCustomers />} />
-          <Route path="/tasks" element={<SalesTasks />} />
-          <Route path="/calendar" element={<SalesCalendar />} />
-          <Route path="/notes" element={<SalesNotes />} />
-          <Route path="/products" element={<SalesProducts />} />
-          <Route path="/analytics" element={<SalesAnalytics />} />
-          <Route path="/notifications" element={<SalesNotifications />} />
-          <Route path="/profile" element={<SalesProfile />} />
+        <Route element={<RequireAuthentication authState={authState} />}>
+          <Route path="/dashboard" element={<RoleDashboard authState={authState} />} />
+          <Route element={<RequireRole authState={authState} role="SALES" />}>
+            <Route element={<SalesLayout />}>
+              <Route path="/leads/:leadId" element={<SalesLeadDetails />} />
+              <Route path="/leads" element={<SalesLeads />} />
+              <Route path="/customers" element={<SalesCustomers />} />
+              <Route path="/tasks" element={<SalesTasks />} />
+              <Route path="/calendar" element={<SalesCalendar />} />
+              <Route path="/notes" element={<SalesNotes />} />
+              <Route path="/products" element={<SalesProducts />} />
+              <Route path="/analytics" element={<SalesAnalytics />} />
+              <Route path="/notifications" element={<SalesNotifications />} />
+              <Route path="/profile" element={<SalesProfile />} />
+            </Route>
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

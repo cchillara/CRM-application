@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { Pencil, Search, Trash2 } from "lucide-react";
 import FormModal from "../../components/common/FormModal.jsx";
 import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
-import { getLeadContactName, useSalesData } from "../../components/sales/SalesDataContext.jsx";
+import { getLeadContactName } from "../../components/sales/SalesDataContext.jsx";
+import { auth } from "../../firebase.js";
 import "./SalesNotes.css";
 
 const noteFilters = ["All Notes", "Recent"];
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
 function formatNoteDate(note) {
   const wasUpdated = note.updatedAt && note.updatedAt !== note.createdAt;
@@ -20,14 +24,69 @@ function formatNoteDate(note) {
 }
 
 function SalesNotes() {
-  const { leads, customers, notes, addNote, updateNote, deleteNote } = useSalesData();
+  const [notes, setNotes] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [today] = useState(() => new Date());
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All Notes");
   const [form, setForm] = useState(null);
   const [formError, setFormError] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteToDelete, setNoteToDelete] = useState(null);
+
+  useEffect(() => onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      setNotes([]);
+      setLeads([]);
+      setCustomers([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      };
+      const [notesResponse, leadsResponse, customersResponse] = await Promise.all([
+        fetch(`${SALES_API_URL}/notes`, { headers }),
+        fetch(`${SALES_API_URL}/leads`, { headers }),
+        fetch(`${SALES_API_URL}/customers`, { headers }),
+      ]);
+      const [notesResult, leadsResult, customersResult] = await Promise.all([
+        notesResponse.json(),
+        leadsResponse.json(),
+        customersResponse.json(),
+      ]);
+
+      if (!notesResponse.ok || notesResult.success === false) {
+        throw new Error(notesResult.message || "Unable to load notes.");
+      }
+      if (!leadsResponse.ok || leadsResult.success === false) {
+        throw new Error(leadsResult.message || "Unable to load leads.");
+      }
+      if (!customersResponse.ok || customersResult.success === false) {
+        throw new Error(customersResult.message || "Unable to load customers.");
+      }
+
+      setNotes(Array.isArray(notesResult.data) ? notesResult.data : []);
+      setLeads(Array.isArray(leadsResult.data) ? leadsResult.data : []);
+      setCustomers(Array.isArray(customersResult.data) ? customersResult.data : []);
+    } catch (requestError) {
+      setNotes([]);
+      setLeads([]);
+      setCustomers([]);
+      setError(requestError.message || "Unable to load notes.");
+    } finally {
+      setLoading(false);
+    }
+  }), []);
 
   const relatedOptions = [
     ...leads.map((lead) => ({
@@ -71,30 +130,78 @@ function SalesNotes() {
     setFormError("");
   };
 
-  const saveNote = (event) => {
+  const saveNote = async (event) => {
     event.preventDefault();
     if (!form.title.trim() || !form.content.trim()) {
       setFormError("Add a title and note content.");
       return;
     }
 
-    if (form.id) {
-      const existingNote = notes.find((note) => note.id === form.id);
-      if (existingNote) updateNote(existingNote, form);
-    } else {
-      addNote(form);
+    setFormError("");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(
+        form.id ? `${SALES_API_URL}/notes/${encodeURIComponent(form.id)}` : `${SALES_API_URL}/notes`,
+        {
+          method: form.id ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            title: form.title.trim(),
+            content: form.content.trim(),
+            relatedType: form.relatedType || null,
+            relatedId: form.relatedId || null,
+          }),
+        }
+      );
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Unable to save note.");
+      }
+
+      if (form.id) {
+        setNotes((currentNotes) => currentNotes.map((note) => note.id === result.data.id ? result.data : note));
+      } else {
+        setNotes((currentNotes) => [result.data, ...currentNotes]);
+      }
+      setForm(null);
+      setError("");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to save note.");
     }
-    setForm(null);
   };
 
   const removeNote = (note) => {
     setNoteToDelete(note);
   };
 
-  const confirmDeleteNote = () => {
-    deleteNote(noteToDelete);
-    setOpenNoteId(null);
-    setNoteToDelete(null);
+  const confirmDeleteNote = async () => {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/notes/${encodeURIComponent(noteToDelete.id)}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Unable to delete note.");
+      }
+
+      setNotes((currentNotes) => currentNotes.filter((note) => note.id !== noteToDelete.id));
+      setOpenNoteId(null);
+      setNoteToDelete(null);
+      setError("");
+    } catch (requestError) {
+      setNoteToDelete(null);
+      setError(requestError.message || "Unable to delete note.");
+    }
   };
 
   const relatedLink = (relatedTo) => {
@@ -146,6 +253,8 @@ function SalesNotes() {
           </label>
         </div>
 
+        {error && <p className="sales-form-error" role="alert">{error}</p>}
+        {loading && <p className="sales-note-date" role="status">Loading notes…</p>}
         {visibleNotes.length ? (
           <div className="sales-notes-list">
             {visibleNotes.map((note) => (
@@ -171,7 +280,7 @@ function SalesNotes() {
           </div>
         ) : (
           <p className="sales-notes-empty">
-            {notes.length ? "No notes match your search or filter." : "No notes yet. Add a note to keep important details close at hand."}
+            {loading ? "Loading notes…" : error ? "Notes could not be loaded." : notes.length ? "No notes match your search or filter." : "No notes yet. Add a note to keep important details close at hand."}
           </p>
         )}
       </section>

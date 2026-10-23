@@ -53,13 +53,11 @@ function Login() {
 
             const role = data?.data?.role;
 
-            if (role === "SALES") {
-                navigate("/dashboard", { replace: true });
-            } else if (role === "ORGANIZATION_ADMIN" || role === "MANAGER") {
-                alert("Login successful!");
-            } else {
+            if (!["SALES", "MANAGER", "ORGANIZATION_ADMIN"].includes(role)) {
                 throw new Error("Your account profile is missing a supported role.");
             }
+
+            navigate("/dashboard", { replace: true });
         } catch (error) {
             console.error(error);
 
