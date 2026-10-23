@@ -1,16 +1,17 @@
-import { CustomerStatus } from "../generated/prisma/client.ts";
-import prisma from "../db/index.js";
-import { ApiError } from "../utils/apiError.js";
-import { ApiResponse } from "../utils/apiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { CustomerStatus } from "../../generated/prisma/client.ts";
+import prisma from "../../db/index.js";
+import { ApiError } from "../../utils/apiError.js";
+import { ApiResponse } from "../../utils/apiResponse.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
 
-const customerRelations = {
+const customerRelations = (organizationId) => ({
     company: {
         select: {
             name: true,
             email: true,
             phone: true,
             contacts: {
+                where: { company: { is: { organizationId } } },
                 select: { firstName: true, lastName: true, email: true, phone: true },
                 orderBy: { createdAt: "desc" },
                 take: 1,
@@ -18,6 +19,7 @@ const customerRelations = {
         },
     },
     activities: {
+        where: { organizationId },
         select: { createdAt: true },
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -25,7 +27,7 @@ const customerRelations = {
     assignedTo: {
         select: { firstName: true, lastName: true },
     },
-};
+});
 
 const formatCustomer = (customer) => {
     const contact = customer.company.contacts[0];
@@ -49,8 +51,11 @@ const formatCustomer = (customer) => {
 
 export const getSalesCustomers = asyncHandler(async (req, res) => {
     const customers = await prisma.customer.findMany({
-        where: { organizationId: req.organizationId },
-        include: customerRelations,
+        where: {
+            organizationId: req.organizationId,
+            company: { is: { organizationId: req.organizationId } },
+        },
+        include: customerRelations(req.organizationId),
         orderBy: { createdAt: "desc" },
     });
 
@@ -61,8 +66,12 @@ export const getSalesCustomers = asyncHandler(async (req, res) => {
 
 export const getSalesCustomerById = asyncHandler(async (req, res) => {
     const customer = await prisma.customer.findFirst({
-        where: { id: req.params.customerId, organizationId: req.organizationId },
-        include: customerRelations,
+        where: {
+            id: req.params.customerId,
+            organizationId: req.organizationId,
+            company: { is: { organizationId: req.organizationId } },
+        },
+        include: customerRelations(req.organizationId),
     });
     if (!customer) throw new ApiError(404, "Customer not found");
 
@@ -74,11 +83,9 @@ export const getSalesCustomerById = asyncHandler(async (req, res) => {
 export const createSalesCustomer = asyncHandler(async (req, res) => {
     const { name, company: companyName, email, phone, status = CustomerStatus.ACTIVE } = req.body || {};
 
-    if (typeof name !== "string" || !name.trim() || typeof companyName !== "string" || !companyName.trim()) {
+    if (!name?.trim() || !companyName?.trim()) {
         throw new ApiError(400, "Customer name and company are required");
     }
-    if (email != null && typeof email !== "string") throw new ApiError(400, "Invalid customer email");
-    if (phone != null && typeof phone !== "string") throw new ApiError(400, "Invalid customer phone");
     if (!Object.values(CustomerStatus).includes(status)) {
         throw new ApiError(400, "Invalid customer status");
     }
@@ -121,7 +128,7 @@ export const createSalesCustomer = asyncHandler(async (req, res) => {
                     assignedToId: req.user.id,
                     status,
                 },
-                include: customerRelations,
+                include: customerRelations(req.organizationId),
             });
         });
 
@@ -138,21 +145,8 @@ export const createSalesCustomer = asyncHandler(async (req, res) => {
 export const updateSalesCustomer = asyncHandler(async (req, res) => {
     const { name, company: companyName, email, phone, status } = req.body || {};
 
-    if ([name, companyName, email, phone, status].every((value) => value === undefined)) {
-        throw new ApiError(400, "At least one customer field is required");
-    }
-    if (name !== undefined && (typeof name !== "string" || !name.trim())) {
-        throw new ApiError(400, "Customer name cannot be empty");
-    }
-    if (companyName !== undefined && (typeof companyName !== "string" || !companyName.trim())) {
-        throw new ApiError(400, "Company cannot be empty");
-    }
-    if (email !== undefined && email !== null && typeof email !== "string") {
-        throw new ApiError(400, "Invalid customer email");
-    }
-    if (phone !== undefined && phone !== null && typeof phone !== "string") {
-        throw new ApiError(400, "Invalid customer phone");
-    }
+    if (name !== undefined && !name.trim()) throw new ApiError(400, "Customer name cannot be empty");
+    if (companyName !== undefined && !companyName.trim()) throw new ApiError(400, "Company cannot be empty");
     if (status !== undefined && !Object.values(CustomerStatus).includes(status)) {
         throw new ApiError(400, "Invalid customer status");
     }
@@ -160,72 +154,82 @@ export const updateSalesCustomer = asyncHandler(async (req, res) => {
     try {
         const customer = await prisma.$transaction(async (tx) => {
             const existingCustomer = await tx.customer.findFirst({
-                where: { id: req.params.customerId, organizationId: req.organizationId },
+                where: {
+                    id: req.params.customerId,
+                    organizationId: req.organizationId,
+                    company: { is: { organizationId: req.organizationId } },
+                },
                 select: { id: true, companyId: true },
             });
             if (!existingCustomer) throw new ApiError(404, "Customer not found");
 
-            if (companyName !== undefined || name !== undefined || email !== undefined || phone !== undefined) {
-                const company = await tx.company.findFirst({
-                    where: { id: existingCustomer.companyId, organizationId: req.organizationId },
-                    select: {
-                        id: true,
-                        name: true,
-                        contacts: {
-                            select: { id: true, firstName: true, lastName: true },
-                            orderBy: { createdAt: "desc" },
-                            take: 1,
-                        },
+            const company = await tx.company.findFirst({
+                where: { id: existingCustomer.companyId, organizationId: req.organizationId },
+                select: {
+                    id: true,
+                    name: true,
+                    contacts: {
+                        where: { company: { is: { organizationId: req.organizationId } } },
+                        select: { id: true },
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
                     },
+                },
+            });
+            if (!company) throw new ApiError(404, "Company not found");
+
+            if (companyName !== undefined) {
+                await tx.company.update({
+                    where: { id: company.id },
+                    data: { name: companyName.trim() },
                 });
-                if (!company) throw new ApiError(404, "Company not found");
+            }
 
-                if (companyName !== undefined) {
-                    await tx.company.update({
-                        where: { id: company.id },
-                        data: { name: companyName.trim() },
-                    });
+            if (name !== undefined || email !== undefined || phone !== undefined) {
+                const contactData = {};
+                if (name !== undefined) {
+                    const [firstName, ...lastName] = name.trim().split(/\s+/);
+                    contactData.firstName = firstName;
+                    contactData.lastName = lastName.join(" ") || null;
                 }
+                if (email !== undefined) contactData.email = email?.trim() || null;
+                if (phone !== undefined) contactData.phone = phone?.trim() || null;
 
-                if (name !== undefined || email !== undefined || phone !== undefined) {
-                    const contact = company.contacts[0];
-                    const contactData = {};
-
-                    if (name !== undefined) {
-                        const [firstName, ...lastName] = name.trim().split(/\s+/);
-                        contactData.firstName = firstName;
-                        contactData.lastName = lastName.join(" ") || null;
-                    }
-                    if (email !== undefined) contactData.email = email?.trim() || null;
-                    if (phone !== undefined) contactData.phone = phone?.trim() || null;
-
-                    if (contact) {
-                        await tx.contact.update({ where: { id: contact.id }, data: contactData });
-                    } else {
-                        const contactName = name?.trim() || companyName?.trim() || company.name;
-                        const [firstName, ...lastName] = contactName.split(/\s+/);
-                        await tx.contact.create({
-                            data: {
-                                ...contactData,
-                                firstName,
-                                lastName: lastName.join(" ") || null,
-                                companyId: company.id,
-                            },
-                        });
-                    }
+                if (company.contacts[0]) {
+                    const contact = await tx.contact.findFirst({
+                        where: {
+                            id: company.contacts[0].id,
+                            company: { is: { organizationId: req.organizationId } },
+                        },
+                        select: { id: true },
+                    });
+                    if (!contact) throw new ApiError(404, "Contact not found");
+                    await tx.contact.update({ where: { id: contact.id }, data: contactData });
+                } else {
+                    const contactName = name?.trim() || companyName?.trim() || company.name;
+                    const [firstName, ...lastName] = contactName.split(/\s+/);
+                    await tx.contact.create({
+                        data: {
+                            ...contactData,
+                            firstName,
+                            lastName: lastName.join(" ") || null,
+                            companyId: company.id,
+                        },
+                    });
                 }
             }
 
             if (status !== undefined) {
-                await tx.customer.update({
-                    where: { id: existingCustomer.id },
-                    data: { status },
-                });
+                await tx.customer.update({ where: { id: existingCustomer.id }, data: { status } });
             }
 
             return tx.customer.findFirst({
-                where: { id: existingCustomer.id, organizationId: req.organizationId },
-                include: customerRelations,
+                where: {
+                    id: existingCustomer.id,
+                    organizationId: req.organizationId,
+                    company: { is: { organizationId: req.organizationId } },
+                },
+                include: customerRelations(req.organizationId),
             });
         });
 

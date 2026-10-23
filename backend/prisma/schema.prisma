@@ -116,6 +116,7 @@ model User {
   email       String     @unique
   firstName   String
   lastName    String?
+  phone       String?
   role        UserRole   @default(SALES)
   status      UserStatus @default(INVITED)
   lastLoginAt DateTime?

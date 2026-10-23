@@ -1,18 +1,21 @@
 import { Router } from "express";
-import {requireOrganization,requireRoles,requireUser} from "../middleware/authmiddleware.js";
-import { convertSalesLead, createSalesLead, deleteSalesLead, getSalesLeadById, getSalesLeads, updateSalesLeadStatus,} from "../controllers/salesLead.controller.js";
-import { createSalesTask, deleteSalesTask, getSalesTasks, updateSalesTaskStatus } from "../controllers/salesTask.controller.js";
-import { getAllNotes,createNotes,editNotes,deleteNotes } from "../controllers/salesNotes.controller.js";
-import { getSalesProductById, getSalesProducts } from "../controllers/salesProduct.controller.js";
-import { getSalesAnalytics } from "../controllers/salesAnalytics.controller.js";
-import { getSalesNotifications, getSalesUnreadNotificationCount, markAllSalesNotificationsAsRead, markSalesNotificationAsRead } from "../controllers/salesNotification.controller.js";
-import { createSalesCustomer, getSalesCustomerById, getSalesCustomers, updateSalesCustomer } from "../controllers/salesCustomer.controller.js";
-import { createSalesCalendarEvent, deleteSalesCalendarEvent, getSalesCalendarEventById, getSalesCalendarEvents, updateSalesCalendarEvent } from "../controllers/salesCalendar.controller.js";
+import { requireOrganization, requireRoles, requireUser } from "../middleware/authmiddleware.js";
+import { convertSalesLead, createSalesLead, deleteSalesLead, getSalesLeadById, getSalesLeads, updateSalesLeadStatus, } from "../controllers/sales/salesLead.controller.js";
+import { createSalesTask, deleteSalesTask, getSalesTasks, updateSalesTaskStatus } from "../controllers/sales/salesTask.controller.js";
+import { getAllNotes, createNotes, editNotes, deleteNotes } from "../controllers/sales/salesNotes.controller.js";
+import { getSalesProductById, getSalesProducts } from "../controllers/sales/salesProduct.controller.js";
+import { getSalesAnalytics } from "../controllers/sales/salesAnalytics.controller.js";
+import { getSalesNotifications, getSalesUnreadNotificationCount, markAllSalesNotificationsAsRead, markSalesNotificationAsRead } from "../controllers/sales/salesNotification.controller.js";
+import { createSalesCustomer, getSalesCustomerById, getSalesCustomers, updateSalesCustomer } from "../controllers/sales/salesCustomer.controller.js";
+import { createSalesCalendarEvent, deleteSalesCalendarEvent, getSalesCalendarEventById, getSalesCalendarEvents, updateSalesCalendarEvent } from "../controllers/sales/salesCalendar.controller.js";
+import { getSalesProfile, updateSalesProfile } from "../controllers/sales/salesProfile.controller.js";
 const router = Router();
 
 router.use(requireUser, requireOrganization, requireRoles("SALES"));
 
 router.get("/analytics", getSalesAnalytics);
+router.get("/profile", getSalesProfile);
+router.patch("/profile", updateSalesProfile);
 router.get("/calendar/events", getSalesCalendarEvents);
 router.get("/calendar/events/:taskId", getSalesCalendarEventById);
 router.post("/calendar/events", createSalesCalendarEvent);
@@ -38,10 +41,10 @@ router.patch("/tasks/:taskId/status", updateSalesTaskStatus);
 router.delete("/tasks/:taskId", deleteSalesTask);
 
 
-router.get("/notes",getAllNotes)
-router.post("/notes",createNotes)
-router.patch("/notes/:noteId",editNotes)
-router.delete("/notes/:noteId",deleteNotes)
+router.get("/notes", getAllNotes)
+router.post("/notes", createNotes)
+router.patch("/notes/:noteId", editNotes)
+router.delete("/notes/:noteId", deleteNotes)
 router.get("/products", getSalesProducts);
 router.get("/products/:productId", getSalesProductById);
 export default router;

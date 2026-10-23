@@ -1,8 +1,8 @@
-import { CalendarEventType } from "../generated/prisma/client.ts";
-import prisma from "../db/index.js";
-import { ApiError } from "../utils/apiError.js";
-import { ApiResponse } from "../utils/apiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { CalendarEventType } from "../../generated/prisma/client.ts";
+import prisma from "../../db/index.js";
+import { ApiError } from "../../utils/apiError.js";
+import { ApiResponse } from "../../utils/apiResponse.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
 
 const eventTypes = {
     Call: CalendarEventType.CALL,
@@ -11,10 +11,17 @@ const eventTypes = {
     Task: CalendarEventType.TASK,
 };
 
+const eventLabels = {
+    [CalendarEventType.CALL]: "Call",
+    [CalendarEventType.MEETING]: "Meeting",
+    [CalendarEventType.FOLLOW_UP]: "Follow-up",
+    [CalendarEventType.TASK]: "Task",
+};
+
 const formatEvent = (task) => ({
     id: task.id,
     title: task.title,
-    type: Object.keys(eventTypes).find((type) => eventTypes[type] === task.eventType),
+    type: eventLabels[task.eventType],
     start: task.dueDate?.toISOString().slice(11, 19) === "00:00:00"
         ? task.dueDate.toISOString().slice(0, 10)
         : task.dueDate?.toISOString() || null,
@@ -53,24 +60,22 @@ export const getSalesCalendarEventById = asyncHandler(async (req, res) => {
 export const createSalesCalendarEvent = asyncHandler(async (req, res) => {
     const { title, type, start, end, relatedTo, notes } = req.body || {};
 
-    if (typeof title !== "string" || !title.trim()) throw new ApiError(400, "title is required");
+    if (!title?.trim()) throw new ApiError(400, "title is required");
     if (!Object.hasOwn(eventTypes, type)) throw new ApiError(400, "Invalid event type");
     if (!start) throw new ApiError(400, "start is required");
-    if (notes != null && typeof notes !== "string") throw new ApiError(400, "Invalid notes");
-    if (relatedTo != null && typeof relatedTo !== "string") throw new ApiError(400, "Invalid related record");
+
+    const dueDate = new Date(start);
+    if (Number.isNaN(dueDate.getTime())) throw new ApiError(400, "Invalid start date");
 
     const data = {
         title: title.trim(),
         description: notes || null,
-        dueDate: new Date(start),
+        dueDate,
         endDate: end ? new Date(end) : null,
         eventType: eventTypes[type],
         organizationId: req.organizationId,
         assignedToId: req.user.id,
     };
-    if (Number.isNaN(data.dueDate.getTime()) || (data.endDate && Number.isNaN(data.endDate.getTime()))) {
-        throw new ApiError(400, "Invalid start or end date");
-    }
 
     if (relatedTo) {
         const lead = await prisma.lead.findFirst({
@@ -104,10 +109,7 @@ export const updateSalesCalendarEvent = asyncHandler(async (req, res) => {
 
     const { title, type, start, end, relatedTo, notes } = req.body || {};
     const data = {};
-    if (title !== undefined) {
-        if (typeof title !== "string" || !title.trim()) throw new ApiError(400, "title is required");
-        data.title = title.trim();
-    }
+    if (title !== undefined) data.title = title.trim();
     if (type !== undefined) {
         if (!Object.hasOwn(eventTypes, type)) throw new ApiError(400, "Invalid event type");
         data.eventType = eventTypes[type];
@@ -116,16 +118,9 @@ export const updateSalesCalendarEvent = asyncHandler(async (req, res) => {
         data.dueDate = new Date(start);
         if (Number.isNaN(data.dueDate.getTime())) throw new ApiError(400, "Invalid start date");
     }
-    if (end !== undefined) {
-        data.endDate = end ? new Date(end) : null;
-        if (data.endDate && Number.isNaN(data.endDate.getTime())) throw new ApiError(400, "Invalid end date");
-    }
-    if (notes !== undefined) {
-        if (notes != null && typeof notes !== "string") throw new ApiError(400, "Invalid notes");
-        data.description = notes || null;
-    }
+    if (end !== undefined) data.endDate = end ? new Date(end) : null;
+    if (notes !== undefined) data.description = notes || null;
     if (relatedTo !== undefined) {
-        if (relatedTo != null && typeof relatedTo !== "string") throw new ApiError(400, "Invalid related record");
         data.leadId = null;
         data.customerId = null;
         if (relatedTo) {

@@ -1,8 +1,8 @@
-import prisma from "../db/index.js";
-import { ApiResponse } from "../utils/apiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ActivityType } from "../generated/prisma/client.ts";
-import { ApiError } from "../utils/apiError.js";
+import prisma from "../../db/index.js";
+import { ApiResponse } from "../../utils/apiResponse.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ActivityType } from "../../generated/prisma/client.ts";
+import { ApiError } from "../../utils/apiError.js";
 
 export const getAllNotes = asyncHandler(async (req, res) => {
     const activities = await prisma.activity.findMany({
