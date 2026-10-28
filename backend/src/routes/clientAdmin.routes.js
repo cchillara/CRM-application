@@ -26,79 +26,104 @@ import {
     createEmployee,
     updateEmployee,
     deleteEmployee,
+    getProfile,
     updateProfile,
     updatePassword,
     getSettings,
     updateSettings,
+    listFollowUps,
+    createFollowUp,
+    deleteFollowUp,
+    updateFollowUp,
 } from "../controllers/clientAdmin.controller.js";
 
-import { verifyFirebaseToken } from "../middleware/authmiddleware.js";
+import { requireClientAdmin, requireRoles } from "../middleware/authmiddleware.js";
 
 const router = Router();
 
-/* Dashboard */
-router.get(["/", "/dashboard", "/client-admin"], verifyFirebaseToken, getDashboard);
+router.use(requireClientAdmin);
 
-/* Leads (Leads.jsx) */
-router.get(["/leads", "/client-admin/leads"], verifyFirebaseToken, listLeads);
-router.post(["/leads", "/client-admin/leads"], verifyFirebaseToken, createLead);
-router.patch(["/leads/:id", "/client-admin/leads/:id"], verifyFirebaseToken, updateLead);
-router.delete(["/leads/:id", "/client-admin/leads/:id"], verifyFirebaseToken, deleteLead);
+router.get(["/", "/dashboard", "/client-admin"], getDashboard);
 
-/* Deals (Deals.jsx) */
-router.get(["/deals", "/client-admin/deals"], verifyFirebaseToken, listDeals);
-router.post(["/deals", "/client-admin/deals"], verifyFirebaseToken, createDeal);
-router.patch(["/deals/:id", "/client-admin/deals/:id"], verifyFirebaseToken, updateDeal);
-router.delete(["/deals/:id", "/client-admin/deals/:id"], verifyFirebaseToken, deleteDeal);
+router.get(["/leads", "/client-admin/leads"], listLeads);
+router.post(["/leads", "/client-admin/leads"], createLead);
+router.patch(["/leads/:id", "/client-admin/leads/:id"], updateLead);
+router.delete(
+  ["/leads/:id", "/client-admin/leads/:id"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  deleteLead
+);
 
-/* Tasks (Tasks.jsx) */
-router.get(["/tasks", "/client-admin/tasks"], verifyFirebaseToken, getTasks);
-router.post(["/tasks", "/client-admin/tasks"], verifyFirebaseToken, createTask);
-router.patch(["/tasks/:id", "/client-admin/tasks/:id"], verifyFirebaseToken, updateTask);
-router.delete(["/tasks/:id", "/client-admin/tasks/:id"], verifyFirebaseToken, deleteTask);
+router.get(["/deals", "/client-admin/deals"], listDeals);
+router.post(["/deals", "/client-admin/deals"], createDeal);
+router.patch(["/deals/:id", "/client-admin/deals/:id"], updateDeal);
+router.delete(
+  ["/deals/:id", "/client-admin/deals/:id"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  deleteDeal
+);
 
-/* Teams (Teams.jsx) */
-router.get(["/team", "/client-admin/team"], verifyFirebaseToken, getTeams);
-router.post(["/team", "/client-admin/team"], verifyFirebaseToken, createTeam);
-router.patch(["/team/:id", "/client-admin/team/:id"], verifyFirebaseToken, updateTeam);
-router.delete(["/team/:id", "/client-admin/team/:id"], verifyFirebaseToken, deleteTeam);
+router.get(["/tasks", "/client-admin/tasks"], getTasks);
+router.post(["/tasks", "/client-admin/tasks"], createTask);
+router.patch(["/tasks/:id", "/client-admin/tasks/:id"], updateTask);
+router.delete(
+  ["/tasks/:id", "/client-admin/tasks/:id"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  deleteTask
+);
 
-/* Products (Products.jsx) */
-router.get(["/products", "/client-admin/products"], verifyFirebaseToken, listProducts);
-router.post(["/products", "/client-admin/products"], verifyFirebaseToken, createProduct);
-router.patch(["/products/:id", "/client-admin/products/:id"], verifyFirebaseToken, updateProduct);
-router.delete(["/products/:id", "/client-admin/products/:id"], verifyFirebaseToken, deleteProduct);
+router.get(["/team", "/client-admin/team"], getTeams);
+router.post(["/team", "/client-admin/team"], createTeam);
+router.patch(["/team/:id", "/client-admin/team/:id"], updateTeam);
+router.delete(
+  ["/team/:id", "/client-admin/team/:id"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  deleteTeam
+);
 
-/* Employees / Staff (Employee.jsx) */
-router.get(["/employee", "/client-admin/employee"], verifyFirebaseToken, listEmployee);
-router.post(["/employee", "/client-admin/employee"], verifyFirebaseToken, createEmployee);
-router.patch(["/employee/:id", "/client-admin/employee/:id"], verifyFirebaseToken, updateEmployee);
-router.delete(["/employee/:id", "/client-admin/employee/:id"], verifyFirebaseToken, deleteEmployee);
+router.get(["/products", "/client-admin/products"], listProducts);
+router.post(
+  ["/products", "/client-admin/products"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  createProduct
+);
+router.patch(["/products/:id", "/client-admin/products/:id"], updateProduct);
+router.delete(
+  ["/products/:id", "/client-admin/products/:id"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  deleteProduct
+);
 
-/* Settings, Profile & Password (Settings.jsx) */
-router.get(["/settings", "/client-admin/settings"], verifyFirebaseToken, getSettings);
-router.patch(["/settings", "/client-admin/settings"], verifyFirebaseToken, updateSettings);
-router.patch(["/profile", "/client-admin/profile"], verifyFirebaseToken, updateProfile);
-router.patch(["/password", "/client-admin/password"], verifyFirebaseToken, updatePassword);
+router.get(["/employee", "/client-admin/employee"], listEmployee);
+router.post(
+  ["/employee", "/client-admin/employee"],
+  requireRoles("ORGANIZATION_ADMIN"),
+  createEmployee
+);
+router.patch(
+  ["/employee/:id", "/client-admin/employee/:id"],
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  updateEmployee
+);
+router.delete(
+  ["/employee/:id", "/client-admin/employee/:id"],
+  requireRoles("ORGANIZATION_ADMIN"),
+  deleteEmployee
+);
 
-/* Users Management */
-// router.get("/users", verifyFirebaseToken, listUsers);
-// router.get("/users/:id", verifyFirebaseToken, getUser);
-// router.post("/users", verifyFirebaseToken, createUser);
-// router.patch("/users/:id", verifyFirebaseToken, updateUser);
-// router.patch("/users/:id/status", verifyFirebaseToken, updateUserStatus);
-// router.delete("/users/:id", verifyFirebaseToken, deleteUser);
+router.get(["/settings", "/client-admin/settings"], getSettings);
+router.patch(["/settings", "/client-admin/settings"], updateSettings);
+router.get(["/profile", "/client-admin/profile"], getProfile);
+router.patch(["/profile", "/client-admin/profile"], updateProfile);
+router.patch(["/password", "/client-admin/password"], updatePassword);
 
-/* Roles */
-// router.get("/roles", verifyFirebaseToken, listRoles);
-// router.get("/roles/:id", verifyFirebaseToken, getRole);
-// router.post("/roles", verifyFirebaseToken, createRole);
-// router.patch("/roles/:id", verifyFirebaseToken, updateRole);
-// router.delete("/roles/:id", verifyFirebaseToken, deleteRole);
-
-// /* CRM Utilities & Reports */
-// router.get("/customers", verifyFirebaseToken, listCustomers);
-// router.get("/companies", verifyFirebaseToken, listCompanies);
-// router.get("/reports", verifyFirebaseToken, getReports);
+router.get("/followups", listFollowUps);
+router.post("/followups", createFollowUp);
+router.put("/followups/:id", updateFollowUp);
+router.delete(
+  "/followups/:id",
+  requireRoles("ORGANIZATION_ADMIN", "MANAGER"),
+  deleteFollowUp
+);
 
 export default router;

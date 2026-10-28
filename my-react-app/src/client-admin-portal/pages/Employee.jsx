@@ -3,7 +3,7 @@ import { employeesList } from '../data';
 import { getStored, setStored } from '../storage';
 import { UserCog, Plus, X, Pencil, Trash2 } from 'lucide-react';
 import { getEmployees, createEmployee, updateEmployee, deleteEmployee } from './../Api/Employee';
-
+import "../styles/Leads.css"
 const STORAGE_KEY = 'employees';
 const EMPTY_FORM = { name: '', email: '', department: 'Sales & Accounts', role: '', phone: '', status: 'Full-time' };
 const DEPARTMENTS = ['Sales & Accounts', 'Solutions & Deals', 'Enterprise Sales', 'Customer Success', 'Technical Support', 'Product Marketing', 'Executive'];
@@ -70,7 +70,13 @@ export default function Employee() {
       persist(employees.map(e => e.id === editingEmployee.id ? optimistic : e));
       try {
         const saved = await updateEmployee(editingEmployee.id, payload);
-        if (saved) setEmployees(prev => prev.map(e => e.id === editingEmployee.id ? { ...e, ...saved } : e));
+        if (saved) {
+          setEmployees(prev => {
+            const updated = prev.map(e => e.id === editingEmployee.id ? { ...e, ...saved } : e);
+            setStored(STORAGE_KEY, updated);
+            return updated;
+          });
+        }
       }
       catch (err) { console.warn('[Employee] Update API error:', err.message); }
     }
@@ -83,7 +89,13 @@ export default function Employee() {
       persist([created, ...employees]);
       try {
         const saved = await createEmployee(payload);
-        if (saved?.id) setEmployees(prev => prev.map(e => e.id === created.id ? { ...e, ...saved } : e));
+        if (saved?.id) {
+          setEmployees(prev => {
+            const updated = prev.map(e => e.id === created.id ? { ...e, ...saved } : e);
+            setStored(STORAGE_KEY, updated);
+            return updated;
+          });
+        }
       } catch (err) { console.warn('[Employee] Create API error:', err.message); }
     }
     handleClose();

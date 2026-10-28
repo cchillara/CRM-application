@@ -9,7 +9,21 @@ export const menuItems = [
   { id: 'employee', label: 'Employee', icon: 'UserCog' },
   { id: 'settings', label: 'Settings', icon: 'Settings' }
 ];
-
+export const Default_Profile = {
+  name: "Client Admin",
+  email: "admin@crmclient.com",
+  phone: "+91 98000 00000",
+  designation: "Client Administrator",
+  role: "ORGANIZATION_ADMIN",
+  orgName: "SHNOOR CRM"
+};
+export const Default_settings = {
+  platformName: "SHNOOR CRM",
+  supportEmail: "support@shnoor.com",
+  allowSignup: true,
+  emailAlerts: true,
+  maintenanceMode: false
+};
 
 export const totalDeals = [
   {
@@ -422,12 +436,12 @@ export const quickActions = [
 ];
 
 export const initialTasks = [
-  { id: 'TSK-101', title: 'Follow up with ABC Technologies', client: 'ABC Technologies', assignedTo: 'Sarah Jenkins', due: 'Today, 5:00 PM', priority: 'High', completed: false },
-  { id: 'TSK-102', title: 'Prepare proposal for Cloud Migration', client: 'TechNova Solutions', assignedTo: 'Arjun Kumar', due: 'Tomorrow', priority: 'Medium', completed: false },
-  { id: 'TSK-103', title: 'Schedule product demo for Skyline Logistics', client: 'Skyline Logistics', assignedTo: 'Vikram Singh', due: 'Oct 10, 2026', priority: 'High', completed: true },
-  { id: 'TSK-104', title: 'Send contract renewal to Vertex Commerce', client: 'Vertex Commerce', assignedTo: 'Marcus Vance', due: 'Oct 12, 2026', priority: 'Low', completed: false },
-  { id: 'TSK-105', title: 'Security review checklist with NovaStack', client: 'NovaStack Labs', assignedTo: 'David Miller', due: 'Oct 14, 2026', priority: 'Medium', completed: false },
-  { id: 'TSK-106', title: 'Quarterly billing alignment call', client: 'GreenLeaf Industries', assignedTo: 'Meena Patel', due: 'Oct 15, 2026', priority: 'High', completed: false },
+  { id: 'TSK-101', title: 'Follow up with ABC Technologies', client: 'ABC Technologies', assignedTo: 'Sarah Jenkins', due: '11-26-2026', priority: 'High', completed: false },
+  { id: 'TSK-102', title: 'Prepare proposal for Cloud Migration', client: 'TechNova Solutions', assignedTo: 'Arjun Kumar', due: '10-21-2026', priority: 'Medium', completed: false },
+  { id: 'TSK-103', title: 'Schedule product demo for Skyline Logistics', client: 'Skyline Logistics', assignedTo: 'Vikram Singh', due: '10-14-2026', priority: 'High', completed: true },
+  { id: 'TSK-104', title: 'Send contract renewal to Vertex Commerce', client: 'Vertex Commerce', assignedTo: 'Marcus Vance', due: '10-12-2026', priority: 'Low', completed: false },
+  { id: 'TSK-105', title: 'Security review checklist with NovaStack', client: 'NovaStack Labs', assignedTo: 'David Miller', due: '10-14-2026', priority: 'Medium', completed: false },
+  { id: 'TSK-106', title: 'Quarterly billing alignment call', client: 'GreenLeaf Industries', assignedTo: 'Meena Patel', due: '10-15-2026', priority: 'High', completed: false },
 ];
 export const tasksList = initialTasks;
 export const tasks = initialTasks;
@@ -442,12 +456,12 @@ export const teamMembers = [
 ];
 
 export const productsList = [
-  { id: 'PRD-001', name: 'CRM Enterprise Suite', category: 'Software & SaaS', price: '₹85,000 / mo', billing: 'Annual Billing', inventory: 'Enterprise Edition · Unlimited Seats', status: 'Active' },
-  { id: 'PRD-002', name: 'Cloud Pipeline Automation', category: 'Cloud Services', price: '₹45,000 / mo', billing: 'Monthly Billing', inventory: 'Standard Tier · Up to 50 Pipelines', status: 'Active' },
-  { id: 'PRD-003', name: 'AI Lead Scoring Engine', category: 'AI & Intelligence', price: '₹60,000 / mo', billing: 'Quarterly Billing', inventory: 'Add-on · Real-time Analytics', status: 'Active' },
-  { id: 'PRD-004', name: 'ERP Sync Integration Connector', category: 'Integration', price: '₹35,000 / mo', billing: 'Annual Billing', inventory: 'Connector Module · Multi-platform', status: 'Active' },
-  { id: 'PRD-005', name: 'Omnichannel Helpdesk & Tickets', category: 'Customer Support', price: '₹50,000 / mo', billing: 'Annual Billing', inventory: 'Support Suite · 24/7 SLA', status: 'Active' },
-  { id: 'PRD-006', name: 'Custom Workflow Consulting', category: 'Professional Services', price: '₹1,20,000', billing: 'One-Time', inventory: 'Implementation Package · 40 hrs', status: 'Active' },
+  { id: 'PRD-001', name: 'CRM Enterprise Suite', category: 'Software & SaaS', price: '₹85,000 ', billing: 'Annual Billing', inventory: 'Enterprise Edition · Unlimited Seats', organizationName : 'ABC tech',status: 'Active' },
+  { id: 'PRD-002', name: 'Cloud Pipeline Automation', category: 'Cloud Services', price: '₹45,000 ', billing: 'Monthly Billing', inventory: 'Standard Tier · Up to 50 Pipelines', organizationName : 'Business Next', status: 'Active' },
+  { id: 'PRD-003', name: 'AI Lead Scoring Engine', category: 'AI & Intelligence', price: '₹60,000 ', billing: 'Quarterly Billing', inventory: 'Add-on · Real-time Analytics',organizationName : 'Mirai Asset',  status: 'Active' },
+  { id: 'PRD-004', name: 'ERP Sync Integration Connector', category: 'Integration', price: '₹35,000 ', billing: 'Annual Billing', inventory: 'Connector Module · Multi-platform', organizationName : 'Cognify', status: 'Active' },
+  { id: 'PRD-005', name: 'Omnichannel Helpdesk & Tickets', category: 'Customer Support', price: '₹50,000 ', billing: 'Annual Billing', inventory: 'Support Suite · 24/7 SLA', organizationName : 'Prep Insta"', status: 'Active' },
+  { id: 'PRD-006', name: 'Custom Workflow Consulting', category: 'Professional Services', price: '₹1,20,000', billing: 'One-Time', inventory: 'Implementation Package · 40 hrs', organizationName : 'XYZ tech', status: 'Active' },
 ];
 export const products = productsList;
 
@@ -460,3 +474,4 @@ export const employeesList = [
   { id: 'EMP-006', name: 'Ananya Rao', email: 'ananya.r@crmclient.com', department: 'Product Marketing', role: 'Growth Specialist', phone: '+91 98666 77788', status: 'Contract' },
 ];
 export const employees = employeesList;
+

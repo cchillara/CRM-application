@@ -13,11 +13,13 @@ const mapLeadSource = (src) => {
     return 'OTHER';
 };
 
+const validateUserRole = (r) => ['ORGANIZATION_ADMIN', 'MANAGER', 'SALES'].includes(r);
+const validateUserStatus = (s) => ['INVITED', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'].includes(s);
+
 const mapLeadStatus = (st) => {
     const s = String(st || '').toUpperCase().trim();
-    if (['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED'].includes(s)) return s;
+    if (['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'PENDING', 'CONVERTED'].includes(s)) return s;
     if (s === 'ACTIVE') return 'NEW';
-    if (s === 'PENDING') return 'CONTACTED';
     return 'NEW';
 };
 
@@ -109,7 +111,7 @@ const formatLead = (l) => {
             if (l.description.startsWith('{')) {
                 extraMeta = JSON.parse(l.description);
             }
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const contactName = l.contact?.name || extraMeta.contact || extraMeta.contactPerson || 'Direct Contact';
@@ -121,13 +123,25 @@ const formatLead = (l) => {
         ? `${l.assignedTo.firstName || ''} ${l.assignedTo.lastName || ''}`.trim()
         : (extraMeta.assignedTo || 'Unassigned');
 
-    const formattedStatus = l.status === 'NEW' ? 'Active' : (l.status ? (l.status.charAt(0) + l.status.slice(1).toLowerCase()) : 'Active');
+    const formattedStatus = l.status === 'NEW'
+        ? 'Active'
+        : (l.status === 'PENDING'
+            ? 'Pending'
+            : (l.status === 'CONTACTED'
+                ? 'Contacted'
+                : (l.status === 'QUALIFIED'
+                    ? 'Qualified'
+                    : (l.status === 'UNQUALIFIED'
+                        ? 'Unqualified'
+                        : (l.status === 'CONVERTED'
+                            ? 'Converted'
+                            : 'Active')))));
     const formattedSource = l.source ? (l.source.charAt(0) + l.source.slice(1).toLowerCase().replace('_', ' ')) : 'Website';
 
     const nameStr = l.title || 'Untitled Lead';
     const initials = nameStr.split(' ').filter(Boolean).map(p => p[0]).join('').slice(0, 2).toUpperCase() || 'LE';
     const stLower = formattedStatus.toLowerCase();
-    const stType = stLower === 'active' ? 'active' : (stLower === 'qualified' ? 'qualified' : 'pending');
+    const stType = ['active', 'qualified', 'contacted', 'pending', 'unqualified', 'converted'].includes(stLower) ? stLower : 'pending';
 
     return {
         id: l.id,
@@ -161,7 +175,7 @@ const formatDeal = (d) => {
     if (d.description) {
         try {
             if (d.description.startsWith('{')) extraMeta = JSON.parse(d.description);
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const companyName = d.customer?.company?.name || extraMeta.company || 'Enterprise Client';
@@ -206,10 +220,11 @@ export const getDashboard = async (req, res) => {
         ]);
 
         const totalLeads = allLeads.length;
+        const newLeadsCount = allLeads.filter(l => l.status === "NEW").length;
+        const contactedLeadsCount = allLeads.filter(l => l.status === "CONTACTED").length;
         const qualifiedLeadsCount = allLeads.filter(l => l.status === "QUALIFIED").length;
-        const activeLeadsCount = allLeads.filter(l => l.status === "NEW").length;
-        const pendingLeadsCount = allLeads.filter(l => l.status === "CONTACTED").length;
-        const convertedLeadsCount = allLeads.filter(l => l.status === "CONVERTED").length;
+        const unqualifiedLeadsCount = allLeads.filter(l => l.status === "UNQUALIFIED").length;
+        const pendingLeadsCount = allLeads.filter(l => l.status === "PENDING").length;
 
         const totalDeals = allDeals.length;
         const openDealsCount = allDeals.filter(d => !["WON", "LOST"].includes(d.stage)).length;
@@ -221,32 +236,20 @@ export const getDashboard = async (req, res) => {
 
         const recentLeadsFormatted = allLeads.slice(0, 6).map(formatLead);
 
+        // All 5 LeadStatus enum values from schema.prisma
         const leadsByStatus = [
-            {
-                label: "Active",
-                count: activeLeadsCount,
-                percentage: totalLeads > 0 ? Math.round((activeLeadsCount / totalLeads) * 100) : 0,
-                color: "#2563eb"
-            },
-            {
-                label: "Pending",
-                count: pendingLeadsCount,
-                percentage: totalLeads > 0 ? Math.round((pendingLeadsCount / totalLeads) * 100) : 0,
-                color: "#f59e0b"
-            },
-            {
-                label: "Qualified",
-                count: qualifiedLeadsCount,
-                percentage: totalLeads > 0 ? Math.round((qualifiedLeadsCount / totalLeads) * 100) : 0,
-                color: "#10b981"
-            }
+            { label: "New", count: newLeadsCount, percentage: totalLeads > 0 ? Math.round((newLeadsCount / totalLeads) * 100) : 0, color: "#2563eb" },
+            { label: "Contacted", count: contactedLeadsCount, percentage: totalLeads > 0 ? Math.round((contactedLeadsCount / totalLeads) * 100) : 0, color: "#f59e0b" },
+            { label: "Qualified", count: qualifiedLeadsCount, percentage: totalLeads > 0 ? Math.round((qualifiedLeadsCount / totalLeads) * 100) : 0, color: "#10b981" },
+            { label: "Unqualified", count: unqualifiedLeadsCount, percentage: totalLeads > 0 ? Math.round((unqualifiedLeadsCount / totalLeads) * 100) : 0, color: "#ef4444" },
+            { label: "Pending", count: pendingLeadsCount, percentage: totalLeads > 0 ? Math.round((pendingLeadsCount / totalLeads) * 100) : 0, color: "#8b5cf6" }
         ];
 
         return res.status(200).json(
             new ApiResponse(200, [], {
                 totalLeads,
                 qualifiedLeads: qualifiedLeadsCount,
-                activeLeads: activeLeadsCount,
+                activeLeads: newLeadsCount,
                 openDeals: openDealsCount,
                 totalDeals,
                 wonDeals: wonDealsCount,
@@ -309,7 +312,6 @@ export const listLeads = async (req, res) => {
     }
 };
 
-/* Leads CRUD */
 export const createLead = async (req, res) => {
     try {
         const result = await getClientAdmin(req.user.uid, req.user.email);
@@ -403,7 +405,7 @@ export const updateLead = async (req, res) => {
         if (existing.description) {
             try {
                 if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const { title, name, description, status, source, contact, email, phone, tier, value, numericValue, assignedTo } = req.body;
@@ -450,7 +452,6 @@ export const deleteLead = async (req, res) => {
     }
 };
 
-/* Deals CRUD */
 
 
 export const listDeals = async (req, res) => {
@@ -551,7 +552,7 @@ export const updateDeal = async (req, res) => {
         if (existing.description) {
             try {
                 if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const { title, description, value, stage, probability, company, contact, owner, expectedCloseDate } = req.body;
@@ -595,7 +596,7 @@ export const deleteDeal = async (req, res) => {
     }
 };
 
-/* Tasks CRUD (for Tasks.jsx) */
+
 const mapTaskStatus = (st) => {
     const s = String(st || '').toUpperCase().trim();
     if (['TODO', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(s)) return s;
@@ -610,19 +611,31 @@ const formatTask = (t) => {
         try {
             if (t.description.startsWith('{')) extraMeta = JSON.parse(t.description);
             else extraMeta = { notes: t.description };
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const clientName = extraMeta.client || t.lead?.title || t.customer?.company?.name || 'General';
-    const assignedName = t.assignedTo
-        ? `${t.assignedTo.firstName || ''} ${t.assignedTo.lastName || ''}`.trim()
-        : (extraMeta.assignedTo || 'Sarah Jenkins');
+    let assignedName = extraMeta.assignedTo;
+    if (!assignedName || assignedName === 'Client Admin') {
+        const uName = t.assignedTo ? `${t.assignedTo.firstName || ''} ${t.assignedTo.lastName || ''}`.trim() : '';
+        if (uName && uName !== 'Client Admin') {
+            assignedName = uName;
+        } else {
+            const fallbackOwners = ['Sarah Jenkins', 'David Miller', 'Arjun Kumar', 'Elena Rostova', 'Marcus Vance', 'Meena Patel', 'Vikram Singh'];
+            const sum = (t.title || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+            assignedName = fallbackOwners[sum % fallbackOwners.length];
+        }
+    }
     const priorityVal = extraMeta.priority || 'Medium';
     let dueStr = extraMeta.due;
     if (!dueStr && t.dueDate) {
         try {
-            dueStr = new Date(t.dueDate).toLocaleDateString();
-        } catch (e) {}
+            const d = new Date(t.dueDate);
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const y = d.getFullYear();
+            dueStr = `${m}-${day}-${y}`;
+        } catch (e) { }
     }
     if (!dueStr) dueStr = 'Upcoming';
 
@@ -632,6 +645,7 @@ const formatTask = (t) => {
         client: clientName,
         assignedTo: assignedName,
         due: dueStr,
+        dueDate: t.dueDate ? t.dueDate.toISOString() : (extraMeta.dueDate || null),
         priority: priorityVal.charAt(0).toUpperCase() + priorityVal.slice(1).toLowerCase(),
         completed: t.status === 'COMPLETED',
         status: t.status,
@@ -684,7 +698,9 @@ export const createTask = async (req, res) => {
 
         const metaPayload = {
             client: client || 'General',
-            assignedTo: assignedTo || `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'Sarah Jenkins',
+            assignedTo: (assignedTo && assignedTo !== 'Client Admin')
+                ? assignedTo
+                : 'Sarah Jenkins',
             due: due || (dueDate ? new Date(dueDate).toLocaleDateString() : 'Upcoming'),
             priority: priority || 'Medium',
         };
@@ -735,14 +751,17 @@ export const updateTask = async (req, res) => {
         if (existing.description) {
             try {
                 if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const { title, client, assignedTo, due, dueDate, priority, status } = req.body;
+        const resolvedAssignedTo = (assignedTo && assignedTo !== 'Client Admin')
+            ? assignedTo
+            : (existingMeta.assignedTo && existingMeta.assignedTo !== 'Client Admin' ? existingMeta.assignedTo : 'Sarah Jenkins');
         const updatedMeta = {
             ...existingMeta,
             ...(client !== undefined && { client }),
-            ...(assignedTo !== undefined && { assignedTo }),
+            assignedTo: resolvedAssignedTo,
             ...(due !== undefined && { due }),
             ...(priority !== undefined && { priority })
         };
@@ -785,7 +804,6 @@ export const deleteTask = async (req, res) => {
     }
 };
 
-/* Teams CRUD (for Teams.jsx) */
 let inMemoryTeamMembers = [
     { id: 'TM-01', name: 'Sarah Jenkins', role: 'Sales Lead', email: 'sarah.j@crmclient.com', territory: 'APAC / Regional', dealsClosed: 5, revenueWon: '₹42.5L', status: 'Active' },
     { id: 'TM-02', name: 'David Miller', role: 'Account Executive', email: 'david.m@crmclient.com', territory: 'North America', dealsClosed: 9, revenueWon: '₹28.0L', status: 'Active' },
@@ -840,7 +858,6 @@ export const deleteTeam = async (req, res) => {
     return res.status(200).json(new ApiResponse(200, [], null, "Team member deleted successfully"));
 };
 
-/* Products Catalog (for Products.jsx) */
 let inMemoryProducts = [
     { id: "PRD-001", name: "CRM Enterprise Suite", category: "Software & SaaS", price: "₹85,000 / mo", billing: "Annual Billing", inventory: "Enterprise Edition · Unlimited Seats", status: "Active" },
     { id: "PRD-002", name: "Cloud Pipeline Automation", category: "Cloud Services", price: "₹45,000 / mo", billing: "Monthly Billing", inventory: "Standard Tier · Up to 50 Pipelines", status: "Active" },
@@ -883,14 +900,11 @@ export const deleteProduct = async (req, res) => {
     return res.status(200).json(new ApiResponse(200, [], null, "Product deleted successfully"));
 };
 
-/* ==========================================================================
-   Employees Directory Handlers (Employee.jsx)
-   ========================================================================== */
-const employeeMetaStore = new Map();
+
 
 export const listEmployee = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
+        const result = await getClientAdmin(req.user.uid, req.user.email);
         if (result.error) {
             return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
         }
@@ -906,27 +920,26 @@ export const listEmployee = async (req, res) => {
                 firstName: true,
                 lastName: true,
                 role: true,
+                jobTitle: true,
                 status: true,
+                phone: true,
+                department: true,
                 createdAt: true,
                 updatedAt: true,
             },
             orderBy: { createdAt: "desc" }
         });
 
-        // Format employee data for Employee.jsx frontend
-        const formatted = employees.map(emp => {
-            const meta = employeeMetaStore.get(emp.id) || {};
-            return {
-                id: emp.id,
-                name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email,
-                email: emp.email,
-                role: meta.role || (emp.role === 'ORGANIZATION_ADMIN' ? 'Regional Manager' : emp.role === 'MANAGER' ? 'Senior Account Manager' : 'Business Development'),
-                department: meta.department || (emp.role === 'ORGANIZATION_ADMIN' ? 'Executive' : emp.role === 'MANAGER' ? 'Sales & Accounts' : 'Enterprise Sales'),
-                phone: meta.phone || '+91 98000 00000',
-                status: meta.status || (emp.status === 'ACTIVE' ? 'Full-time' : emp.status === 'INVITED' ? 'Contract' : 'Part-time'),
-                createdAt: emp.createdAt
-            };
-        });
+        const formatted = employees.map(emp => ({
+            id: emp.id,
+            name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email,
+            email: emp.email,
+            role: emp.jobTitle || (emp.role === 'ORGANIZATION_ADMIN' ? 'Regional Manager' : emp.role === 'MANAGER' ? 'Senior Account Manager' : 'Business Development'),
+            department: emp.department || (emp.role === 'ORGANIZATION_ADMIN' ? 'Executive' : emp.role === 'MANAGER' ? 'Sales & Accounts' : 'Enterprise Sales'),
+            phone: emp.phone || '+91 98000 00000',
+            status: emp.status === 'ACTIVE' ? 'Full-time' : emp.status === 'INVITED' ? 'Contract' : 'Part-time',
+            createdAt: emp.createdAt
+        }));
 
         return res.status(200).json(new ApiResponse(200, [], formatted, "Employees retrieved successfully"));
     } catch (error) {
@@ -936,7 +949,7 @@ export const listEmployee = async (req, res) => {
 
 export const createEmployee = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
+        const result = await getClientAdmin(req.user.uid, req.user.email);
         if (result.error) {
             return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
         }
@@ -947,7 +960,6 @@ export const createEmployee = async (req, res) => {
             return res.status(400).json(new ApiResponse(400, [{ message: "Email is required" }], null, "Missing email"));
         }
 
-        // Split name into first/last name if full name string provided
         let fName = firstName || "";
         let lName = lastName || "";
         if (name && !firstName) {
@@ -961,7 +973,7 @@ export const createEmployee = async (req, res) => {
             return res.status(409).json(new ApiResponse(409, [{ message: "User with this email already exists" }], null, "Email in use"));
         }
 
-        const validPrismaRole = ["ORGANIZATION_ADMIN", "ADMIN"].includes(role) ? "SALES" : (validateUserRole(role) ? role : "SALES");
+        const validPrismaRole = validateUserRole(role) ? role : "SALES";
         const validPrismaStatus = validateUserStatus(status) ? status : "ACTIVE";
 
         const newEmployee = await prisma.user.create({
@@ -971,7 +983,10 @@ export const createEmployee = async (req, res) => {
                 firstName: fName || "New",
                 lastName: lName || "Employee",
                 role: validPrismaRole,
+                jobTitle: role || "Account Executive",
                 status: validPrismaStatus,
+                phone: phone || null,
+                department: department || null,
                 ...(result.user.organizationId && { organizationId: result.user.organizationId })
             },
             select: {
@@ -981,27 +996,22 @@ export const createEmployee = async (req, res) => {
                 firstName: true,
                 lastName: true,
                 role: true,
+                jobTitle: true,
                 status: true,
+                phone: true,
+                department: true,
                 createdAt: true,
                 updatedAt: true,
             }
-        });
-
-        // Save display metadata
-        employeeMetaStore.set(newEmployee.id, {
-            department,
-            phone,
-            role,
-            status
         });
 
         const formatted = {
             id: newEmployee.id,
             name: `${newEmployee.firstName} ${newEmployee.lastName}`.trim(),
             email: newEmployee.email,
-            role,
-            department,
-            phone,
+            role: newEmployee.jobTitle || role,
+            department: newEmployee.department || department,
+            phone: newEmployee.phone || phone,
             status,
             createdAt: newEmployee.createdAt
         };
@@ -1014,7 +1024,7 @@ export const createEmployee = async (req, res) => {
 
 export const updateEmployee = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
+        const result = await getClientAdmin(req.user.uid, req.user.email);
         if (result.error) {
             return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
         }
@@ -1045,8 +1055,10 @@ export const updateEmployee = async (req, res) => {
                 ...(fName !== undefined && { firstName: fName }),
                 ...(lName !== undefined && { lastName: lName }),
                 ...(email !== undefined && { email }),
-                ...(role !== undefined && validateUserRole(role) && role !== "ADMIN" && { role }),
-                ...(status !== undefined && validateUserStatus(status) && { status })
+                ...(role !== undefined && { jobTitle: role, ...(validateUserRole(role) && role !== "ADMIN" ? { role } : {}) }),
+                ...(status !== undefined && validateUserStatus(status) && { status }),
+                ...(phone !== undefined && { phone }),
+                ...(department !== undefined && { department }),
             },
             select: {
                 id: true,
@@ -1055,30 +1067,23 @@ export const updateEmployee = async (req, res) => {
                 firstName: true,
                 lastName: true,
                 role: true,
+                jobTitle: true,
                 status: true,
+                phone: true,
+                department: true,
                 createdAt: true,
                 updatedAt: true,
             }
         });
 
-        const currentMeta = employeeMetaStore.get(id) || {};
-        const newMeta = {
-            ...currentMeta,
-            ...(department !== undefined && { department }),
-            ...(phone !== undefined && { phone }),
-            ...(role !== undefined && { role }),
-            ...(status !== undefined && { status }),
-        };
-        employeeMetaStore.set(id, newMeta);
-
         const formatted = {
             id: updated.id,
             name: `${updated.firstName} ${updated.lastName}`.trim(),
             email: updated.email,
-            role: newMeta.role || updated.role,
-            department: newMeta.department || 'Sales & Accounts',
-            phone: newMeta.phone || '+91 98000 00000',
-            status: newMeta.status || (updated.status === 'ACTIVE' ? 'Full-time' : 'Contract'),
+            role: updated.jobTitle || updated.role,
+            department: updated.department || 'Sales & Accounts',
+            phone: updated.phone || '+91 98000 00000',
+            status: updated.status === 'ACTIVE' ? 'Full-time' : 'Contract',
             updatedAt: updated.updatedAt
         };
 
@@ -1090,7 +1095,7 @@ export const updateEmployee = async (req, res) => {
 
 export const deleteEmployee = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
+        const result = await getClientAdmin(req.user.uid, req.user.email);
         if (result.error) {
             return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
         }
@@ -1116,59 +1121,196 @@ export const deleteEmployee = async (req, res) => {
 export const updateEmployees = updateEmployee;
 export const deleteEmployees = deleteEmployee;
 
-/* ==========================================================================
-   Profile, Password & Settings Handlers (Settings.jsx)
-   ========================================================================== */
 
-export const updateProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
+        const uid = req.user?.uid || req.user?.firebaseUid;
+        const email = req.user?.email;
+        const orgId = req.organizationId;
+
+        const profileModel = prisma.profile || prisma.clientAdmin;
+        if (!profileModel) {
+            return res.status(500).json(new ApiResponse(500, [{ message: "Profile model not found" }], null, "Database configuration error"));
         }
 
-        const { name, firstName, lastName, email, phone, orgName } = req.body;
-
-        let fName = firstName;
-        let lName = lastName;
-        if (name !== undefined && !firstName) {
-            const parts = name.trim().split(" ");
-            fName = parts[0] || "";
-            lName = parts.slice(1).join(" ") || "";
-        }
-
-        const updatedUser = await prisma.user.update({
-            where: { id: result.user.id },
-            data: {
-                ...(fName !== undefined && { firstName: fName }),
-                ...(lName !== undefined && { lastName: lName }),
-                ...(email !== undefined && { email }),
-            },
-            select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                organizationId: true
+        // 1. Look for existing profile in database table
+        let profile = await profileModel.findFirst({
+            where: {
+                OR: [
+                    ...(uid ? [{ firebaseUid: uid }] : []),
+                    ...(email ? [{ email }] : [])
+                ]
             }
         });
 
-        if (orgName && result.user.organizationId) {
-            await prisma.organization.update({
-                where: { id: result.user.organizationId },
-                data: { name: orgName }
-            });
+        // 2. If table is empty or record doesn't exist yet, auto-provision from user / defaults
+        if (!profile) {
+            let orgName = "SHNOOR CRM";
+            if (orgId) {
+                const org = await prisma.organization.findUnique({
+                    where: { id: orgId },
+                    select: { name: true }
+                });
+                if (org?.name) orgName = org.name;
+            }
+
+            let phone = "+91 98000 00000";
+            let designation = req.user?.role === "ORGANIZATION_ADMIN" ? "Client Administrator" : "Sales Lead";
+            if (req.user?.id) {
+                const fullUser = await prisma.user.findUnique({
+                    where: { id: req.user.id },
+                    select: { phone: true, jobTitle: true }
+                });
+                if (fullUser?.phone) phone = fullUser.phone;
+                if (fullUser?.jobTitle) designation = fullUser.jobTitle;
+            }
+
+            const name = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || "Client Admin";
+            const userEmail = email || "admin@crmclient.com";
+            const role = req.user?.role || "ORGANIZATION_ADMIN";
+
+            try {
+                profile = await profileModel.create({
+                    data: {
+                        firebaseUid: uid || `user_${Date.now()}`,
+                        email: userEmail,
+                        name,
+                        phone,
+                        designation,
+                        organizationName: orgName,
+                        role,
+                        passwordLastChangedAt: new Date()
+                    }
+                });
+            } catch (createErr) {
+                console.warn("[getProfile] Auto-create fallback:", createErr.message);
+                profile = {
+                    id: req.user?.id || "temp-profile-id",
+                    firebaseUid: uid,
+                    email: userEmail,
+                    name,
+                    phone,
+                    designation,
+                    organizationName: orgName,
+                    role,
+                    passwordLastChangedAt: new Date()
+                };
+            }
         }
 
         return res.status(200).json(
             new ApiResponse(200, [], {
-                name: `${updatedUser.firstName} ${updatedUser.lastName}`.trim(),
-                email: updatedUser.email,
-                phone: phone || '+91 98000 00000',
-                role: updatedUser.role,
-                orgName: orgName || 'SHNOOR CRM'
-            }, "Profile updated successfully")
+                id: profile.id,
+                name: profile.name,
+                email: profile.email,
+                phone: profile.phone,
+                designation: profile.designation,
+                organizationName: profile.organizationName,
+                orgName: profile.organizationName,
+                role: profile.role,
+                passwordLastChangedAt: profile.passwordLastChangedAt
+            }, "Profile retrieved successfully")
+        );
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve profile"));
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    try {
+        const uid = req.user?.uid || req.user?.firebaseUid;
+        const email = req.body?.email || req.user?.email;
+        const { name, phone, designation, role, orgName, organizationName } = req.body;
+        const resolvedOrgName = orgName || organizationName;
+
+        const profileModel = prisma.profile || prisma.clientAdmin;
+
+        let existing = null;
+        if (profileModel) {
+            existing = await profileModel.findFirst({
+                where: {
+                    OR: [
+                        ...(uid ? [{ firebaseUid: uid }] : []),
+                        ...(email ? [{ email }] : [])
+                    ]
+                }
+            });
+        }
+
+        let updatedProfile = null;
+        if (existing) {
+            updatedProfile = await profileModel.update({
+                where: { id: existing.id },
+                data: {
+                    ...(name !== undefined && { name: name.trim() }),
+                    ...(phone !== undefined && { phone: phone.trim() }),
+                    ...(designation !== undefined && { designation: designation.trim() }),
+                    ...(resolvedOrgName !== undefined && { organizationName: resolvedOrgName.trim() }),
+                    ...(role !== undefined && { role }),
+                    ...(uid && !existing.firebaseUid && { firebaseUid: uid })
+                }
+            });
+        } else if (profileModel) {
+            updatedProfile = await profileModel.create({
+                data: {
+                    firebaseUid: uid || `user_${Date.now()}`,
+                    email: email || "admin@crmclient.com",
+                    name: name?.trim() || "Client Admin",
+                    phone: phone?.trim() || "+91 98000 00000",
+                    designation: designation?.trim() || "Client Administrator",
+                    organizationName: resolvedOrgName?.trim() || "SHNOOR CRM",
+                    role: role || "ORGANIZATION_ADMIN",
+                    passwordLastChangedAt: new Date()
+                }
+            });
+        }
+
+        // Also sync User & Organization records if present
+        try {
+            let fName = undefined;
+            let lName = undefined;
+            if (name !== undefined) {
+                const parts = name.trim().split(" ");
+                fName = parts[0] || "";
+                lName = parts.slice(1).join(" ") || "";
+            }
+
+            if (req.user?.id) {
+                await prisma.user.update({
+                    where: { id: req.user.id },
+                    data: {
+                        ...(fName !== undefined && { firstName: fName }),
+                        ...(lName !== undefined && { lastName: lName }),
+                        ...(phone !== undefined && { phone: phone.trim() }),
+                        ...(designation !== undefined && { jobTitle: designation.trim() }),
+                    }
+                }).catch(() => {});
+            }
+
+            if (resolvedOrgName && req.organizationId) {
+                await prisma.organization.update({
+                    where: { id: req.organizationId },
+                    data: { name: resolvedOrgName.trim() }
+                }).catch(() => {});
+            }
+        } catch (syncErr) {
+            console.warn("[updateProfile] Secondary sync warning:", syncErr.message);
+        }
+
+        const responseData = {
+            id: updatedProfile?.id || req.user?.id,
+            name: updatedProfile?.name || name,
+            email: updatedProfile?.email || email,
+            phone: updatedProfile?.phone || phone,
+            designation: updatedProfile?.designation || designation,
+            organizationName: updatedProfile?.organizationName || resolvedOrgName,
+            orgName: updatedProfile?.organizationName || resolvedOrgName,
+            role: updatedProfile?.role || role,
+            passwordLastChangedAt: updatedProfile?.passwordLastChangedAt
+        };
+
+        return res.status(200).json(
+            new ApiResponse(200, [], responseData, "Profile updated successfully")
         );
     } catch (error) {
         return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update profile"));
@@ -1177,11 +1319,8 @@ export const updateProfile = async (req, res) => {
 
 export const updatePassword = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
+        const uid = req.user?.uid || req.user?.firebaseUid;
+        const email = req.user?.email;
         const { currentPassword, newPassword } = req.body;
 
         if (!newPassword || newPassword.length < 8) {
@@ -1189,11 +1328,27 @@ export const updatePassword = async (req, res) => {
         }
 
         // If firebase auth is active, update password in firebase auth service
-        if (auth && typeof auth.updateUser === "function" && req.user.uid && !req.user.uid.startsWith("dev-")) {
-            await auth.updateUser(req.user.uid, { password: newPassword });
+        if (auth && typeof auth.updateUser === "function" && uid && !uid.startsWith("dev-")) {
+            await auth.updateUser(uid, { password: newPassword });
         }
 
-        return res.status(200).json(new ApiResponse(200, [], null, "Password updated successfully"));
+        const now = new Date();
+        const profileModel = prisma.profile || prisma.clientAdmin;
+        if (profileModel) {
+            await profileModel.updateMany({
+                where: {
+                    OR: [
+                        ...(uid ? [{ firebaseUid: uid }] : []),
+                        ...(email ? [{ email }] : [])
+                    ]
+                },
+                data: {
+                    passwordLastChangedAt: now
+                }
+            }).catch(() => {});
+        }
+
+        return res.status(200).json(new ApiResponse(200, [], { passwordLastChangedAt: now }, "Password updated successfully"));
     } catch (error) {
         return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update password"));
     }
@@ -1219,6 +1374,20 @@ export const getSettings = async (req, res) => {
         if (result.error) {
             return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
         }
+        const uid = user?.uid || user?.firebaseUid;
+
+        const profileModel = prisma.profile || prisma.clientAdmin;
+        let profile = null;
+        if (profileModel) {
+            profile = await profileModel.findFirst({
+                where: {
+                    OR: [
+                        ...(uid ? [{ firebaseUid: uid }] : []),
+                        ...(user?.email ? [{ email: user.email }] : [])
+                    ]
+                }
+            });
+        }
 
         let orgDetails = null;
         if (result.user.organizationId) {
@@ -1229,12 +1398,15 @@ export const getSettings = async (req, res) => {
         }
 
         const userProfile = {
-            name: `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'Client Admin',
-            email: result.user.email,
-            phone: '+91 98000 00000',
-            designation: result.user.role === 'ORGANIZATION_ADMIN' ? 'Client Administrator' : 'Sales Lead',
-            role: result.user.role || 'ORGANIZATION_ADMIN',
-            orgName: orgDetails?.name || 'SHNOOR CRM'
+            id: profile?.id || user.id,
+            name: profile?.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Client Admin',
+            email: profile?.email || user.email || '',
+            phone: profile?.phone || fullUser?.phone || '+91 98000 00000',
+            designation: profile?.designation || fullUser?.jobTitle || (user.role === 'ORGANIZATION_ADMIN' ? 'Client Administrator' : 'Sales Lead'),
+            role: profile?.role || user.role || 'ORGANIZATION_ADMIN',
+            orgName: profile?.organizationName || orgDetails?.name || 'SHNOOR CRM',
+            organizationName: profile?.organizationName || orgDetails?.name || 'SHNOOR CRM',
+            passwordLastChangedAt: profile?.passwordLastChangedAt
         };
 
         const combined = {
@@ -1276,3 +1448,115 @@ export const updateSettings = async (req, res) => {
 };
 
 
+
+export const listFollowUps = async (req, res) => {
+    try {
+        const { entityType, entityId } = req.query;
+        if (!entityType || !entityId) {
+            return res.status(400).json(new ApiResponse(400, [{ message: "entityType and entityId required" }], null));
+        }
+
+        const items = await prisma.followUp.findMany({
+            where: {
+                entityType: { equals: String(entityType), mode: 'insensitive' },
+                entityId: String(entityId)
+            },
+            orderBy: { createdAt: "desc" }
+        });
+
+        const formatted = items.map(f => ({
+            id: f.id,
+            description: f.description,
+            nextFollowUpDate: f.nextFollowUpDate,
+            author: f.author,
+            createdAt: new Date(f.createdAt).toLocaleDateString('en-US', {
+                month: '2-digit', day: '2-digit', year: 'numeric'
+            }) + ', ' + new Date(f.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        }));
+
+        return res.status(200).json(new ApiResponse(200, [], formatted, "Follow-ups retrieved"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+    }
+};
+
+export const createFollowUp = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+        const { entityType, entityId, description, nextFollowUpDate, author } = req.body;
+
+        if (!entityType || !entityId || !description) {
+            return res.status(400).json(new ApiResponse(400, [{ message: "Missing required fields" }], null));
+        }
+
+        let orgId = result.user?.organizationId;
+        if (!orgId) {
+            const defaultOrg = await prisma.organization.findFirst();
+            orgId = defaultOrg?.id;
+        }
+        if (!orgId) {
+            return res.status(400).json(new ApiResponse(400, [{ message: "No organization found" }], null));
+        }
+
+        const created = await prisma.followUp.create({
+            data: {
+                entityType: String(entityType).toLowerCase(),
+                entityId: String(entityId),
+                description,
+                nextFollowUpDate: nextFollowUpDate || null,
+                author: author || 'Sarah Jenkins',
+                organizationId: orgId,
+            }
+        });
+
+        const formatted = {
+            id: created.id,
+            description: created.description,
+            nextFollowUpDate: created.nextFollowUpDate,
+            author: created.author,
+            createdAt: new Date(created.createdAt).toLocaleDateString('en-US', {
+                month: '2-digit', day: '2-digit', year: 'numeric'
+            }) + ', ' + new Date(created.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        };
+
+        return res.status(201).json(new ApiResponse(201, [], formatted, "Follow-up created"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+    }
+};
+
+export const updateFollowUp = async (req, res) => {
+    try {
+        const { description, nextFollowUpDate } = req.body;
+        const updated = await prisma.followUp.update({
+            where: { id: req.params.id },
+            data: {
+                ...(description !== undefined && { description: description.trim() }),
+                ...(nextFollowUpDate !== undefined && { nextFollowUpDate })
+            }
+        });
+
+        const formatted = {
+            id: updated.id,
+            description: updated.description,
+            nextFollowUpDate: updated.nextFollowUpDate,
+            author: updated.author,
+            createdAt: new Date(updated.createdAt).toLocaleDateString('en-US', {
+                month: '2-digit', day: '2-digit', year: 'numeric'
+            }) + ', ' + new Date(updated.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        };
+
+        return res.status(200).json(new ApiResponse(200, [], formatted, "Follow-up updated successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+    }
+};
+
+export const deleteFollowUp = async (req, res) => {
+    try {
+        await prisma.followUp.delete({ where: { id: req.params.id } });
+        return res.status(200).json(new ApiResponse(200, [], null, "Follow-up deleted"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+    }
+};

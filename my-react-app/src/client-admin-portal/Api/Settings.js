@@ -8,6 +8,10 @@ export const updateSettings = async (settingsData) => {
   return await api.patch('/settings', settingsData);
 };
 
+export const getProfile = async () => {
+  return await api.get('/profile');
+}
+
 export const updateProfile = async (profileData) => {
   return await api.patch('/profile', profileData);
 };
@@ -18,6 +22,7 @@ export const updatePassword = async (passwordData) => {
 
 export default {
   getSettings,
+  getProfile,
   updateSettings,
   updateProfile,
   updatePassword,

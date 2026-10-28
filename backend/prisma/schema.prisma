@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,24 +7,31 @@ datasource db {
 }
 
 model Organization {
-  id          String                   @id @default(uuid())
-  name        String
-  status      OrganizationStatus       @default(ACTIVE)
-  email       String?
-  phone       String?
-  website     String?
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
-  activities  Activity[]
-  auditLogs   AuditLog[]
-  companies   Company[]
-  customers   Customer[]
-  deals       Deal[]
-  leads       Lead[]
-  invitations OrganizationInvitation[]
-  tasks       Task[]
-  teams       Team[]
-  users       User[]
+  id                 String                   @id @default(uuid())
+  name               String
+  status             OrganizationStatus       @default(ACTIVE)
+  email              String?
+  phone              String?
+  website            String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  planId             String?
+  subscriptionStatus String?
+  paymentStatus      String?
+  billingCycle       String?
+  subscriptionAmount Float?
+  activities         Activity[]
+  auditLogs          AuditLog[]
+  companies          Company[]
+  customers          Customer[]
+  deals              Deal[]
+  followUps          FollowUp[]
+  leads              Lead[]
+  invitations        OrganizationInvitation[]
+  supportTickets     SupportTicket[]
+  tasks              Task[]
+  teams              Team[]
+  users              User[]
 }
 
 model User {
@@ -40,6 +46,9 @@ model User {
   organizationId      String?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
+  department          String?
+  phone               String?
+  jobTitle            String?
   performedActivities Activity[]       @relation("ActivityPerformedBy")
   auditLogs           AuditLog[]
   assignedDeals       Deal[]           @relation("DealAssignedTo")
@@ -159,6 +168,24 @@ model Lead {
   @@index([customerId])
 }
 
+model Product {
+  id             String        @id @default(uuid())
+  organizationId String
+  productId      String
+  organizationName String    @default("")
+  name           String
+  description    String?
+  category       String
+  pricing        Int
+  billingCycle   BillingCycle
+  status         ProductStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, productId])
+  @@index([organizationId])
+}
+
 model Customer {
   id             String       @id @default(uuid())
   organizationId String
@@ -225,6 +252,22 @@ model Task {
   @@index([dealId])
 }
 
+model FollowUp {
+  id               String       @id @default(uuid())
+  entityType       String
+  entityId         String
+  description      String
+  nextFollowUpDate String?
+  author           String?
+  organizationId   String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+}
+
 model Activity {
   id             String       @id @default(uuid())
   type           ActivityType
@@ -266,19 +309,80 @@ model AuditLog {
   @@index([actorId])
   @@index([entityType, entityId])
 }
+model ClientAdmin{
+  id       String  @id  @default(uuid())
+  firebaseUid   String @unique
+  email         String @unique
+  name          String
+  phone         String
+  designation   String
+  organizationName  String
+  role          String
+  passwordLastChangedAt DateTime
+}
 
 model SuperAdmin {
-  id          String   @id @default(uuid())
-  firebaseUid String   @unique
-  email       String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String    @id @default(uuid())
+  firebaseUid           String    @unique
+  email                 String    @unique
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  name                  String?
+  phone                 String?
+  designation           String?
+  passwordLastChangedAt DateTime?
+}
+model SubscriptionPlan {
+  id        String   @id
+  name      String
+  price     Float
+  billing   String
+  userLimit Int
+  features  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformSettings {
+  id        String   @id @default("global")
+  settings  Json
+  updatedAt DateTime @updatedAt
+}
+
+model SupportTicket {
+  id             String        @id @default(uuid())
+  organizationId String?
+  subject        String
+  category       String
+  priority       String
+  status         String        @default("OPEN")
+  message        String
+  replies        Json          @default("[]")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([status, createdAt])
 }
 
 enum UserRole {
   ORGANIZATION_ADMIN
   MANAGER
   SALES
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  ONE_TIME
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
 }
 
 enum OrganizationStatus {
@@ -300,6 +404,7 @@ enum LeadStatus {
   QUALIFIED
   UNQUALIFIED
   CONVERTED
+  PENDING
 }
 
 enum LeadSource {

@@ -10,7 +10,7 @@ export const getAuthToken = async () => {
         return freshToken;
       }
     } catch (e) {
-      // Fallback to localStorage
+
     }
   }
   return localStorage.getItem('token') || localStorage.getItem('firebaseToken') || '';
@@ -40,7 +40,6 @@ export async function request(endpoint, options = {}) {
       throw new Error(errorMessage);
     }
 
-    // Return the data field if response wraps in ApiResponse { data: ... }
     return result?.data !== undefined ? result.data : result;
   } catch (error) {
     console.error(`[CRM API Error] ${options.method || 'GET'} ${url}:`, error.message);

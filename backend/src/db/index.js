@@ -10,4 +10,11 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+// Provide alias so prisma.profile and prisma.clientAdmin can be used interchangeably
+if (!prisma.profile && prisma.clientAdmin) {
+  prisma.profile = prisma.clientAdmin;
+} else if (!prisma.clientAdmin && prisma.profile) {
+  prisma.clientAdmin = prisma.profile;
+}
+
 export default prisma;

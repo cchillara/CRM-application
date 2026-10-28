@@ -8,6 +8,8 @@ import Team from "./pages/Teams";
 import Products from "./pages/Products";
 import Employee from "./pages/Employee";
 import Settings from "./pages/Settings";
+import Calendar from "./pages/Calendar";
+import Profile from "./pages/Profile";
 import "./Client-admin.css"
 
 export default function ClientAdminRoutes() {
@@ -19,6 +21,8 @@ export default function ClientAdminRoutes() {
         <Route path="deals" element={<Deals />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="team" element={<Team />} />
+        <Route path="calendar" element={<Calendar />} />
+        <Route path="profile" element={<Profile/>}/>
         <Route path="products" element={<Products />} />
         <Route path="employee" element={<Employee />} />
         <Route path="settings" element={<Settings />} />
