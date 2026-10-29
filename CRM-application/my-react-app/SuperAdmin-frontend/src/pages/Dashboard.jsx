@@ -1,4 +1,4 @@
-import { Building2, CreditCard, Headphones, LogOut, Users } from "lucide-react";
+import { Building2, CreditCard, Headphones, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePlatform } from "../context/PlatformContext";
 import Status from "../components/Status";
@@ -18,12 +18,6 @@ export default function Dashboard() {
     { label: "Open Queries", value: metrics.openTickets, helper: "Support requests", icon: Headphones, path: "/support" }
   ];
 
-  function logout() {
-    ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
-    sessionStorage.clear();
-    window.location.href = import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login";
-  }
-
   return (
     <>
       <section className="overview-top">
@@ -31,12 +25,9 @@ export default function Dashboard() {
           <h2>Platform Overview</h2>
           <p>All numbers below are calculated from the current platform data.</p>
         </div>
-        <button className="logout-button" onClick={logout}>
-          <LogOut size={16} /> Log out
-        </button>
       </section>
 
-      <section className="stats-grid">
+      <section className="stats-grid platform-overview-stats">
         {cards.map(({ label, value, helper, icon: Icon, path }) => (
           <button className="stat-card" key={label} onClick={() => navigate(path)}>
             <div className="stat-card-top">

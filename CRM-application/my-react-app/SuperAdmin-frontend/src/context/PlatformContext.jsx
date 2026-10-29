@@ -140,7 +140,8 @@ const defaultData = {
   tickets: defaultTickets,
   settings: {
     platformName: "SHNOOR CRM", supportEmail: "support@shnoor.com", allowSignup: true,
-    emailAlerts: true, maintenanceMode: false, defaultPlanId: "starter"
+    emailAlerts: true, maintenanceMode: false, defaultPlanId: "starter",
+    newOrganizationAlerts: true, failedPaymentAlerts: true, weeklySummaryEmail: false
   },
   profile: {
     name: "Super Admin", email: "admin@shnoor.com", phone: "+91 90000 00000",
@@ -302,7 +303,7 @@ export function PlatformProvider({ children }) {
         unassignedUsers: (users || []).filter((user) => !user.organizationId).map(mapUser),
         auditLogs,
         plans: plans || current.plans,
-        settings: settings || current.settings,
+        settings: settings ? { ...defaultData.settings, ...settings } : current.settings,
         profile: profile || current.profile,
         security: profile ? { ...current.security, passwordLastChangedAt: profile.passwordLastChangedAt || null } : current.security,
         tickets: Array.isArray(tickets) ? tickets : current.tickets,

@@ -208,7 +208,7 @@ export default function OrganizationDetails() {
           <small>Current subscription status</small>
         </div>
 
-        <div className="detail-card">
+        <div className={`detail-card payment-summary-card payment-${String(organization.paymentStatus || "unknown").toLowerCase().replaceAll(" ", "-")}`}>
           <span>Payment</span>
           <strong>{organization.paymentStatus}</strong>
           <small>Current payment status</small>

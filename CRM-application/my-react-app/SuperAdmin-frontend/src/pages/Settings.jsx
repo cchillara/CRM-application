@@ -7,6 +7,7 @@ import {
   UserRound
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import Modal from "../components/Modal";
 import { usePlatform } from "../context/PlatformContext";
 
 function normalizeE164Phone(value) {
@@ -17,10 +18,10 @@ function isValidE164Phone(value) {
   return /^\+[1-9]\d{7,14}$/.test(normalizeE164Phone(value));
 }
 
-export default function Settings() {
+export default function Settings({ accountMode = false }) {
   const { data, updateSettings, updateProfile, changePassword } = usePlatform();
 
-  const [view, setView] = useState("settings");
+  const [view, setView] = useState(accountMode ? "account" : "settings");
 
   const [settingsForm, setSettingsForm] = useState(data.settings);
   const [profileForm, setProfileForm] = useState(data.profile);
@@ -62,6 +63,42 @@ export default function Settings() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const accountHome = (
+    <div className="settings-page">
+      <section className="panel account-summary-panel">
+        <div className="settings-profile-summary">
+          <div className="profile-large-avatar">{initials}</div>
+          <div className="settings-profile-copy">
+            <div className="profile-title-line">
+              <h2>{data.profile.name || "Super Admin"}</h2>
+              <span className={`profile-completion ${profileComplete ? "complete" : "incomplete"}`}>
+                {profileComplete ? "Profile Complete" : "Profile Incomplete"}
+              </span>
+            </div>
+            <p>{data.profile.designation}</p>
+          </div>
+        </div>
+      </section>
+      <section className="panel">
+        <div className="panel-title">
+          <div><h3>Account</h3><p>Manage your profile and account security.</p></div>
+        </div>
+        <div className="settings-option-list">
+          <button type="button" className="settings-option" onClick={() => setView("profile")}>
+            <div className="settings-option-icon"><UserRound size={18} /></div>
+            <div className="settings-option-copy"><strong>Profile</strong><span>View and edit Super Admin profile details.</span></div>
+            <div className="settings-option-right"><ChevronRight size={18} /></div>
+          </button>
+          <button type="button" className="settings-option" onClick={() => setView("password")}>
+            <div className="settings-option-icon"><KeyRound size={18} /></div>
+            <div className="settings-option-copy"><strong>Change Password</strong><span>Update your account password securely.</span></div>
+            <div className="settings-option-right"><ChevronRight size={18} /></div>
+          </button>
+        </div>
+      </section>
+    </div>
+  );
 
   async function submitSettings(event) {
     event.preventDefault();
@@ -169,6 +206,52 @@ export default function Settings() {
     }, 1400);
   }
 
+  if (accountMode && view === "profile") {
+    return <>
+      {accountHome}
+      <Modal open title="Edit Profile" size="large" onClose={() => { setView("account"); setProfileSaved(false); setSaveError(""); }}>
+        {saveError && <div className="inline-error" role="alert">{saveError}</div>}
+        <form className="form-stack account-modal-form" onSubmit={submitProfile}>
+          <p className="account-modal-intro">Update the profile details used for your Super Admin account.</p>
+          <div className="form-grid">
+            <label>Name<input required value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} /></label>
+            <label>Email<input required type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} /></label>
+            <label>Phone<input required type="tel" placeholder="+919876543210" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} /></label>
+            <label>Designation<input required value={profileForm.designation} onChange={(e) => setProfileForm({ ...profileForm, designation: e.target.value })} /></label>
+            <label>Role<input value={profileForm.role} disabled /></label>
+          </div>
+          <div className="modal-actions">
+            {profileSaved && <span className="modal-success-message">Profile saved.</span>}
+            <button type="button" className="secondary-button" onClick={() => { setView("account"); setProfileSaved(false); setSaveError(""); }}>Cancel</button>
+            <button type="submit" className="primary-button" disabled={profileSaving}><Save size={15} />{profileSaving ? "Saving…" : "Save Profile"}</button>
+          </div>
+        </form>
+      </Modal>
+    </>;
+  }
+
+  if (accountMode && view === "password") {
+    return <>
+      {accountHome}
+      <Modal open title="Change Password" onClose={() => { setView("account"); setPasswordMessage({ type: "", text: "" }); }}>
+        <form className="form-stack account-modal-form" onSubmit={submitPassword}>
+          <p className="account-modal-intro">Choose a new password with at least 8 characters.</p>
+          <label>Current Password<input required type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} /></label>
+          <label>New Password<input required type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} /></label>
+          <label>Confirm New Password<input required type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} /></label>
+          <div className="password-info-row">
+            <div><strong>Last changed</strong><span>{data.security?.passwordLastChangedAt || "Not changed yet"}</span></div>
+          </div>
+          {passwordMessage.text && <div role="status" className={`password-message ${passwordMessage.type}`}>{passwordMessage.text}</div>}
+          <div className="modal-actions">
+            <button type="button" className="secondary-button" onClick={() => { setView("account"); setPasswordMessage({ type: "", text: "" }); }}>Cancel</button>
+            <button type="submit" className="primary-button" disabled={passwordSaving}><KeyRound size={15} />{passwordSaving ? "Saving…" : "Change Password"}</button>
+          </div>
+        </form>
+      </Modal>
+    </>;
+  }
+
   if (view === "profile") {
     return (
       <div className="settings-page">
@@ -177,12 +260,12 @@ export default function Settings() {
           <button
             className="back-button"
             onClick={() => {
-              setView("settings");
+              setView(accountMode ? "account" : "settings");
               setProfileSaved(false);
             }}
           >
             <ArrowLeft size={16} />
-            Back to Settings
+            {accountMode ? "Back to Account" : "Back to Settings"}
           </button>
 
           <div>
@@ -318,12 +401,12 @@ export default function Settings() {
           <button
             className="back-button"
             onClick={() => {
-              setView("settings");
+              setView(accountMode ? "account" : "settings");
               setPasswordMessage({ type: "", text: "" });
             }}
           >
             <ArrowLeft size={16} />
-            Back to Settings
+            {accountMode ? "Back to Account" : "Back to Settings"}
           </button>
 
           <div>
@@ -423,65 +506,13 @@ export default function Settings() {
     );
   }
 
+  if (accountMode && view === "account") {
+    return accountHome;
+  }
+
   return (
     <div className="settings-page">
       {saveError && <div className="inline-error" role="alert">{saveError}</div>}
-      <section className="panel">
-        <div className="panel-title">
-          <div>
-            <h3>Account</h3>
-            <p>Manage the Super Admin account and security.</p>
-          </div>
-        </div>
-
-        <div className="settings-option-list">
-          <button
-            type="button"
-            className="settings-option"
-            onClick={() => setView("profile")}
-          >
-            <div className="settings-option-icon">
-              <UserRound size={18} />
-            </div>
-
-            <div className="settings-option-copy">
-              <strong>Profile</strong>
-              <span>View and edit Super Admin profile details.</span>
-            </div>
-
-            <div className="settings-option-right">
-              <span
-                className={`profile-completion ${
-                  profileComplete ? "complete" : "incomplete"
-                }`}
-              >
-                {profileComplete ? "Complete" : "Incomplete"}
-              </span>
-              <ChevronRight size={18} />
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className="settings-option"
-            onClick={() => setView("password")}
-          >
-            <div className="settings-option-icon">
-              <KeyRound size={18} />
-            </div>
-
-            <div className="settings-option-copy">
-              <strong>Change Password</strong>
-              <span>Change the Super Admin account password.</span>
-            </div>
-
-            <div className="settings-option-right">
-              <ChevronRight size={18} />
-            </div>
-          </button>
-        </div>
-      </section>
-
       <form className="settings-form" onSubmit={submitSettings}>
         <section className="panel">
           <div className="panel-title">
@@ -582,6 +613,45 @@ export default function Settings() {
                   emailAlerts: e.target.checked
                 })
               }
+            />
+          </label>
+
+          <label className="setting-row">
+            <div>
+              <strong>New organization alerts</strong>
+              <span>Include new organization activity in platform email alerts.</span>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={settingsForm.newOrganizationAlerts}
+              onChange={(e) => setSettingsForm({ ...settingsForm, newOrganizationAlerts: e.target.checked })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <div>
+              <strong>Failed payment alerts</strong>
+              <span>Include failed payment activity in platform email alerts.</span>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={settingsForm.failedPaymentAlerts}
+              onChange={(e) => setSettingsForm({ ...settingsForm, failedPaymentAlerts: e.target.checked })}
+            />
+          </label>
+
+          <label className="setting-row">
+            <div>
+              <strong>Weekly summary email</strong>
+              <span>Include a weekly overview of platform activity in email alerts.</span>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={settingsForm.weeklySummaryEmail}
+              onChange={(e) => setSettingsForm({ ...settingsForm, weeklySummaryEmail: e.target.checked })}
             />
           </label>
 

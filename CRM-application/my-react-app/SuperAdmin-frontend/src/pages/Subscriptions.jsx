@@ -4,6 +4,12 @@ import Modal from "../components/Modal";
 import Status from "../components/Status";
 import { usePlatform } from "../context/PlatformContext";
 
+const formatCurrency = (value) => new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0
+}).format(value);
+
 export default function Subscriptions() {
   const {
     data,
@@ -91,7 +97,7 @@ export default function Subscriptions() {
         </div>
         <div>
           <span>Monthly Revenue</span>
-          <strong>₹{metrics.monthlyRevenue.toLocaleString("en-IN")}</strong>
+          <strong>{formatCurrency(metrics.monthlyRevenue)}</strong>
         </div>
         <div>
           <span>Organizations</span>
@@ -107,13 +113,12 @@ export default function Subscriptions() {
           return (
             <article className="plan-card editable-plan-card" key={plan.id}>
               <span>{plan.name}</span>
-              <strong>
-                ₹{plan.price.toLocaleString("en-IN")}
+              <strong>{formatCurrency(plan.price)}
                 <small>/{plan.billing.toLowerCase()}</small>
               </strong>
 
               <p>Up to {plan.userLimit} users · {plan.billing}</p>
-              <div>{active} active subscriptions</div>
+              <div>{active} active {active === 1 ? "subscription" : "subscriptions"}</div>
 
               <div className="plan-card-actions">
                 <button
@@ -183,7 +188,7 @@ export default function Subscriptions() {
                 );
               })}
               {data.organizations.length === 0 && (
-                <tr><td colSpan="6" className="empty-cell">{apiLoading ? "Loading subscriptions…" : "No organization subscriptions found."}</td></tr>
+                <tr><td colSpan="6" className="empty-cell">{apiLoading ? "Loading subscriptionsÃ¢â‚¬Â¦" : "No organization subscriptions found."}</td></tr>
               )}
             </tbody>
           </table>
@@ -199,23 +204,30 @@ export default function Subscriptions() {
         {selected && (
           <div className="plan-details">
             <div className="detail-cards compact">
-              <div className="detail-card">
+              <div className="detail-card plan-detail-price">
                 <span>Price</span>
-                <strong>₹{selected.plan.price.toLocaleString("en-IN")}</strong>
-                <small>per month</small>
+                <strong>{formatCurrency(selected.plan.price)}</strong>
+                <small>per {selected.plan.billing.toLowerCase()}</small>
               </div>
 
-              <div className="detail-card">
+              <div className="detail-card plan-detail-users">
                 <span>User Limit</span>
                 <strong>{selected.plan.userLimit}</strong>
                 <small>users per organization</small>
               </div>
 
-              <div className="detail-card">
+              <div className="detail-card plan-detail-organizations">
                 <span>Organizations</span>
                 <strong>{selected.organizations.length}</strong>
                 <small>using this plan</small>
               </div>
+            </div>
+
+            <div className="plan-description">
+              <span className="plan-description-label">PLAN SUMMARY</span>
+              <p>
+                The {selected.plan.name} plan is billed {selected.plan.billing.toLowerCase()} at {formatCurrency(selected.plan.price)} per billing cycle and supports up to {selected.plan.userLimit} users per organization. It includes {selected.plan.features.length} listed {selected.plan.features.length === 1 ? "feature" : "features"} and is currently used by {selected.organizations.length} {selected.organizations.length === 1 ? "organization" : "organizations"}.
+              </p>
             </div>
 
             <h3>What this plan offers</h3>
@@ -244,7 +256,7 @@ export default function Subscriptions() {
                     <div key={org.id}>
                       <strong>{org.name}</strong>
                       <span>
-                        {org.users.length} users · {org.subscriptionStatus} · {org.paymentStatus}
+                        {org.users.length} {org.users.length === 1 ? "user" : "users"} &middot; {org.subscriptionStatus} &middot; {org.paymentStatus}
                       </span>
                     </div>
                   ))}
@@ -278,7 +290,7 @@ export default function Subscriptions() {
               </label>
 
               <label>
-                Price (₹ / month)
+                Price (Ã¢â€šÂ¹ / month)
                 <input
                   required
                   min="0"
@@ -336,7 +348,7 @@ export default function Subscriptions() {
                 Cancel
               </button>
               <button type="submit" className="primary-button" disabled={savingPlan}>
-                {savingPlan ? "Saving…" : "Save Plan"}
+                {savingPlan ? "SavingÃ¢â‚¬Â¦" : "Save Plan"}
               </button>
             </div>
           </form>
@@ -345,7 +357,7 @@ export default function Subscriptions() {
 
       <Modal
         open={Boolean(editingOrganization && orgForm)}
-        title={editingOrganization ? `Edit Subscription · ${editingOrganization.name}` : "Edit Subscription"}
+        title={editingOrganization ? `Edit Subscription Ã‚Â· ${editingOrganization.name}` : "Edit Subscription"}
         onClose={() => {
           setEditOrgId(null);
           setOrgForm(null);
@@ -415,7 +427,7 @@ export default function Subscriptions() {
                 Cancel
               </button>
               <button type="submit" className="primary-button" disabled={savingOrg}>
-                {savingOrg ? "Saving…" : "Save Changes"}
+                {savingOrg ? "SavingÃ¢â‚¬Â¦" : "Save Changes"}
               </button>
             </div>
           </form>

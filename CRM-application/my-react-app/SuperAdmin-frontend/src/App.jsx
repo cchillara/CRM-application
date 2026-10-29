@@ -57,6 +57,7 @@ export default function App() {
           <Route path="audit-logs" element={<AuditLogs />} />
           <Route path="support" element={<Support />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="account" element={<Settings accountMode />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
