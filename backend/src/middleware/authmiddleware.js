@@ -113,7 +113,7 @@ export const requireSuperAdmin = async (req, res, next) => {
 export const requireClientAdmin = async (req, res, next) => {
   try {
     const decodedToken = await extractAndVerifyToken(req);
-    const uid   = decodedToken.uid;
+    const uid = decodedToken.uid;
     const email = decodedToken.email;
 
     const userSelect = {
@@ -200,7 +200,7 @@ export const requireClientAdmin = async (req, res, next) => {
     }
 
     // Attach — merge DB fields with uid from Firebase token
-    req.user           = { ...user, uid };
+    req.user = { ...user, uid };
     req.organizationId = user.organizationId;
     next();
   } catch (error) {

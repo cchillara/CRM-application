@@ -27,7 +27,6 @@ export default function ClientLayout() {
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      // Only close on outside click when in mobile drawer mode
       if (
         typeof window !== 'undefined' &&
         window.innerWidth <= 768 &&
@@ -75,7 +74,7 @@ export default function ClientLayout() {
             <Menu size={22} />
           </button>
 
-          <span className="crm-top-header-brand">SHNOOR CRM</span>
+          {/* <span className="crm-top-header-brand">SHNOOR CRM</span> */}
         </div>
 
         <div className="crm-top-header-actions">
