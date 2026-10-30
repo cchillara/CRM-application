@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { auth } from "../../firebase.js";
+import { onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { LockKeyhole, UserRound } from "lucide-react";
 import FormModal from "../../components/common/FormModal.jsx";
 import DetailSection from "../../components/common/DetailSection.jsx";
@@ -6,25 +8,16 @@ import DetailField from "../../components/common/DetailField.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import "./SalesProfile.css";
 
-const mockProfile = {
-  firstName: "Subham",
-  lastName: "Sharma",
-  email: "subham@acmesolutions.example",
-  phone: "+91 98765 43210",
-  role: "Sales Executive",
-  organizationName: "Acme Solutions Pvt. Ltd.",
-  organizationEmail: "contact@acmesolutions.example",
-  organizationPhone: "+91 44 4000 1234",
-  organizationWebsite: "https://acmesolutions.example",
-  team: "Sales Team",
-  accountStatus: "Active",
-  accountCreated: "2026-03-15T00:00:00.000Z",
-  lastUpdated: "2026-10-06T00:00:00.000Z",
-};
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
+  .replace(/\/api\/v1.*$/, "")
+  .replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
 function SalesProfile() {
-  const [profile, setProfile] = useState(mockProfile);
-  const [profileValues, setProfileValues] = useState({ firstName: mockProfile.firstName, lastName: mockProfile.lastName, phone: mockProfile.phone });
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
+  const [profileValues, setProfileValues] = useState({ firstName: "", lastName: "", phone: "" });
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [profileError, setProfileError] = useState("");
@@ -33,8 +26,36 @@ function SalesProfile() {
   const [passwordError, setPasswordError] = useState(null);
   const [passwordMessage, setPasswordMessage] = useState("");
 
-  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
-  const initials = `${profile.firstName[0] || ""}${profile.lastName[0] || ""}`.toUpperCase();
+  const fetchProfile = async () => {
+    setLoading(true);
+    setFetchError("");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/profile`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) throw new Error(`Failed to load profile (${response.status})`);
+      const json = await response.json();
+      setProfile(json.data);
+    } catch (err) {
+      setFetchError(err.message || "Failed to load profile.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) fetchProfile();
+      else setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  const fullName = profile ? `${profile.firstName} ${profile.lastName || ""}`.trim() : "";
+  const initials = profile
+    ? `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase()
+    : "";
   const formatDate = (value) => {
     const date = new Date(value);
     return value && !Number.isNaN(date.getTime())
@@ -55,19 +76,37 @@ function SalesProfile() {
     setShowPasswordForm(false);
   };
 
-  const saveProfile = (event) => {
+  const saveProfile = async (event) => {
     event.preventDefault();
     if (!profileValues.firstName.trim()) {
       setProfileError("First name is required.");
       return;
     }
-    setProfile({ ...profile, firstName: profileValues.firstName.trim(), lastName: profileValues.lastName.trim(), phone: profileValues.phone.trim() });
     setProfileError("");
-    setShowProfileForm(false);
-    setProfileMessage("Profile preview updated for this session only. Changes are not saved permanently.");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/profile`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          firstName: profileValues.firstName.trim(),
+          lastName: profileValues.lastName.trim(),
+          phone: profileValues.phone.trim(),
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update profile.");
+      await fetchProfile();
+      setShowProfileForm(false);
+      setProfileMessage("Profile updated successfully.");
+    } catch (err) {
+      setProfileError(err.message || "Failed to save profile.");
+    }
   };
 
-  const validatePassword = (event) => {
+  const validatePassword = async (event) => {
     event.preventDefault();
     setPasswordMessage("");
     if (!passwordValues.current) {
@@ -84,9 +123,26 @@ function SalesProfile() {
       setPasswordError({ field: "next", message: "New password must be different from the current password." });
     } else {
       setPasswordError(null);
-      setPasswordMessage("Password updates are not connected yet. No password was changed.");
+      try {
+        const user = auth.currentUser;
+        const credential = EmailAuthProvider.credential(user.email, passwordValues.current);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, passwordValues.next);
+        setPasswordMessage("Password updated successfully.");
+        setPasswordValues({ current: "", next: "", confirm: "" });
+      } catch (err) {
+        if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+          setPasswordError({ field: "current", message: "Current password is incorrect." });
+        } else {
+          setPasswordError({ field: "current", message: err.message || "Failed to update password." });
+        }
+      }
     }
   };
+
+  if (loading) return <div className="sales-profile-page"><p className="sales-form-loading">Loading profile…</p></div>;
+  if (fetchError) return <div className="sales-profile-page"><p className="sales-form-error" role="alert">{fetchError}</p></div>;
+  if (!profile) return null;
 
   return (
     <div className="sales-profile-page">
@@ -110,7 +166,7 @@ function SalesProfile() {
             <p>{profile.email}</p>
           </div>
           <div className="sales-profile-actions">
-            <button className="sales-profile-edit" type="button" onClick={() => { setProfileValues({ firstName: profile.firstName, lastName: profile.lastName, phone: profile.phone }); setProfileError(""); setProfileMessage(""); setShowProfileForm(true); }}>Edit Profile</button>
+            <button className="sales-profile-edit" type="button" onClick={() => { setProfileValues({ firstName: profile.firstName, lastName: profile.lastName || "", phone: profile.phone || "" }); setProfileError(""); setProfileMessage(""); setShowProfileForm(true); }}>Edit Profile</button>
           </div>
         </div>
       </section>

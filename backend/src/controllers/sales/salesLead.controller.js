@@ -1,4 +1,4 @@
-import { LeadSource, LeadStatus } from "../../generated/prisma/client.ts";
+import { LeadSource, LeadStatus } from "@prisma/client";
 import prisma from "../../db/index.js";
 import { ApiError } from "../../utils/apiError.js";
 import { ApiResponse } from "../../utils/apiResponse.js";

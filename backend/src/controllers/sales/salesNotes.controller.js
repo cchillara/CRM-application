@@ -1,7 +1,7 @@
 import prisma from "../../db/index.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { ActivityType } from "../../generated/prisma/client.ts";
+import { ActivityType } from "@prisma/client";
 import { ApiError } from "../../utils/apiError.js";
 
 export const getAllNotes = asyncHandler(async (req, res) => {
@@ -99,8 +99,8 @@ export const createNotes = asyncHandler(async (req, res) => {
         });
         if (!lead) throw new ApiError(404, "Lead not found");
         data.leadId = lead.id;
-    } 
-        else if (relatedType === "Customer") {
+    }
+    else if (relatedType === "Customer") {
         const customer = await prisma.customer.findFirst({
             where: { id: relatedId, organizationId: req.organizationId },
             select: {

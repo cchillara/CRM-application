@@ -1,16 +1,94 @@
+:root {
+  --sidebar-bg: #0d1527;
+  --sidebar-hover: #162038;
+  --sidebar-active: #2563eb;
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+  --sidebar-width: 250px;
+
+  --bg-main: #f4f6fa;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f8fafc;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+
+  --border-light: #e2e8f0;
+  --border-subtle: #f1f5f9;
+
+  --blue-primary: #2563eb;
+  --green-accent: #10b981;
+  --orange-accent: #f59e0b;
+  --red-accent: #ef4444;
+
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
 .sales-stat-card {
+  position: relative;
+  overflow: hidden;
   padding: 20px;
-  background: var(--bg-card, var(--white));
-  border: 1px solid var(--border-light, var(--border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, var(--shadow-sm));
-  transition: border-color 0.2s ease;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   font-family: var(--font-family);
 }
 
+.sales-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--blue-primary);
+}
+
+/* Palette colors assigned in order */
+.sales-stat-card:nth-child(4n + 1)::before {
+  background: var(--blue-primary);
+}
+
+.sales-stat-card:nth-child(4n + 2)::before {
+  background: var(--green-accent);
+}
+
+.sales-stat-card:nth-child(4n + 3)::before {
+  background: var(--orange-accent);
+}
+
+.sales-stat-card:nth-child(4n + 4)::before {
+  background: var(--red-accent);
+}
+
 .sales-stat-card:hover {
-  border-color: var(--blue-primary, var(--blue));
-  box-shadow: var(--shadow-card, var(--shadow-sm));
+  border-color: var(--blue-primary);
+  box-shadow: var(--shadow-card);
+}
+
+.sales-stat-card:nth-child(4n + 1):hover {
+  border-color: var(--blue-primary);
+}
+
+.sales-stat-card:nth-child(4n + 2):hover {
+  border-color: var(--green-accent);
+}
+
+.sales-stat-card:nth-child(4n + 3):hover {
+  border-color: var(--orange-accent);
+}
+
+.sales-stat-card:nth-child(4n + 4):hover {
+  border-color: var(--red-accent);
 }
 
 .sales-stat-card-top {
@@ -36,6 +114,22 @@
   border-radius: var(--radius-sm);
   background: var(--bg-card-subtle);
   color: var(--blue-primary);
+}
+
+.sales-stat-card:nth-child(4n + 1) .sales-stat-card-icon {
+  color: var(--blue-primary);
+}
+
+.sales-stat-card:nth-child(4n + 2) .sales-stat-card-icon {
+  color: var(--green-accent);
+}
+
+.sales-stat-card:nth-child(4n + 3) .sales-stat-card-icon {
+  color: var(--orange-accent);
+}
+
+.sales-stat-card:nth-child(4n + 4) .sales-stat-card-icon {
+  color: var(--red-accent);
 }
 
 .sales-stat-card-value {

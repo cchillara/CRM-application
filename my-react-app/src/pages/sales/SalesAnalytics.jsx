@@ -1,78 +1,105 @@
-import { useState } from "react";
+// STEP 1: Add Firebase auth + useEffect (replacing mock data imports)
+import { useState, useEffect, useCallback } from "react";
+import { auth } from "../../firebase.js";
+import { onAuthStateChanged } from "firebase/auth";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip,XAxis,YAxis} from "recharts";
-import { analyticsActivities, analyticsDeals, analyticsLeads, analyticsTasks,
-} from "../../data/salesAnalyticsData.js";
+// REMOVED: import { analyticsActivities, analyticsDeals, analyticsLeads, analyticsTasks } from "../../data/salesAnalyticsData.js";
 import "./SalesAnalytics.css";
 
-function dateKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
+// STEP 2: Build the API base URL from env (same safe pattern used across all sales pages)
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
+  .replace(/\/api\/v1.*$/, "")
+  .replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
-function parseDate(value) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
+// Map UI period selector values to the API's expected period query param
+// UI: "7" | "30" | "month"  →  API: "7d" | "30d" | "90d"
+const PERIOD_MAP = { "7": "7d", "30": "30d", "month": "90d" };
+
+// REMOVED: Helper functions dateKey, parseDate (mock data processing no longer needed)
+// API now returns pre-computed trends, KPIs, and task counts directly.
 
 function SalesAnalytics() {
   const [period, setPeriod] = useState("30");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayKey = dateKey(today);
-  const start = new Date(today);
-  if (period === "7") start.setDate(start.getDate() - 6);
-  else if (period === "30") {
-    start.setDate(start.getDate() - 29);
 
-  }
-  else {start.setDate(1);}
+  // STEP 3: Live API state — analytics data returned from backend
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const startKey = dateKey(start);
-  
-  const isInPeriod = (value) => Boolean(value && value >= startKey && value <= todayKey);
+  // STEP 4: Fetch analytics from live API — GET /api/v1/sales/analytics?period=30d
+  const fetchAnalytics = useCallback(async (selectedPeriod) => {
+    if (!auth.currentUser) return;
+    setLoading(true);
+    setError("");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const apiPeriod = PERIOD_MAP[selectedPeriod] || "30d";
+      const response = await fetch(`${SALES_API_URL}/analytics?period=${apiPeriod}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) throw new Error(`Failed to load analytics (${response.status})`);
+      const json = await response.json();
+      setAnalytics(json.data);
+    } catch (err) {
+      setError(err.message || "Failed to load analytics.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const periodLeads = analyticsLeads.filter((lead) => isInPeriod(lead.createdAt));
-  const periodDeals = analyticsDeals.filter((deal) => isInPeriod(deal.closedAt) && ["WON", "LOST"].includes(deal.status));
-  
-  const periodTasks = analyticsTasks.filter((task) => isInPeriod(task.createdAt) && task.status !== "CANCELLED");
-  const periodActivities = analyticsActivities.filter((activity) => isInPeriod(activity.createdAt));
+  // STEP 5: Trigger fetch when Firebase auth user is ready
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) fetchAnalytics(period);
+      else setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
-  const convertedLeads = periodLeads.filter((lead) => isInPeriod(lead.convertedAt)).length;
+  // STEP 6: Re-fetch when the period selector changes
+  const handlePeriodChange = (event) => {
+    const newPeriod = event.target.value;
+    setPeriod(newPeriod);
+    fetchAnalytics(newPeriod);
+  };
 
-  const wonDeals = periodDeals.filter((deal) => deal.status === "WON").length;
+  // STEP 7: Derive chart data from live API response shape:
+  // analytics.leadConversionTrends = [{ date, created, converted }]
+  // analytics.taskCompletion = { COMPLETED, TODO, IN_PROGRESS, CANCELLED }
+  // analytics.dealOutcomes = { won, lost }
+  // analytics.overview = { leadConversionRate, dealWinRate, activitiesCompleted, overdueTasks }
 
-  const lostDeals = periodDeals.filter((deal) => deal.status === "LOST").length;
-  const overdueTasks = periodTasks.filter((task) => task.status !== "COMPLETED" && task.dueDate && task.dueDate < todayKey).length;
-  const leadRate = periodLeads.length ? `${Math.round((convertedLeads / periodLeads.length) * 100)}%` : "—";
-  const dealRate = wonDeals + lostDeals ? `${Math.round((wonDeals / (wonDeals + lostDeals)) * 100)}%` : "—";
+  const leadTrend = analytics?.leadConversionTrends?.map((item) => ({
+    name: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(item.date)),
+    created: item.created,
+    converted: item.converted,
+  })) || [];
 
-  const bucketDates = [];
-  const intervalDays = period === "7" ? 1 : 7;
-  for (let offset = 0; offset <= Math.floor((today - start) / 86400000); offset += intervalDays) {
-    const bucketDate = new Date(start);
-    bucketDate.setDate(start.getDate() + offset);
-    bucketDates.push(bucketDate);
-  }
-  const getBucketIndex = (value) => Math.floor((parseDate(value) - start) / 86400000 / intervalDays);
-  const formatBucketLabel = (date) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
-  const leadTrend = bucketDates.map((date) => ({ name: formatBucketLabel(date), created: 0, converted: 0 }));
-  analyticsLeads.forEach((lead) => {
-    if (isInPeriod(lead.createdAt)) leadTrend[getBucketIndex(lead.createdAt)].created += 1;
-    if (isInPeriod(lead.convertedAt)) leadTrend[getBucketIndex(lead.convertedAt)].converted += 1;
-  });
-  const dealTrend = bucketDates.map((date) => ({ name: formatBucketLabel(date), won: 0, lost: 0 }));
-  periodDeals.forEach((deal) => {
-    const bucket = dealTrend[getBucketIndex(deal.closedAt)];
-    if (deal.status === "WON") bucket.won += 1;
-    if (deal.status === "LOST") bucket.lost += 1;
-  });
-
-  const completedTasks = periodTasks.filter((task) => task.status === "COMPLETED").length;
-  const pendingTasks = periodTasks.filter((task) => task.status !== "COMPLETED" && !(task.dueDate && task.dueDate < todayKey)).length;
+  const taskCompletion = analytics?.taskCompletion || {};
+  const completedTasks = taskCompletion.COMPLETED || 0;
+  const pendingTasks = (taskCompletion.TODO || 0) + (taskCompletion.IN_PROGRESS || 0);
+  const overdueTasks = analytics?.overview?.overdueTasks || 0;
   const taskChartData = [
     { name: "Completed", count: completedTasks, color: "#47977a" },
     { name: "Pending", count: pendingTasks, color: "#3978c5" },
     { name: "Overdue", count: overdueTasks, color: "#c64c4c" },
   ];
+
+  const dealOutcomes = analytics?.dealOutcomes || { won: 0, lost: 0 };
+  const dealChartData = [
+    { name: "Won", count: dealOutcomes.won, color: "#47977a" },
+    { name: "Lost", count: dealOutcomes.lost, color: "#c64c4c" },
+  ];
+
+  const overview = analytics?.overview || {};
+  const leadRate = overview.leadConversionRate?.rate != null
+    ? `${overview.leadConversionRate.rate}%` : "—";
+  const dealRate = overview.dealWinRate?.rate != null
+    ? `${overview.dealWinRate.rate}%` : "—";
+  const wonDeals = overview.dealWinRate?.won || 0;
+  const closedDeals = overview.dealWinRate?.closed || 0;
+  const activitiesCompleted = overview.activitiesCompleted || 0;
   return (
     <div className="sales-analytics-page">
       <header className="sales-analytics-header">
@@ -82,7 +109,8 @@ function SalesAnalytics() {
         </div>
         <label className="sales-analytics-period-label">
           <span>Reporting period</span>
-          <select value={period} onChange={(event) => setPeriod(event.target.value)}>
+          {/* STEP 8: Period selector now triggers a live API refetch */}
+          <select value={period} onChange={handlePeriodChange}>
             <option value="7">Last 7 Days</option>
             <option value="30">Last 30 Days</option>
             <option value="month">This Month</option>
@@ -90,74 +118,79 @@ function SalesAnalytics() {
         </label>
       </header>
 
-     
+      {/* STEP 9: Show loading / error states */}
+      {loading && <p className="sales-form-loading">Loading analytics…</p>}
+      {error && <p className="sales-form-error" role="alert">{error}</p>}
 
-      <section className="sales-analytics-kpis" aria-label="Sales performance summary">
-        <article className="sales-analytics-kpi"><span>Lead Conversion Rate</span><strong>{leadRate}</strong><small>Leads created and converted in period</small></article>
-        <article className="sales-analytics-kpi"><span>Deal Win Rate</span><strong>{dealRate}</strong><small>{wonDeals} won of {wonDeals + lostDeals} closed deals</small></article>
-        <article className="sales-analytics-kpi"><span>Activities Completed</span><strong>{periodActivities.length}</strong><small>Logged calls, meetings, emails, and follow-ups</small></article>
-        <article className="sales-analytics-kpi"><span>Overdue Tasks</span><strong>{overdueTasks}</strong><small>Incomplete tasks past due today</small></article>
-      </section>
+      {!loading && !error && analytics && (
+        <>
+          <section className="sales-analytics-kpis" aria-label="Sales performance summary">
+            <article className="sales-analytics-kpi"><span>Lead Conversion Rate</span><strong>{leadRate}</strong><small>Leads created and converted in period</small></article>
+            <article className="sales-analytics-kpi"><span>Deal Win Rate</span><strong>{dealRate}</strong><small>{wonDeals} won of {closedDeals} closed deals</small></article>
+            <article className="sales-analytics-kpi"><span>Activities Completed</span><strong>{activitiesCompleted}</strong><small>Logged calls, meetings, emails, and follow-ups</small></article>
+            <article className="sales-analytics-kpi"><span>Overdue Tasks</span><strong>{overdueTasks}</strong><small>Incomplete tasks past due today</small></article>
+          </section>
 
-      <section className="sales-analytics-chart-grid" >
-        <article className="sales-analytics-chart-card sales-analytics-trend-card">
-          <div className="sales-analytics-chart-heading"><h2>Lead Conversion Trends</h2><p>Leads created and converted over time</p></div>
-          {leadTrend.some((item) => item.created || item.converted) ? (
-            <div className="sales-analytics-chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={leadTrend} margin={{ top: 8, right: 15, left: -15, bottom: 2 }}>
-                  <CartesianGrid stroke="#edf0f4" vertical={false} />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="created" name="Leads created" stroke="#3978c5" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                  <Line type="monotone" dataKey="converted" name="Leads converted" stroke="#47977a" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : <p className="sales-analytics-empty">No lead activity in this reporting period.</p>}
-        </article>
+          <section className="sales-analytics-chart-grid">
+            <article className="sales-analytics-chart-card sales-analytics-trend-card">
+              <div className="sales-analytics-chart-heading"><h2>Lead Conversion Trends</h2><p>Leads created and converted over time</p></div>
+              {leadTrend.some((item) => item.created || item.converted) ? (
+                <div className="sales-analytics-chart">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={leadTrend} margin={{ top: 8, right: 15, left: -15, bottom: 2 }}>
+                      <CartesianGrid stroke="#edf0f4" vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="created" name="Leads created" stroke="#3978c5" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                      <Line type="monotone" dataKey="converted" name="Leads converted" stroke="#47977a" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="sales-analytics-empty">No lead activity in this reporting period.</p>}
+            </article>
 
-        <article className="sales-analytics-chart-card">
-          <div className="sales-analytics-chart-heading"><h2>Deal Outcomes</h2><p>Won and lost deals closed in period</p></div>
-          {periodDeals.length ? (
-            <div className="sales-analytics-chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dealTrend} margin={{ top: 8, right: 12, left: -15, bottom: 2 }}>
-                  <CartesianGrid stroke="#edf0f4" vertical={false} />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
-                  <Tooltip cursor={false} />
-                  <Legend />
-                  <Bar dataKey="won" name="Won" fill="#47977a" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="lost" name="Lost" fill="#c64c4c" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : <p className="sales-analytics-empty">No deals were closed in this reporting period.</p>}
-        </article>
+            <article className="sales-analytics-chart-card">
+              <div className="sales-analytics-chart-heading"><h2>Deal Outcomes</h2><p>Won and lost deals</p></div>
+              {(dealOutcomes.won + dealOutcomes.lost) > 0 ? (
+                <div className="sales-analytics-chart">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dealChartData} margin={{ top: 8, right: 12, left: -15, bottom: 2 }}>
+                      <CartesianGrid stroke="#edf0f4" vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
+                      <Tooltip cursor={false} />
+                      <Bar dataKey="count" name="Deals" radius={[4, 4, 0, 0]}>
+                        {dealChartData.map((item) => <Cell key={item.name} fill={item.color} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="sales-analytics-empty">No deals recorded.</p>}
+            </article>
 
-        <article className="sales-analytics-chart-card">
-          <div className="sales-analytics-chart-heading"><h2>Task Completion</h2><p>Tasks created in period by current status</p></div>
-          {periodTasks.length ? (
-            <div className="sales-analytics-chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={taskChartData} margin={{ top: 8, right: 12, left: -15, bottom: 2 }}>
-                  <CartesianGrid stroke="#edf0f4" vertical={false} />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" name="Tasks" radius={[4, 4, 0, 0]}>
-                    {taskChartData.map((item) => <Cell key={item.name} fill={item.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : <p className="sales-analytics-empty">No tasks were created in this reporting period.</p>}
-        </article>
-
-      </section>
+            <article className="sales-analytics-chart-card">
+              <div className="sales-analytics-chart-heading"><h2>Task Completion</h2><p>Tasks by current status</p></div>
+              {(completedTasks + pendingTasks + overdueTasks) > 0 ? (
+                <div className="sales-analytics-chart">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={taskChartData} margin={{ top: 8, right: 12, left: -15, bottom: 2 }}>
+                      <CartesianGrid stroke="#edf0f4" vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#718096", fontSize: 11 }} />
+                      <Tooltip cursor={false} />
+                      <Bar dataKey="count" name="Tasks" radius={[4, 4, 0, 0]}>
+                        {taskChartData.map((item) => <Cell key={item.name} fill={item.color} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="sales-analytics-empty">No tasks in this reporting period.</p>}
+            </article>
+          </section>
+        </>
+      )}
     </div>
   );
 }

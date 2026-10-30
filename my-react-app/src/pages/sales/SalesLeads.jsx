@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { Ellipsis, Search, Trash2 } from "lucide-react";
 import DataTable from "../../components/common/DataTable.jsx";
 import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import LeadForm from "../../components/sales/LeadForm.jsx";
-import { getLeadContactName, getLeadLastContact, useSalesData } from "../../components/sales/SalesDataContext.jsx";
+import { auth } from "../../firebase.js";
 import "./SalesLeads.css";
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
+  .replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
 const statusVariants = {
   NEW: "neutral",
@@ -27,40 +32,170 @@ const tabs = [
   { label: "Converted", value: "CONVERTED" },
 ];
 
+function getLeadContactName(lead) {
+  if (!lead) return "";
+  const name = [lead.contact?.firstName, lead.contact?.lastName].filter(Boolean).join(" ");
+  return name || lead.title || "Unknown Lead";
+}
+
+function getLeadLastContact(lead) {
+  const latestActivity = [...(lead.activities || [])]
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))[0];
+  if (!latestActivity) return "—";
+  return new Date(latestActivity.createdAt).toLocaleDateString();
+}
+
 function SalesLeads() {
   const navigate = useNavigate();
-  const { leads, addLead, deleteLead } = useSalesData();
+
+  const [leads, setLeads] = useState([]);
+  const [myLeads, setMyLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [openMenuLeadId, setOpenMenuLeadId] = useState(null);
   const [leadToDelete, setLeadToDelete] = useState(null);
   const [showLeadForm, setShowLeadForm] = useState(false);
+
+  const fetchLeads = useCallback(async (user) => {
+    if (!user) {
+      setLeads([]);
+      setMyLeads([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const idToken = await user.getIdToken();
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      };
+
+      const [allRes, myRes] = await Promise.all([
+        fetch(`${SALES_API_URL}/leads`, { headers }),
+        fetch(`${SALES_API_URL}/leads?scope=mine`, { headers }),
+      ]);
+
+      const [allResult, myResult] = await Promise.all([
+        allRes.json(),
+        myRes.json(),
+      ]);
+
+      if (!allRes.ok || allResult.success === false) {
+        throw new Error(allResult.message || "Failed to fetch leads");
+      }
+
+      setLeads(Array.isArray(allResult.data) ? allResult.data : []);
+      setMyLeads(Array.isArray(myResult.data) ? myResult.data : []);
+    } catch (err) {
+      console.error("[SalesLeads] Fetch error:", err);
+      setError(err.message || "Unable to load leads from the server.");
+      setLeads([]);
+      setMyLeads([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      fetchLeads(user);
+    });
+    return () => unsubscribe();
+  }, [fetchLeads]);
+
+  const handleCreateLead = async (values) => {
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Authentication required.");
+
+      const response = await fetch(`${SALES_API_URL}/leads`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(values),
+      });
+
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Failed to create lead.");
+      }
+
+      const newLead = result.data;
+      setLeads((prev) => [newLead, ...prev]);
+      setMyLeads((prev) => [newLead, ...prev]);
+      setShowLeadForm(false);
+      setError("");
+    } catch (err) {
+      console.error("[SalesLeads] Create lead error:", err);
+      setError(err.message || "Unable to save lead.");
+    }
+  };
+
+  const confirmDeleteLead = async () => {
+    if (!leadToDelete) return;
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Authentication required.");
+
+      const response = await fetch(`${SALES_API_URL}/leads/${encodeURIComponent(leadToDelete.id)}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Failed to delete lead.");
+      }
+
+      setLeads((prev) => prev.filter((lead) => lead.id !== leadToDelete.id));
+      setMyLeads((prev) => prev.filter((lead) => lead.id !== leadToDelete.id));
+      setLeadToDelete(null);
+      setError("");
+    } catch (err) {
+      console.error("[SalesLeads] Delete lead error:", err);
+      setError(err.message || "Unable to delete lead.");
+      setLeadToDelete(null);
+    }
+  };
+
   const normalizedSearch = search.trim().toLowerCase();
 
-  const filteredLeads = leads.filter((lead) => {
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "mine" && lead.assignedTo?.id === "user-001") ||
-      lead.status === activeTab;
-    const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
-    const searchableValues = [
-      getLeadContactName(lead),
-      lead.contact?.email,
-      lead.company?.name,
-      lead.title,
-    ];
-    const matchesSearch =
-      !normalizedSearch ||
-      searchableValues.some((value) => value?.toLowerCase().includes(normalizedSearch));
+  const currentDataset = activeTab === "mine" ? myLeads : leads;
 
-    return matchesTab && matchesSource && matchesSearch;
-  });
+  const filteredLeads = useMemo(() => {
+    return currentDataset.filter((lead) => {
+      const matchesTab =
+        activeTab === "all" ||
+        activeTab === "mine" ||
+        lead.status === activeTab;
+      const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+      const searchableValues = [
+        getLeadContactName(lead),
+        lead.contact?.email,
+        lead.company?.name,
+        lead.title,
+      ];
+      const matchesSearch =
+        !normalizedSearch ||
+        searchableValues.some((value) => value?.toLowerCase().includes(normalizedSearch));
 
-  const confirmDeleteLead = () => {
-    deleteLead(leadToDelete.id);
-    setLeadToDelete(null);
-  };
+      return matchesTab && matchesSource && matchesSearch;
+    });
+  }, [currentDataset, activeTab, sourceFilter, normalizedSearch]);
 
   return (
     <div className="sales-leads-page">
@@ -117,9 +252,13 @@ function SalesLeads() {
           </div>
         </div>
 
+        {/* Display loading or error alerts */}
+        {error && <p className="sales-leads-error" role="alert" style={{ color: "var(--red-accent, #ef4444)", padding: "12px 20px", margin: 0 }}>{error}</p>}
+        {loading && <p className="sales-leads-loading" role="status" style={{ padding: "20px", color: "var(--text-muted)" }}>Loading leads…</p>}
+
         <DataTable
           headers={["Lead", "Company", "Status", "Source", "Last Contact", ""]}
-          emptyMessage="No leads match your search or filters."
+          emptyMessage={loading ? "Loading leads…" : error ? "Could not load leads." : "No leads match your search or filters."}
           tableClassName="sales-leads-table"
         >
           {filteredLeads.map((lead) => (
@@ -191,8 +330,21 @@ function SalesLeads() {
         </DataTable>
       </section>
 
-      {leadToDelete && <ConfirmDialog title="Delete lead?" message={`Are you sure you want to delete ${getLeadContactName(leadToDelete)}? This action cannot be undone.`} onCancel={() => setLeadToDelete(null)} onConfirm={confirmDeleteLead} confirmLabel="Delete Lead" />}
-      {showLeadForm && <LeadForm onClose={() => setShowLeadForm(false)} onSubmit={(values) => { addLead(values); setShowLeadForm(false); }} />}
+      {leadToDelete && (
+        <ConfirmDialog
+          title="Delete lead?"
+          message={`Are you sure you want to delete ${getLeadContactName(leadToDelete)}? This action cannot be undone.`}
+          onCancel={() => setLeadToDelete(null)}
+          onConfirm={confirmDeleteLead}
+          confirmLabel="Delete Lead"
+        />
+      )}
+      {showLeadForm && (
+        <LeadForm
+          onClose={() => setShowLeadForm(false)}
+          onSubmit={handleCreateLead}
+        />
+      )}
     </div>
   );
 }

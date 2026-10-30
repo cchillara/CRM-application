@@ -1,21 +1,57 @@
-import { useState } from "react";
+// STEP 1: Import Firebase auth + useEffect (replacing mock data import)
+import { useState, useEffect } from "react";
+import { auth } from "../../firebase.js";
+import { onAuthStateChanged } from "firebase/auth";
 import { Search, Trash2, Pencil } from "lucide-react";
 import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
 import DataTable from "../../components/common/DataTable.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import ProductForm from "../../components/sales/ProductForm.jsx";
-import { salesProducts } from "../../data/salesProductsData.js";
 import "./SalesProducts.css";
 
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
+  .replace(/\/api\/v1.*$/, "")
+  .replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
+
 function SalesProducts() {
-  const [products, setProducts] = useState(salesProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [formProduct, setFormProduct] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${SALES_API_URL}/products`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) throw new Error(`Failed to load products (${response.status})`);
+      const json = await response.json();
+      setProducts(json.data || []);
+    } catch (err) {
+      setError(err.message || "Failed to load products.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) fetchProducts();
+      else setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const query = search.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
@@ -56,6 +92,10 @@ function SalesProducts() {
         <AddButton onClick={openAddForm}>Add Product</AddButton>
       </header>
 
+      {/* STEP 6: Show loading / error states from live API */}
+      {loading && <p className="sales-form-loading">Loading products…</p>}
+      {error && <p className="sales-form-error" role="alert">{error}</p>}
+
       <section className="sales-products-card" aria-label="Product catalogue">
         <div className="sales-products-toolbar">
           <div className="sales-products-filters">
@@ -82,9 +122,9 @@ function SalesProducts() {
             {visibleProducts.map((product) => (
               <tr key={product.id}>
                 <td><div className="sales-products-name">{product.name}<span>{product.description}</span></div></td>
-                <td>{product.code || "—"}</td>
+                <td>{product.code || product.productId || "—"}</td>
                 <td>{product.category}</td>
-                <td>{new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency }).format(product.price)}</td>
+                <td>{new Intl.NumberFormat("en-US", { style: "currency", currency: product.currency || "INR" }).format(Number(product.price) || 0)}</td>
                 <td><StatusBadge status={product.status} variant={product.status === "ACTIVE" ? "success" : "neutral"} /></td>
                 <td>
                   <div className="sales-products-actions">
