@@ -33,13 +33,11 @@ app.use(
 );
 app.use("/api/v1/super-admin", superAdminRouter);
 
-app.use(errorHandler);
-
-
 app.use(
   "/api/v1/client-admin",
   clientAdminRouter
 );
 
+app.use(errorHandler);
 
 export default app;

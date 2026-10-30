@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./Auth.css";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
-
+import { useNavigate } from "react-router-dom";
 function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -11,9 +11,15 @@ function Login() {
     const [loading, setLoading] = useState(false);
 
     const [showPassword, setShowPassword] = useState(false);
+    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
+
+        //     if(email === "clientadmin@xyz.com" && password === "password123"){
+        //     navigate("/client-admin");
+        //     return;
+        // }
 
         setError("");
         setLoading(true);
@@ -30,6 +36,8 @@ function Login() {
                 await userCredential.user.getIdToken();
 
             console.log("Firebase ID Token:", idToken);
+            localStorage.setItem("token", idToken);
+            localStorage.setItem("firebaseToken", idToken);
 
             const response = await fetch(
                 "http://localhost:5000/api/v1/auth/protected",
@@ -53,7 +61,7 @@ function Login() {
 
             console.log("Backend response:", data);
 
-            alert("Login successful!");
+            navigate("/client-admin");
         } catch (error) {
             console.error(error);
 
@@ -67,7 +75,7 @@ function Login() {
         <div className="auth-page">
             <div className="auth-container">
 
-                {/* ================= LEFT ================= */}
+
 
                 <div className="auth-info">
                     <div className="auth-logo">
