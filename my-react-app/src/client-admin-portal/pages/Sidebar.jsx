@@ -10,7 +10,9 @@ import {
   UserCog,
   Settings,
   LogOut,
-  X
+  X,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import { menuItems } from '../data';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +29,7 @@ const iconMap = {
   Settings: Settings
 };
 
-export default function Sidebar({ isOpen = false, onClose }) {
+export default function Sidebar({ isOpen = false, onToggle, onClose }) {
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = React.useState({
     name: 'Client Admin',
@@ -69,27 +71,41 @@ export default function Sidebar({ isOpen = false, onClose }) {
   };
 
   return (
-    <aside className={`crm-sidebar ${isOpen ? 'open' : ''}`} aria-label="Main Navigation">
-      <div className="crm-brand-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="crm-brand-logo">
-            <span>S</span>
-          </div>
-          <div className="crm-brand-details">
-            <h2 className="crm-brand-name">SHNOOR</h2>
-            <span className="crm-brand-role">Client Admin</span>
-          </div>
-        </div>
+    <aside className={`crm-sidebar ${isOpen ? 'open' : 'collapsed'}`} aria-label="Main Navigation">
+      <div className={`crm-brand-header ${!isOpen ? 'collapsed' : ''}`}>
+        {isOpen ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+              <div className="crm-brand-logo">
+                <span>S</span>
+              </div>
+              <div className="crm-brand-details">
+                <h2 className="crm-brand-name">SHNOOR</h2>
+                <span className="crm-brand-role">Client Admin</span>
+              </div>
+            </div>
 
-        {onClose && (
+            {onToggle && (
+              <button
+                type="button"
+                className="crm-sidebar-toggle-btn"
+                onClick={onToggle}
+                aria-label="Collapse navigation"
+                title="Collapse sidebar"
+              >
+                <ArrowLeft size={18} />
+              </button>
+            )}
+          </>
+        ) : (
           <button
             type="button"
-            className="crm-sidebar-close-btn"
-            onClick={onClose}
-            aria-label="Close navigation"
-            title="Close menu"
+            className="crm-sidebar-collapsed-toggle-btn"
+            onClick={onToggle}
+            aria-label="Expand navigation"
+            title="Expand sidebar"
           >
-            <X size={18} />
+            <ArrowRight size={18} />
           </button>
         )}
       </div>
@@ -105,11 +121,16 @@ export default function Sidebar({ isOpen = false, onClose }) {
                 <NavLink
                   to={targetPath}
                   end={item.id === 'dashboard'}
-                  onClick={() => onClose && onClose()}
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.innerWidth <= 768 && onClose) {
+                      onClose();
+                    }
+                  }}
                   className={({ isActive }) => `crm-nav-btn ${isActive ? 'active' : ''}`}
+                  title={item.label}
                 >
                   <span className="crm-nav-icon-wrapper">
-                    <IconComponent size={19} strokeWidth={2} />
+                    <IconComponent size={20} strokeWidth={2} />
                   </span>
                   <span className="crm-nav-label">{item.label}</span>
                   {item.badge && (
@@ -123,31 +144,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
           })}
         </ul>
       </nav>
-
-      {/* <div className="crm-sidebar-footer">
-        <div
-          className="crm-user-profile"
-          onClick={() => navigate('/client-admin/profile')}
-          style={{ cursor: 'pointer' }}
-          title="View Profile"
-        >
-          <div className="crm-user-avatar">
-            <span>{initials}</span>
-          </div>
-          <div className="crm-user-info">
-            <span className="crm-user-name">{userProfile.name}</span>
-            <span className="crm-user-email">{userProfile.email}</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="crm-logout-btn"
-          title="Sign out"
-          onClick={() => handleLogout()}
-        >
-          <LogOut size={16} />
-        </button>
-      </div> */}
     </aside>
   );
 }

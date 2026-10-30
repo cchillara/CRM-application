@@ -18,9 +18,7 @@ export default function ClientLayout() {
   }, []);
 
   useEffect(() => {
-    if (location.pathname === '/client-admin' || location.pathname === '/client-admin/') {
-      setSidebarOpen(true);
-    } else if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
       setSidebarOpen(false);
     }
   }, [location.pathname]);
@@ -63,30 +61,9 @@ export default function ClientLayout() {
     <div className={`crm-portal-container ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
       <header className="crm-top-header-bar">
         <div className="crm-top-header-left">
-
-          <button
-            type="button"
-            className="crm-hamburger-btn"
-            aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
-            onClick={() => setSidebarOpen((prev) => !prev)}
-            title="Toggle Menu"
-          >
-            <Menu size={22} />
-          </button>
-
-          {/* <span className="crm-top-header-brand">SHNOOR CRM</span> */}
         </div>
 
         <div className="crm-top-header-actions">
-          {/* <ToggleTheme />
-          <button
-            type="button"
-            className="crm-header-icon-btn"
-            title="Calendar"
-            onClick={() => navigate('/client-admin/calendar')}
-          >
-            <Calendar size={18} />
-          </button> */}
 
           <button
             type="button"
@@ -116,7 +93,11 @@ export default function ClientLayout() {
       )}
 
       <div ref={sidebarRef}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen((prev) => !prev)}
+          onClose={() => setSidebarOpen(false)}
+        />
       </div>
 
       <main className="crm-main-viewport">
