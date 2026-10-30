@@ -124,7 +124,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
         </ul>
       </nav>
 
-      <div className="crm-sidebar-footer">
+      {/* <div className="crm-sidebar-footer">
         <div
           className="crm-user-profile"
           onClick={() => navigate('/client-admin/profile')}
@@ -139,15 +139,15 @@ export default function Sidebar({ isOpen = false, onClose }) {
             <span className="crm-user-email">{userProfile.email}</span>
           </div>
         </div>
-        {/* <button
+        <button
           type="button"
           className="crm-logout-btn"
           title="Sign out"
           onClick={() => handleLogout()}
         >
           <LogOut size={16} />
-        </button> */}
-      </div>
+        </button>
+      </div> */}
     </aside>
   );
 }
