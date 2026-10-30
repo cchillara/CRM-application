@@ -15,14 +15,14 @@
 
 .sales-section-header h2 {
   margin: 0;
-  color: #0F141C;
+  color: var(--text-main, #0F141C);
   font-size: 18px;
   font-weight: 600;
 }
 
 .sales-section-header p {
   margin: 4px 0 0;
-  color: #66717F;
+  color: var(--text-muted, #66717F);
   font-size: 14px;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .sales-followup-customer {
-  color: #0F141C;
+  color: var(--text-main, #0F141C);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;

@@ -1,70 +1,489 @@
-.sales-profile-page {
-  padding: 28px;
-  overflow-x: clip;
-  background: var(--bg-main, var(--background));
-  color: var(--text-main, var(--heading));
-  font-family: var(--font-family);
+.sales-profile-container {
+  padding: 28px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
-.sales-profile-page-heading { margin-bottom: 22px; }
-.sales-profile-page-heading h1 { margin: 0; color: var(--text-main, var(--heading)); font-size: 28px; font-weight: 600; line-height: 1.3; }
-.sales-profile-page-heading p { margin: 5px 0 0; color: var(--text-muted, var(--body)); font-size: 14px; }
-
-.sales-profile-card {
+.panel {
+  background-color: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   width: 100%;
+  /* min-width: 110px; */
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.panel-title h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+
+.panel-title p {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+}
+
+.settings-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.settings-option:hover {
+  background: var(--bg-card-subtle, #f8fafc);
+  border-color: var(--border-light, #cbd5e1);
+}
+
+.settings-option-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background-color: var(--bg-card-subtle, #f1f5f9);
+  color: var(--text-muted, #475569);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+
+.settings-option-copy {
+  flex: 1;
+}
+
+.settings-option-copy strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  margin-bottom: 2px;
+}
+
+.settings-option-copy span {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+}
+
+.settings-option-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-light, #94a3b8);
+}
+
+.profile-completion {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.profile-completion.complete {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+}
+
+.profile-completion.incomplete {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+/* ── Modals Backdrop & Card ── */
+.crm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.crm-modal-card {
+  background-color: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border: 1px solid var(--border-light, var(--border));
-  border-radius: var(--radius-md, 10px);
-  background: var(--bg-card, var(--white));
-  box-shadow: var(--shadow-card, var(--shadow-sm));
+  animation: crmModalFadeIn 0.2s ease-out;
 }
 
-.sales-profile-header { display: flex; align-items: center; gap: 18px; padding: 24px; border-bottom: 1px solid var(--border-light, var(--border)); }
-.sales-profile-avatar { display: flex; flex: 0 0 64px; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-card-subtle, var(--background)); color: var(--blue-primary, var(--blue)); font-size: 20px; font-weight: 600; }
-.sales-profile-identity { min-width: 0; }
-.sales-profile-identity h2 { overflow: hidden; margin: 0; color: var(--text-main, var(--heading)); font-size: 18px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.sales-profile-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-.sales-profile-organization-name { min-width: 0; color: var(--text-muted, var(--body)); font-size: 12px; overflow-wrap: anywhere; }
-.sales-profile-identity p { margin: 4px 0 0; color: var(--text-muted, var(--body)); font-size: 12px; overflow-wrap: anywhere; }
-.sales-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
-.sales-profile-edit,
-.sales-profile-password-button { min-height: 38px; padding: 0 13px; border: 1px solid var(--border-light, var(--border)); border-radius: var(--radius-sm, 6px); font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
-.sales-profile-edit { border-color: var(--blue-primary, var(--blue)); background: var(--blue-primary, var(--blue)); color: var(--white, #fff); }
-.sales-profile-edit:hover { filter: brightness(.95); }
-.sales-profile-password-button { background: var(--bg-card, var(--white)); color: var(--text-main, var(--heading)); }
-.sales-profile-password-button:hover { background: var(--bg-card-subtle, var(--background)); }
-
-.sales-profile-sections { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 16px; }
-.sales-profile-sections .sales-profile-information { min-width: 0; padding: 19px 20px; }
-.sales-profile-information .detail-section-title { margin-bottom: 16px; }
-.sales-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; }
-.sales-profile-information:last-child .sales-profile-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.sales-profile-security { display: flex; align-items: center; gap: 13px; width: 100%; margin-top: 16px; padding: 17px 19px; border: 1px solid var(--border-light, var(--border)); border-radius: var(--radius-md, 10px); background: var(--bg-card, var(--white)); box-shadow: var(--shadow-card, var(--shadow-sm)); }
-.sales-profile-security-icon { display: flex; flex: 0 0 38px; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: var(--radius-sm, 6px); background: var(--bg-card-subtle, var(--background)); color: var(--blue-primary, var(--blue)); }
-.sales-profile-security-copy { min-width: 0; }
-.sales-profile-security-copy h2 { margin: 0; color: var(--text-main, var(--heading)); font-size: 14px; font-weight: 600; }
-.sales-profile-security-copy p { margin: 4px 0 0; color: var(--text-muted, var(--body)); font-size: 12px; }
-.sales-profile-security > button { margin-left: auto; }
-.sales-profile-password-button { white-space: nowrap; }
-.sales-profile-message { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #cbe8d6; border-radius: var(--radius-sm, 6px); background: #eaf5ef; color: var(--green-accent, #16845b); font-size: 12px; line-height: 1.5; }
-.sales-profile-password-notice { margin-top: 12px; border-color: var(--border-light, var(--border)); background: var(--bg-card-subtle, var(--background)); color: var(--text-muted, var(--body)); }
-
-@media (max-width: 900px) {
-  .sales-profile-page { padding: 22px 16px; }
-  .sales-profile-page-heading h1 { font-size: 25px; }
-  .sales-profile-header { align-items: flex-start; flex-wrap: wrap; padding: 20px; }
-  .sales-profile-actions { width: 100%; margin-left: 0; }
-  .sales-profile-sections { grid-template-columns: 1fr; }
+@keyframes crmModalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
-@media (max-width: 480px) {
-  .sales-profile-header { gap: 13px; }
-  .sales-profile-avatar { flex-basis: 54px; width: 54px; height: 54px; }
-  .sales-profile-identity h2 { font-size: 19px; }
-  .sales-profile-actions button { flex: 1; }
-  .sales-profile-sections .sales-profile-information { padding: 17px; }
-  .sales-profile-fields { grid-template-columns: 1fr; gap: 16px; }
-  .sales-profile-information:last-child .sales-profile-fields { grid-template-columns: 1fr; }
-  .sales-profile-security { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; }
-  .sales-profile-security > button { grid-column: 1 / -1; width: 100%; margin-left: 0; }
+.crm-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.crm-modal-close-btn {
+  color: var(--text-muted, #64748b);
+  background: none;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.crm-modal-close-btn:hover {
+  color: var(--text-main, #0f172a);
+  background-color: var(--bg-card-subtle, #f1f5f9);
+}
+
+.crm-modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.crm-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-light, #e2e8f0);
+  background-color: var(--bg-card-subtle, #f8fafc);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-large-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--blue-primary, #2563eb);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-profile-copy {
+  flex: 1;
+}
+
+.profile-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+/* ── Form Inputs (Screenshot 2) ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-grid label,
+.password-form-stack label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main, #334155);
+}
+
+.form-grid input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--text-main, #0f172a);
+  background: var(--bg-card, #ffffff);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-grid input:focus,
+.password-form-stack input:focus {
+  border-color: var(--blue-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-grid input:disabled {
+  background-color: var(--bg-card-subtle, #f8fafc);
+  color: var(--text-muted, #94a3b8);
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+/* ── Password Modal (Screenshot 4) ── */
+.password-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 40px 0 12px;
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--text-main, #0f172a);
+  background: var(--bg-card, #ffffff);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.password-toggle-btn:hover {
+  color: var(--text-main, #475569);
+}
+
+.password-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+}
+
+.security-note {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background-color: var(--bg-card-subtle, #f8fafc);
+  border-left: 3px solid var(--blue-primary, #2563eb);
+  border-radius: 0 6px 6px 0;
+  font-size: 12.5px;
+  color: var(--text-muted, #64748b);
+  line-height: 1.5;
+}
+
+.password-message {
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.password-message.error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+}
+
+.password-message.success {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+}
+
+/* ── Buttons ── */
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background-color: var(--blue-primary, #2563eb);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.primary-button:hover {
+  background-color: var(--blue-hover, #1d4ed8);
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-success-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Dark Mode Overrides for Profile ── */
+[data-theme="dark"] .panel {
+  background-color: var(--bg-card);
+  border-color: var(--border-light);
+}
+
+[data-theme="dark"] .settings-option {
+  background-color: var(--bg-card);
+  border-color: var(--border-light);
+}
+
+[data-theme="dark"] .settings-option:hover {
+  background-color: var(--bg-card-subtle);
+  border-color: #334155;
+}
+
+[data-theme="dark"] .settings-option-icon {
+  background-color: var(--bg-card-subtle);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .crm-modal-backdrop {
+  background-color: rgba(3, 7, 18, 0.75);
+}
+
+[data-theme="dark"] .crm-modal-card {
+  background-color: var(--bg-card);
+  border-color: var(--border-light);
+  color: var(--text-main);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .crm-modal-header {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .crm-modal-footer {
+  background-color: var(--bg-card-subtle);
+  border-top-color: var(--border-light);
+}
+
+[data-theme="dark"] .crm-modal-close-btn:hover {
+  background-color: var(--bg-card-subtle);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .form-grid input,
+[data-theme="dark"] .password-form-stack input {
+  background-color: var(--bg-card-subtle);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .form-grid input:disabled {
+  background-color: rgba(15, 23, 42, 0.4);
+  border-color: var(--border-light);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .security-note {
+  background-color: var(--bg-card-subtle);
+  color: var(--text-muted);
+  border-left-color: var(--blue-primary);
+}
+
+[data-theme="dark"] .profile-completion.complete {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .profile-completion.incomplete {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .password-message.error {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .password-message.success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
 }

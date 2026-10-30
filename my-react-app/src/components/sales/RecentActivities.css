@@ -47,7 +47,7 @@
 }
 
 .sales-activity-title {
-  color: #0F141C;
+  color: var(--text-main, #0F141C);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
@@ -55,14 +55,14 @@
 
 .sales-activity-description {
   margin-top: 3px;
-  color: #66717F;
+  color: var(--text-muted, #66717F);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .sales-activity-time {
   flex-shrink: 0;
-  color: #9CA3AF;
+  color: var(--text-muted, #9CA3AF);
   font-size: 11px;
   line-height: 1.4;
 }

@@ -1,22 +1,29 @@
 /* Edited by subham sharma on 06-10-2026*/
 import { useState } from "react";
-import { LayoutDashboard,  Users,UserRound,CheckSquare,Calendar, NotebookPen, Package, BarChart3,
-    Bell, CircleUserRound
+import {
+  LayoutDashboard,
+  Users,
+  UserRound,
+  CheckSquare,
+  Calendar,
+  NotebookPen,
+  Package,
+  BarChart3,
+  Bell
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import "./Sidebar.css";
 const navigationItems = [
-{label:"Dashboard", icon:LayoutDashboard , path:"/dashboard"},
-{label:"Leads", icon: Users , path:"/leads"},
-{label:"Customers", icon:UserRound , path:"/customers"},
-{label:"Tasks", icon:CheckSquare , path:"/tasks"},
-{label:"Calendar", icon:Calendar , path:"/calendar"},
-{label:"Notes", icon:NotebookPen , path:"/notes"},
-{label:"Products", icon:Package , path:"/products"},
-{label:"Analytics", icon:BarChart3 , path:"/analytics"},
-{label:"Notifications", icon:Bell , path:"/notifications"},
-{label:"Profile", icon:CircleUserRound , path:"/profile"}
-]
+  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Leads", icon: Users, path: "/leads" },
+  { label: "Customers", icon: UserRound, path: "/customers" },
+  { label: "Tasks", icon: CheckSquare, path: "/tasks" },
+  { label: "Calendar", icon: Calendar, path: "/calendar" },
+  { label: "Notes", icon: NotebookPen, path: "/notes" },
+  { label: "Products", icon: Package, path: "/products" },
+  { label: "Analytics", icon: BarChart3, path: "/analytics" },
+  { label: "Notifications", icon: Bell, path: "/notifications" }
+];
 
  
 function Sidebar() {

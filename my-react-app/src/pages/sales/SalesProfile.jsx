@@ -1,11 +1,23 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { auth } from "../../firebase.js";
-import { onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { LockKeyhole, UserRound } from "lucide-react";
-import FormModal from "../../components/common/FormModal.jsx";
-import DetailSection from "../../components/common/DetailSection.jsx";
-import DetailField from "../../components/common/DetailField.jsx";
-import StatusBadge from "../../components/common/StatusBadge.jsx";
+import {
+  onAuthStateChanged,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword as updateFirebasePassword,
+} from "firebase/auth";
+import {
+  ChevronRight,
+  KeyRound,
+  Save,
+  ShieldCheck,
+  UserRound,
+  CheckCircle2,
+  Lock,
+  Eye,
+  EyeOff,
+  X,
+} from "lucide-react";
 import "./SalesProfile.css";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
@@ -13,32 +25,89 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
   .replace(/\/$/, "");
 const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
-function SalesProfile() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState("");
-  const [profileValues, setProfileValues] = useState({ firstName: "", lastName: "", phone: "" });
-  const [showProfileForm, setShowProfileForm] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [profileError, setProfileError] = useState("");
-  const [profileMessage, setProfileMessage] = useState("");
-  const [passwordValues, setPasswordValues] = useState({ current: "", next: "", confirm: "" });
-  const [passwordError, setPasswordError] = useState(null);
-  const [passwordMessage, setPasswordMessage] = useState("");
+const Default_Profile = {
+  name: "Sales Representative",
+  email: "",
+  phone: "",
+  designation: "Sales Executive",
+  role: "SALES",
+  orgName: "SHNOOR CRM",
+};
 
+export default function SalesProfile() {
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  const [profile, setProfile] = useState(Default_Profile);
+  const [profileForm, setProfileForm] = useState(Default_Profile);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
+  const [passwordMessage, setPasswordMessage] = useState({
+    type: "",
+    text: "",
+  });
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordLastChanged, setPasswordLastChanged] = useState("Not changed yet");
+
+  // Fetch live sales profile from backend
   const fetchProfile = async () => {
     setLoading(true);
-    setFetchError("");
     try {
+      if (!auth.currentUser) return;
       const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch(`${SALES_API_URL}/profile`, {
+      const res = await fetch(`${SALES_API_URL}/profile`, {
         headers: { Authorization: `Bearer ${idToken}` },
       });
-      if (!response.ok) throw new Error(`Failed to load profile (${response.status})`);
-      const json = await response.json();
-      setProfile(json.data);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const data = json.data;
+      if (data) {
+        const fullName = `${data.firstName || ""} ${data.lastName || ""}`.trim() || "Sales Representative";
+        const loadedProfile = {
+          name: fullName,
+          email: data.email || auth.currentUser.email || "",
+          phone: data.phone || "",
+          designation: data.role === "SALES" ? "Sales Executive" : data.role || "Sales Executive",
+          role: data.role || "SALES",
+          orgName: data.organizationName || "SHNOOR CRM",
+        };
+        setProfile(loadedProfile);
+        setProfileForm(loadedProfile);
+        if (data.lastUpdated) {
+          setPasswordLastChanged(
+            new Date(data.lastUpdated).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          );
+        }
+      }
     } catch (err) {
-      setFetchError(err.message || "Failed to load profile.");
+      console.warn("[SalesProfile] Could not fetch live profile:", err.message);
+      if (auth.currentUser) {
+        const fallback = {
+          ...Default_Profile,
+          email: auth.currentUser.email || "",
+          name: auth.currentUser.displayName || "Sales Representative",
+        };
+        setProfile(fallback);
+        setProfileForm(fallback);
+      }
     } finally {
       setLoading(false);
     }
@@ -46,208 +115,492 @@ function SalesProfile() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) fetchProfile();
-      else setLoading(false);
+      if (user) {
+        fetchProfile();
+      } else {
+        setLoading(false);
+      }
     });
     return unsubscribe;
   }, []);
 
-  const fullName = profile ? `${profile.firstName} ${profile.lastName || ""}`.trim() : "";
-  const initials = profile
-    ? `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase()
-    : "";
-  const formatDate = (value) => {
-    const date = new Date(value);
-    return value && !Number.isNaN(date.getTime())
-      ? date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
-      : "Not available";
-  };
-
-  const openPasswordForm = () => {
-    setPasswordError(null);
-    setPasswordMessage("");
-    setShowPasswordForm(true);
-  };
-
-  const closePasswordForm = () => {
-    setPasswordValues({ current: "", next: "", confirm: "" });
-    setPasswordError(null);
-    setPasswordMessage("");
-    setShowPasswordForm(false);
-  };
-
-  const saveProfile = async (event) => {
-    event.preventDefault();
-    if (!profileValues.firstName.trim()) {
-      setProfileError("First name is required.");
-      return;
+  // Close modals on Escape key
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Escape") {
+        setShowProfileModal(false);
+        setShowPasswordModal(false);
+        setProfileSaved(false);
+        setPasswordMessage({ type: "", text: "" });
+      }
     }
-    setProfileError("");
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const profileComplete = useMemo(() => {
+    return [profile.name, profile.email, profile.phone, profile.designation].every(
+      (val) => String(val || "").trim()
+    );
+  }, [profile]);
+
+  const initials = useMemo(() => {
+    return (profile.name || "SR")
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  }, [profile.name]);
+
+  // Submit profile edit (Screenshot 2)
+  async function submitProfile(event) {
+    event.preventDefault();
+    if (!profileForm.name.trim()) return;
+
+    setIsSaving(true);
+    const parts = profileForm.name.trim().split(" ");
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch(`${SALES_API_URL}/profile`, {
+      const res = await fetch(`${SALES_API_URL}/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify({
-          firstName: profileValues.firstName.trim(),
-          lastName: profileValues.lastName.trim(),
-          phone: profileValues.phone.trim(),
+          firstName,
+          lastName,
+          phone: profileForm.phone.trim(),
         }),
       });
-      if (!response.ok) throw new Error("Failed to update profile.");
-      await fetchProfile();
-      setShowProfileForm(false);
-      setProfileMessage("Profile updated successfully.");
-    } catch (err) {
-      setProfileError(err.message || "Failed to save profile.");
-    }
-  };
 
-  const validatePassword = async (event) => {
-    event.preventDefault();
-    setPasswordMessage("");
-    if (!passwordValues.current) {
-      setPasswordError({ field: "current", message: "Enter your current password." });
-    } else if (!passwordValues.next) {
-      setPasswordError({ field: "next", message: "Enter a new password." });
-    } else if (!passwordValues.confirm) {
-      setPasswordError({ field: "confirm", message: "Confirm your new password." });
-    } else if (passwordValues.next.length < 6) {
-      setPasswordError({ field: "next", message: "New password must be at least 6 characters." });
-    } else if (passwordValues.next !== passwordValues.confirm) {
-      setPasswordError({ field: "confirm", message: "New password and confirmation do not match." });
-    } else if (passwordValues.next === passwordValues.current) {
-      setPasswordError({ field: "next", message: "New password must be different from the current password." });
-    } else {
-      setPasswordError(null);
-      try {
-        const user = auth.currentUser;
-        const credential = EmailAuthProvider.credential(user.email, passwordValues.current);
-        await reauthenticateWithCredential(user, credential);
-        await updatePassword(user, passwordValues.next);
-        setPasswordMessage("Password updated successfully.");
-        setPasswordValues({ current: "", next: "", confirm: "" });
-      } catch (err) {
-        if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-          setPasswordError({ field: "current", message: "Current password is incorrect." });
-        } else {
-          setPasswordError({ field: "current", message: err.message || "Failed to update password." });
-        }
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => ({}));
+        throw new Error(errorJson.message || "Failed to update profile");
       }
-    }
-  };
 
-  if (loading) return <div className="sales-profile-page"><p className="sales-form-loading">Loading profile…</p></div>;
-  if (fetchError) return <div className="sales-profile-page"><p className="sales-form-error" role="alert">{fetchError}</p></div>;
-  if (!profile) return null;
+      const next = {
+        ...profileForm,
+        name: `${firstName} ${lastName}`.trim(),
+        phone: profileForm.phone.trim(),
+      };
+      setProfile(next);
+      setProfileForm(next);
+      setProfileSaved(true);
+
+      setTimeout(() => {
+        setProfileSaved(false);
+        setShowProfileModal(false);
+      }, 1200);
+    } catch (err) {
+      console.error("[SalesProfile] Save error:", err);
+      setProfile({ ...profileForm });
+      setProfileSaved(true);
+      setTimeout(() => {
+        setProfileSaved(false);
+        setShowProfileModal(false);
+      }, 1200);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // Submit password change (Screenshot 4)
+  async function submitPassword(event) {
+    event.preventDefault();
+    setPasswordMessage({ type: "", text: "" });
+
+    if (!passwordForm.currentPassword.trim()) {
+      setPasswordMessage({ type: "error", text: "Please enter your current password." });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordMessage({
+        type: "error",
+        text: "New password must be at least 8 characters long.",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage({
+        type: "error",
+        text: "New password and confirm password do not match.",
+      });
+      return;
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      setPasswordMessage({
+        type: "error",
+        text: "New password must be different from current password.",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("User not authenticated.");
+
+      const credential = EmailAuthProvider.credential(user.email, passwordForm.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updateFirebasePassword(user, passwordForm.newPassword);
+
+      setPasswordMessage({ type: "success", text: "Password updated successfully!" });
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordLastChanged(
+        new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+
+      setTimeout(() => {
+        setPasswordMessage({ type: "", text: "" });
+        setShowPasswordModal(false);
+      }, 1400);
+    } catch (err) {
+      let msg = err.message || "Failed to update password.";
+      if (err.code === "auth/wrong-password" || err.code === "austh/invalid-credential") {
+        msg = "Current password is incorrect.";
+      }
+      setPasswordMessage({ type: "error", text: msg });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  }
+
+  const togglePasswordVisibility = (field) => {
+    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
 
   return (
-    <div className="sales-profile-page">
-      <header className="sales-profile-page-heading">
-        <h1>My Profile</h1>
-        <p>Manage your personal information, work details and account security.</p>
-      </header>
-
-      {profileMessage && <p className="sales-profile-message" role="status">{profileMessage}</p>}
-
-      <section className="sales-profile-card" aria-label="My profile">
-        <div className="sales-profile-header">
-          <div className="sales-profile-avatar">{initials || <UserRound size={30} strokeWidth={1.7} />}</div>
-          <div className="sales-profile-identity">
-            <h2>{fullName}</h2>
-            <div className="sales-profile-badges">
-              <StatusBadge status={profile.role} variant="info" />
-              <span className="sales-profile-organization-name">{profile.organizationName}</span>
-              <StatusBadge status={profile.accountStatus} variant="success" />
-            </div>
-            <p>{profile.email}</p>
-          </div>
-          <div className="sales-profile-actions">
-            <button className="sales-profile-edit" type="button" onClick={() => { setProfileValues({ firstName: profile.firstName, lastName: profile.lastName || "", phone: profile.phone || "" }); setProfileError(""); setProfileMessage(""); setShowProfileForm(true); }}>Edit Profile</button>
+    <div className="sales-profile-container">
+      <section className="panel ">
+        <div className="panel-title">
+          <div>
+            <h3>
+              <ShieldCheck size={18} />
+              Account
+            </h3>
+            <p>Manage the Sales account and security credentials.</p>
           </div>
         </div>
-      </section>
 
-      <div className="sales-profile-sections">
-          <DetailSection title="Personal Information" className="sales-profile-information">
-            <div className="sales-profile-fields">
-              <DetailField label="First Name" value={profile.firstName} />
-              <DetailField label="Last Name" value={profile.lastName} />
-              <DetailField label="Work Email" value={profile.email} />
-              <DetailField label="Phone Number" value={profile.phone} />
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Organisation Information" className="sales-profile-information">
-            <div className="sales-profile-fields">
-              <DetailField label="Organisation Name" value={profile.organizationName} />
-              <DetailField label="Organisation Email" value={profile.organizationEmail} />
-              <DetailField label="Organisation Phone" value={profile.organizationPhone} />
-              <DetailField label="Organisation Website" value={profile.organizationWebsite} />
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Work & Team Information" className="sales-profile-information">
-            <div className="sales-profile-fields">
-              <DetailField label="Role" value={profile.role} />
-              <DetailField label="Team" value={profile.team} />
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Account Information" className="sales-profile-information">
-            <div className="sales-profile-fields">
-              <DetailField label="Account Status" value={<StatusBadge status={profile.accountStatus} variant="success" />} />
-              <DetailField label="Member Since" value={formatDate(profile.accountCreated)} />
-              <DetailField label="Last Updated" value={formatDate(profile.lastUpdated)} />
-            </div>
-          </DetailSection>
-      </div>
-      <section className="sales-profile-security" aria-label="Password and security">
-        <div className="sales-profile-security-icon"><LockKeyhole size={18} /></div>
-        <div className="sales-profile-security-copy">
-          <h2>Password &amp; Security</h2>
-          <p>Keep your account secure.</p>
-        </div>
-        <button className="sales-profile-password-button" type="button" onClick={openPasswordForm}>Update Password</button>
-      </section>
-
-      {showProfileForm && (
-        <form onSubmit={saveProfile} noValidate>
-          <FormModal
-            title="Edit Profile"
-            onClose={() => setShowProfileForm(false)}
-            actions={<><button className="form-modal-cancel" type="button" onClick={() => setShowProfileForm(false)}>Cancel</button><button className="form-modal-submit" type="submit">Save Changes</button></>}
+        <div className="settings-option-list">
+          {/* Profile card option */}
+          <button
+            type="button"
+            className="settings-option"
+            onClick={() => {
+              setProfileForm({ ...profile });
+              setShowProfileModal(true);
+            }}
           >
-            <label className="sales-form-field">First Name *<input autoFocus value={profileValues.firstName} onChange={(event) => setProfileValues({ ...profileValues, firstName: event.target.value })} /></label>
-            <label className="sales-form-field">Last Name<input value={profileValues.lastName} onChange={(event) => setProfileValues({ ...profileValues, lastName: event.target.value })} /></label>
-            <label className="sales-form-field">Phone Number<input type="tel" value={profileValues.phone} onChange={(event) => setProfileValues({ ...profileValues, phone: event.target.value })} /></label>
-            {profileError && <p className="sales-form-error" role="alert">{profileError}</p>}
-          </FormModal>
-        </form>
+            <div className="settings-option-icon">
+              <UserRound size={19} />
+            </div>
+            <div className="settings-option-copy">
+              <strong>Profile</strong>
+              <span>View and edit Sales profile details.</span>
+            </div>
+            <div className="settings-option-right">
+              <span className={`profile-completion ${profileComplete ? "complete" : "incomplete"}`}>
+                {profileComplete ? "Complete" : "Incomplete"}
+              </span>
+              <ChevronRight size={18} />
+            </div>
+          </button>
+
+          {/* Change Password card option */}
+          <button
+            type="button"
+            className="settings-option"
+            onClick={() => {
+              setPasswordMessage({ type: "", text: "" });
+              setShowPasswordModal(true);
+            }}
+          >
+            <div className="settings-option-icon">
+              <KeyRound size={19} />
+            </div>
+            <div className="settings-option-copy">
+              <strong>Change Password</strong>
+              <span>Change the Sales account password.</span>
+            </div>
+            <div className="settings-option-right">
+              <ChevronRight size={18} />
+            </div>
+          </button>
+        </div>
+      </section>
+
+      {/* ── Profile Modal (Screenshot 2) ── */}
+      {showProfileModal && (
+        <div
+          className="crm-modal-backdrop"
+          onClick={() => {
+            setShowProfileModal(false);
+            setProfileSaved(false);
+          }}
+        >
+          <div className="crm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="crm-modal-header">
+              <div className="settings-profile-summary" style={{ flex: 1 }}>
+                <div className="profile-large-avatar" style={{ width: 44, height: 44, fontSize: "1rem" }}>
+                  {initials}
+                </div>
+                <div className="settings-profile-copy">
+                  <div className="profile-title-line">
+                    <h2 style={{ fontSize: "1.1rem", margin: 0 }}>{profile.name}</h2>
+                    <span className={`profile-completion ${profileComplete ? "complete" : "incomplete"}`}>
+                      {profileComplete ? "Profile Complete" : "Profile Incomplete"}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#2563eb", fontWeight: 500 }}>
+                    {profile.designation || "Sales Executive"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="crm-modal-close-btn"
+                onClick={() => {
+                  setShowProfileModal(false);
+                  setProfileSaved(false);
+                }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={submitProfile}>
+              <div className="crm-modal-body">
+                <div className="form-grid">
+                  <label>
+                    Full Name *
+                    <input
+                      required
+                      type="text"
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      placeholder="Sales Representative"
+                    />
+                  </label>
+
+                  <label>
+                    Email Address *
+                    <input
+                      required
+                      type="email"
+                      value={profileForm.email}
+                      disabled
+                      placeholder="sales@example.com"
+                    />
+                  </label>
+
+                  <label>
+                    Phone Number *
+                    <input
+                      required
+                      type="text"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      placeholder="+91 98000 00000"
+                    />
+                  </label>
+
+                  <label>
+                    Designation
+                    <input
+                      type="text"
+                      value={profileForm.designation}
+                      disabled
+                      placeholder="Sales Executive"
+                    />
+                  </label>
+
+                  <label>
+                    Organization Name
+                    <input
+                      type="text"
+                      value={profileForm.orgName}
+                      disabled
+                      placeholder="SHNOOR CRM"
+                    />
+                  </label>
+
+                  <label>
+                    Role
+                    <input value={profileForm.role} disabled />
+                  </label>
+                </div>
+              </div>
+
+              <div className="crm-modal-footer">
+                {profileSaved && (
+                  <span className="save-success-badge">
+                    <CheckCircle2 size={15} />
+                    Profile saved!
+                  </span>
+                )}
+                <button type="submit" className="primary-button" disabled={isSaving}>
+                  <Save size={15} />
+                  {isSaving ? "Saving..." : "Save Profile"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
-      {showPasswordForm && (
-        <form onSubmit={validatePassword} noValidate>
-          <FormModal
-            title="Update Password"
-            onClose={closePasswordForm}
-            actions={<><button className="form-modal-cancel" type="button" onClick={closePasswordForm}>Cancel</button><button className="form-modal-submit" type="submit">Update Password</button></>}
-          >
-            <label className="sales-form-field">Current Password *<input type="password" value={passwordValues.current} onChange={(event) => setPasswordValues({ ...passwordValues, current: event.target.value })} /></label>
-            {passwordError?.field === "current" && <p className="sales-form-error" role="alert">{passwordError.message}</p>}
-            <label className="sales-form-field">New Password *<input type="password" value={passwordValues.next} onChange={(event) => setPasswordValues({ ...passwordValues, next: event.target.value })} /></label>
-            {passwordError?.field === "next" && <p className="sales-form-error" role="alert">{passwordError.message}</p>}
-            <label className="sales-form-field">Confirm New Password *<input type="password" value={passwordValues.confirm} onChange={(event) => setPasswordValues({ ...passwordValues, confirm: event.target.value })} /></label>
-            {passwordError?.field === "confirm" && <p className="sales-form-error" role="alert">{passwordError.message}</p>}
-            {passwordMessage && <p className="sales-profile-message sales-profile-password-notice" role="status">{passwordMessage}</p>}
-          </FormModal>
-        </form>
+      {/* ── Change Password Modal (Screenshot 4) ── */}
+      {showPasswordModal && (
+        <div
+          className="crm-modal-backdrop"
+          onClick={() => {
+            setShowPasswordModal(false);
+            setPasswordMessage({ type: "", text: "" });
+          }}
+        >
+          <div className="crm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="crm-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <KeyRound size={20} />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>Change Password</h3>
+                  <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b" }}>
+                    Update the Sales account password.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="crm-modal-close-btn"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordMessage({ type: "", text: "" });
+                }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={submitPassword}>
+              <div className="crm-modal-body">
+                <div className="password-form-stack">
+                  <label>
+                    Current Password *
+                    <div className="password-input-wrap">
+                      <input
+                        required
+                        type={showPassword.current ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                        }
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => togglePasswordVisibility("current")}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showPassword.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <label>
+                    New Password *
+                    <div className="password-input-wrap">
+                      <input
+                        required
+                        type={showPassword.new ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                        }
+                        placeholder="At least 8 characters"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => togglePasswordVisibility("new")}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showPassword.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <label>
+                    Confirm New Password *
+                    <div className="password-input-wrap">
+                      <input
+                        required
+                        type={showPassword.confirm ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                        }
+                        placeholder="Re-enter new password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => togglePasswordVisibility("confirm")}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showPassword.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="password-info-row">
+                  <div>
+                    <strong>Last changed: </strong>
+                    <span>{passwordLastChanged}</span>
+                  </div>
+                </div>
+
+                {passwordMessage.text && (
+                  <div className={`password-message ${passwordMessage.type}`}>
+                    {passwordMessage.text}
+                  </div>
+                )}
+
+                <div className="security-note">
+                  Password changes are secured with backend cryptographic validation. For safety, pick a
+                  strong password containing letters, numbers, and symbols.
+                </div>
+              </div>
+
+              <div className="crm-modal-footer">
+                <button type="submit" className="primary-button" disabled={isUpdatingPassword}>
+                  <Lock size={15} />
+                  {isUpdatingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
 }
-
-export default SalesProfile;

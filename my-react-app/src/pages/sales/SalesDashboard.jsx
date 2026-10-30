@@ -2,15 +2,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase.js";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { CircleUserRound, LogOut } from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
+import { Calendar } from "lucide-react";
 import StatCard from "../../components/common/StatCard.jsx";
-// REMOVED: import { dashboardStats } from "../../data/salesDashboardData.js";
 import "./SalesDashboard.css";
 import PipelineCard from "../../components/sales/PipelineCard.jsx";
 import TodayTasks from "../../components/sales/TodaysTask.jsx";
 import RecentActivities from "../../components/sales/RecentActivities.jsx";
 import UpcomingFollowUps from "../../components/sales/UpcomingFollowUps.jsx";
+import ToggleTheme from "../../components/common/ThemeToggle.jsx";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
   .replace(/\/api\/v1.*$/, "")
@@ -112,34 +112,25 @@ function SalesDashboard() {
 
   return (
     <div className="sales-dashboard">
-      <header className="sales-dashboard-header">
-        <div className="sales-dashboard-header-left">
-          <h1>Dashboard</h1>
+      <section className="sales-overview-header-card">
+        <div className="sales-overview-header-left">
+          <h2>Platform Overview</h2>
+          <p>SHNOOR CRM · Sales</p>
         </div>
 
-        <div className="sales-dashboard-header-right">
+        <div className="sales-overview-header-right">
+          <ToggleTheme/>
           <button
             type="button"
-            className="sales-dashboard-profile-btn"
-            onClick={() => navigate("/profile")}
-            title="Profile"
-            aria-label="Profile"
+            className="crm-header-icon-btn"
+            title="Calendar"
+            aria-label="Calendar"
+            onClick={() => navigate("/calendar")}
           >
-            <CircleUserRound size={22} strokeWidth={1.8} />
-          </button>
-
-          <button
-            type="button"
-            className="sales-dashboard-logout-btn"
-            onClick={handleLogout}
-            title="Logout"
-            aria-label="Logout from sales"
-          >
-            <LogOut size={17} strokeWidth={1.8} />
-            <span>Logout</span>
+            <Calendar size={18} />
           </button>
         </div>
-      </header>
+      </section>
 
     
       {loading && <p className="sales-form-loading">Loading dashboard…</p>}

@@ -1,12 +1,10 @@
-// STEP: TodayTasks now receives live tasks[] as a prop (replacing mock todayTasks import)
-// REMOVED: import { todayTasks } from "../../data/salesDashboardData.js"
+
 import { Clock3 } from "lucide-react"
 import "./TodaysTask.css"
 
 function TodayTasks({ tasks = [] }) {
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // Filter to only tasks due today that are not completed or cancelled
   const todayTasks = tasks.filter((task) => {
     if (!task.dueDate) return false;
     return (
@@ -16,7 +14,7 @@ function TodayTasks({ tasks = [] }) {
     );
   });
 
-  // Format a time string from ISO dueDate for display (e.g. "10:00 AM")
+
   const formatTime = (isoString) => {
     if (!isoString) return "";
     const date = new Date(isoString);

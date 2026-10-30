@@ -636,6 +636,7 @@ function App() {
 
       try {
         const idToken = await firebaseUser.getIdToken();
+        console.log("Firebase Auth Token (ID Token):", idToken);
         const response = await fetch("http://localhost:5000/api/v1/auth/protected", {
           headers: { Authorization: `Bearer ${idToken}` },
         });

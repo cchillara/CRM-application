@@ -16,14 +16,14 @@
 
 .sales-section-header h2 {
   margin: 0;
-  color: #0F141C;
+  color: var(--text-main, #0F141C);
   font-size: 18px;
   font-weight: 600;
 }
 
 .sales-section-header p {
   margin: 4px 0 0;
-  color: #66717F;
+  color: var(--text-muted, #66717F);
   font-size: 14px;
 }
 
@@ -90,7 +90,7 @@
 
 .sales-task-content h3 {
   margin: 0 0 2px;
-  color: #0F141C;
+  color: var(--text-main, #0F141C);
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
@@ -99,7 +99,7 @@
 }
 
 .sales-task-content span {
-  color: #66717F;
+  color: var(--text-muted, #66717F);
   font-size: 12px;
 }
 
@@ -108,7 +108,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 3px;
-  color: #66717F;
+  color: var(--text-muted, #66717F);
   font-size: 12px;
 }
 
