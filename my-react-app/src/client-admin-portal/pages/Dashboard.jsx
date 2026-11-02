@@ -175,32 +175,6 @@ export default function Dashboard() {
   return (
     <div className="crm-dashboard">
 
-      <section className="crm-banner-card" aria-label="Platform Status">
-        <div className="crm-banner-left">
-          <h2 className="crm-banner-title">Platform Overview</h2>
-          <span className="crm-banner-subtitle">SHNOOR CRM · Client Admin</span>
-        </div>
-
-        <div className="crm-banner-right" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <ToggleTheme />
-          <button type="button" className="crm-banner-btn"
-            onClick={() => navigate('/client-admin/calendar')}>
-            <Calendar/>
-          </button>
-
-          {/* <button
-            type="button"
-            className="crm-banner-btn"
-            onClick={handleLogout}
-          >
-            <LogOut size={15} />
-            <span>Log out</span>
-          </button> */}
-
-
-        </div>
-      </section>
-
       <section className="crm-overdue-widget">
         <div
           className="crm-overdue-widget-header crm-overdue-header-clickable"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './pages/Sidebar';
-import { Menu, LogOut, User } from 'lucide-react';
+import { Menu, LogOut, User , Calendar } from 'lucide-react';
 import ToggleTheme from './components/ThemeToggle';
 
 export default function ClientLayout() {
@@ -64,6 +64,11 @@ export default function ClientLayout() {
         </div>
 
         <div className="crm-top-header-actions">
+          <ToggleTheme />
+          <button type="button" className="crm-banner-btn"
+            onClick={() => navigate('/client-admin/calendar')}>
+            <Calendar/>
+          </button>
 
           <button
             type="button"
