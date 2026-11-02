@@ -1,6 +1,6 @@
 .sales-notes-page {
   min-height: 100vh;
-  padding: 28px;
+  /* padding: 10px; */
   overflow-x: clip;
   background: var(--bg-main, var(--background));
   color: var(--text-main, var(--heading));
