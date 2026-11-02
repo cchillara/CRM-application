@@ -24,8 +24,7 @@ export const getSalesAnalytics = asyncHandler(async (req, res) => {
 
     const leads = await prisma.lead.findMany({
         where: {
-            organizationId: req.organizationId,
-            assignedToId: req.user.id,
+            
             createdAt: { gte: startDate, lte: endDate },
         },
         select: { createdAt: true, convertedAt: true },
@@ -57,8 +56,7 @@ export const getSalesAnalytics = asyncHandler(async (req, res) => {
 
       const activitiesCompleted = await prisma.activity.count({
         where: {
-            organizationId: req.organizationId,
-            performedById: req.user.id,
+            
             createdAt: { gte: startDate, lte: endDate },
             type: { in: ["CALL", "MEETING", "EMAIL", "FOLLOW_UP"] },
         },
@@ -66,8 +64,7 @@ export const getSalesAnalytics = asyncHandler(async (req, res) => {
 
     const overdueTasks = await prisma.task.count({
         where: {
-            organizationId: req.organizationId,
-            assignedToId: req.user.id,
+            
             dueDate: { lt: endDate },
             status: { notIn: ["COMPLETED", "CANCELLED"] },
         },
@@ -76,8 +73,7 @@ export const getSalesAnalytics = asyncHandler(async (req, res) => {
     const taskStatusCounts = await prisma.task.groupBy({
         by: ["status"],
         where: {
-            organizationId: req.organizationId,
-            assignedToId: req.user.id,
+            
             createdAt: { gte: startDate, lte: endDate },
         },
         _count: { _all: true },
@@ -96,8 +92,7 @@ export const getSalesAnalytics = asyncHandler(async (req, res) => {
     const dealStageCounts = await prisma.deal.groupBy({
         by: ["stage"],
         where: {
-            organizationId: req.organizationId,
-            assignedToId: req.user.id,
+            
             stage: { in: ["WON", "LOST"] },
         },
         _count: { _all: true },

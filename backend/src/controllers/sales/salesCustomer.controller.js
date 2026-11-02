@@ -52,8 +52,6 @@ const formatCustomer = (customer) => {
 export const getSalesCustomers = asyncHandler(async (req, res) => {
     const customers = await prisma.customer.findMany({
         where: {
-            organizationId: req.organizationId,
-            company: { is: { organizationId: req.organizationId } },
             ...(req.query.scope === "mine" ? { assignedToId: req.user.id } : {}),
         },
         include: customerRelations(req.organizationId),

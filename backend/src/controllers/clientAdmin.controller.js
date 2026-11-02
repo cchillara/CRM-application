@@ -2,40 +2,24 @@ import crypto from "crypto";
 import prisma from "../db/index.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 
-const getClientAdmin = async (firebaseUid) => {
-    const user = await prisma.user.findUnique({
-        where: {
-            firebaseUid,
-        },
-        select: {
-            id: true,
-            role: true,
-        },
-    });
-
-    if (!user) {
-        return {
-            error: "User not found",
-        };
-    }
-
-    if (user.role !== "ADMIN") {
-        return {
-            error: "Client Admin access required",
-        };
-    }
-
-    return {
-        user,
-    };
-};
+// organizationId is attached by requireClientAdmin middleware (req.organizationId)
 
 const validateUserRole = (role) => {
-    return ["ADMIN", "MANAGER", "SALES"].includes(role);
+    return ["ORGANIZATION_ADMIN", "MANAGER", "SALES"].includes(role);
 };
 
 const validateUserStatus = (status) => {
-    return ["ACTIVE", "INACTIVE"].includes(status);
+    return ["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"].includes(status);
+};
+
+const getClientAdmin = async (uid) => {
+    const user = await prisma.user.findFirst({
+        where: {
+            OR: [{ firebaseUid: uid }, { id: uid }]
+        }
+    });
+    if (!user) return { error: "User not found" };
+    return { user };
 };
 
 export const listUsers = async (req, res) => {
@@ -851,206 +835,231 @@ export const deleteRole = async (req, res) => {
 
 export const listLeads = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
+        const orgId = req.organizationId;
 
-        if (result.error) {
-            return res.status(403).json(
-                new ApiResponse(
-                    403,
-                    [{ message: result.error }],
-                    null,
-                    result.error
-                )
-            );
-        }
+        // Safe raw query to skip Prisma enum validation for legacy PENDING rows
+        const leads = await prisma.$queryRawUnsafe(`
+            SELECT
+                l.id, l.title, l.description, l.status, l.source,
+                l."organizationId", l."companyId", l."contactId",
+                l."assignedToId", l."convertedAt", l."convertedById",
+                l."customerId", l."createdAt", l."updatedAt",
+                co.name AS "companyName",
+                co.email AS "companyEmail",
+                co.phone AS "companyPhone",
+                ct."firstName" AS "contactFirstName",
+                ct."lastName" AS "contactLastName",
+                ct.email AS "contactEmail",
+                ct.phone AS "contactPhone",
+                ct."jobTitle" AS "contactJobTitle",
+                u."firstName" AS "assignedFirstName",
+                u."lastName" AS "assignedLastName"
+            FROM "Lead" l
+            LEFT JOIN "Company" co ON l."companyId" = co.id
+            LEFT JOIN "Contact" ct ON l."contactId" = ct.id
+            LEFT JOIN "User" u ON l."assignedToId" = u.id
+            ORDER BY l."createdAt" DESC
+        `);
 
-        const leads = await prisma.lead.findMany({
-            include: {
-                company: true,
-                contact: true,
-                assignedTo: true,
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
+        // Normalise & parse stringified JSON descriptions
+        const formatted = leads.map((l) => {
+            let meta = {};
+            if (l.description) {
+                try { if (l.description.startsWith("{")) meta = JSON.parse(l.description); } catch (_) {}
+            }
+            const contactName = l.contactFirstName
+                ? `${l.contactFirstName || ""} ${l.contactLastName || ""}`.trim()
+                : (meta.contact || meta.contactPerson || null);
+            const assignedTo = l.assignedFirstName
+                ? `${l.assignedFirstName || ""} ${l.assignedLastName || ""}`.trim()
+                : (meta.assignedTo || "Unassigned");
+
+            return {
+                id: l.id,
+                title: l.title,
+                status: l.status,
+                source: l.source,
+                organizationId: l.organizationId,
+                createdAt: l.createdAt,
+                updatedAt: l.updatedAt,
+                // flattened relations for easy frontend use
+                contact: contactName ? {
+                    firstName: l.contactFirstName,
+                    lastName: l.contactLastName,
+                    email: l.contactEmail || meta.email,
+                    phone: l.contactPhone || meta.phone,
+                    jobTitle: l.contactJobTitle,
+                } : null,
+                company: l.companyName ? {
+                    id: l.companyId,
+                    name: l.companyName,
+                    email: l.companyEmail,
+                    phone: l.companyPhone,
+                } : null,
+                assignedTo: assignedTo,
+                // legacy extra fields from description JSON
+                tier: meta.tier || null,
+                value: meta.value || null,
+                phone: l.contactPhone || meta.phone || null,
+                email: l.contactEmail || meta.email || null,
+                contactName: contactName,
+            };
         });
 
-        return res.status(200).json(
-            new ApiResponse(
-                200,
-                [],
-                leads,
-                "Leads retrieved successfully"
-            )
-        );
+        return res.status(200).json(new ApiResponse(200, [], formatted, "Leads retrieved successfully"));
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(
-                500,
-                [{ message: error.message }],
-                null,
-                "Failed to retrieve leads"
-            )
-        );
+        console.error("[listLeads]", error);
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve leads"));
     }
 };
 
 export const listCustomers = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
-
-        if (result.error) {
-            return res.status(403).json(
-                new ApiResponse(
-                    403,
-                    [{ message: result.error }],
-                    null,
-                    result.error
-                )
-            );
-        }
-
+        const orgId = req.organizationId;
         const customers = await prisma.customer.findMany({
-            include: {
-                company: true,
-                tasks: true,
-                activities: true,
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
+            include: { company: true, tasks: true, activities: true },
+            orderBy: { createdAt: "desc" },
         });
-
-        return res.status(200).json(
-            new ApiResponse(
-                200,
-                [],
-                customers,
-                "Customers retrieved successfully"
-            )
-        );
+        return res.status(200).json(new ApiResponse(200, [], customers, "Customers retrieved successfully"));
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(
-                500,
-                [{ message: error.message }],
-                null,
-                "Failed to retrieve customers"
-            )
-        );
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve customers"));
     }
 };
 
 export const listCompanies = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
-
-        if (result.error) {
-            return res.status(403).json(
-                new ApiResponse(
-                    403,
-                    [{ message: result.error }],
-                    null,
-                    result.error
-                )
-            );
-        }
-
+        const orgId = req.organizationId;
         const companies = await prisma.company.findMany({
-            include: {
-                contacts: true,
-                customers: true,
-                leads: true,
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
+            include: { contacts: true, customers: true, leads: true },
+            orderBy: { createdAt: "desc" },
         });
-
-        return res.status(200).json(
-            new ApiResponse(
-                200,
-                [],
-                companies,
-                "Companies retrieved successfully"
-            )
-        );
+        return res.status(200).json(new ApiResponse(200, [], companies, "Companies retrieved successfully"));
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(
-                500,
-                [{ message: error.message }],
-                null,
-                "Failed to retrieve companies"
-            )
-        );
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve companies"));
     }
 };
 
 export const listDeals = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
-
-        if (result.error) {
-            return res.status(403).json(
-                new ApiResponse(
-                    403,
-                    [{ message: result.error }],
-                    null,
-                    result.error
-                )
-            );
-        }
-
+        const orgId = req.organizationId;
         const deals = await prisma.deal.findMany({
+            include: { customer: true, assignedTo: true },
+            orderBy: { createdAt: "desc" },
+        });
+        return res.status(200).json(new ApiResponse(200, [], deals, "Deals retrieved successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve deals"));
+    }
+};
+
+// ── Tasks (shared with Sales) ─────────────────────────────────────────────────
+
+export const listTasks = async (req, res) => {
+    try {
+        const orgId = req.organizationId;
+        const tasks = await prisma.task.findMany({
             include: {
-                customer: true,
-                assignedTo: true,
+                assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+                lead: { select: { id: true, title: true } },
+                customer: { select: { id: true } },
             },
-            orderBy: {
-                createdAt: "desc",
+            orderBy: { createdAt: "desc" },
+        });
+        return res.status(200).json(new ApiResponse(200, [], tasks, "Tasks retrieved successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve tasks"));
+    }
+};
+
+export const createTask = async (req, res) => {
+    try {
+        const orgId = req.organizationId;
+        const { title, description, status, dueDate, endDate, eventType, assignedToId, leadId, customerId, dealId } = req.body;
+
+        if (!title) return res.status(400).json(new ApiResponse(400, [{ message: "title is required" }], null, "Validation error"));
+
+        // Resolve assignedToId — fall back to caller
+        let resolvedAssignedTo = assignedToId || req.user.id;
+
+        const task = await prisma.task.create({
+            data: {
+                title,
+                description: description || null,
+                status: status || "TODO",
+                dueDate: dueDate ? new Date(dueDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
+                eventType: eventType || "TASK",
+                organizationId: orgId,
+                assignedToId: resolvedAssignedTo,
+                leadId: leadId || null,
+                customerId: customerId || null,
+                dealId: dealId || null,
+            },
+            include: {
+                assignedTo: { select: { id: true, firstName: true, lastName: true } },
+                lead: { select: { id: true, title: true } },
             },
         });
 
-        return res.status(200).json(
-            new ApiResponse(
-                200,
-                [],
-                deals,
-                "Deals retrieved successfully"
-            )
-        );
+        return res.status(201).json(new ApiResponse(201, [], task, "Task created successfully"));
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(
-                500,
-                [{ message: error.message }],
-                null,
-                "Failed to retrieve deals"
-            )
-        );
+        console.error("[createTask]", error);
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create task"));
+    }
+};
+
+export const updateTask = async (req, res) => {
+    try {
+        const orgId = req.organizationId;
+        const { taskId } = req.params;
+        const { title, description, status, dueDate, endDate, eventType, assignedToId } = req.body;
+
+        const existing = await prisma.task.findFirst({ where: { id: taskId } });
+        if (!existing) return res.status(404).json(new ApiResponse(404, [], null, "Task not found"));
+
+        const task = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                ...(title !== undefined && { title }),
+                ...(description !== undefined && { description }),
+                ...(status !== undefined && { status }),
+                ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
+                ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+                ...(eventType !== undefined && { eventType }),
+                ...(assignedToId !== undefined && { assignedToId }),
+            },
+            include: {
+                assignedTo: { select: { id: true, firstName: true, lastName: true } },
+            },
+        });
+
+        return res.status(200).json(new ApiResponse(200, [], task, "Task updated successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update task"));
+    }
+};
+
+export const deleteTask = async (req, res) => {
+    try {
+        const orgId = req.organizationId;
+        const { taskId } = req.params;
+
+        const existing = await prisma.task.findFirst({ where: { id: taskId } });
+        if (!existing) return res.status(404).json(new ApiResponse(404, [], null, "Task not found"));
+
+        await prisma.task.delete({ where: { id: taskId } });
+        return res.status(200).json(new ApiResponse(200, [], null, "Task deleted successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete task"));
     }
 };
 
 export const getReports = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid);
-
-        if (result.error) {
-            return res.status(403).json(
-                new ApiResponse(
-                    403,
-                    [{ message: result.error }],
-                    null,
-                    result.error
-                )
-            );
-        }
-
+        const orgId = req.organizationId;
         const [
             totalUsers,
             activeUsers,
-            inactiveUsers,
             totalLeads,
             totalCustomers,
             totalCompanies,
@@ -1059,64 +1068,22 @@ export const getReports = async (req, res) => {
             lostDeals,
         ] = await Promise.all([
             prisma.user.count(),
-            prisma.user.count({
-                where: {
-                    status: "ACTIVE",
-                },
-            }),
-            prisma.user.count({
-                where: {
-                    status: "INACTIVE",
-                },
-            }),
-            prisma.lead.count(),
+            prisma.user.count({ where: { status: "ACTIVE" } }),
+            prisma.$queryRawUnsafe(`SELECT COUNT(*) FROM "Lead" WHERE "organizationId" = $1`, orgId).then((r) => Number(r[0].count)),
             prisma.customer.count(),
             prisma.company.count(),
             prisma.deal.count(),
-            prisma.deal.count({
-                where: {
-                    stage: "WON",
-                },
-            }),
-            prisma.deal.count({
-                where: {
-                    stage: "LOST",
-                },
-            }),
+            prisma.deal.count({ where: { stage: "WON" } }),
+            prisma.deal.count({ where: { stage: "LOST" } }),
         ]);
 
         const reports = {
-            users: {
-                total: totalUsers,
-                active: activeUsers,
-                inactive: inactiveUsers,
-            },
-            crm: {
-                leads: totalLeads,
-                customers: totalCustomers,
-                companies: totalCompanies,
-                deals: totalDeals,
-                wonDeals,
-                lostDeals,
-            },
+            users: { total: totalUsers, active: activeUsers },
+            crm: { leads: totalLeads, customers: totalCustomers, companies: totalCompanies, deals: totalDeals, wonDeals, lostDeals },
         };
 
-        return res.status(200).json(
-            new ApiResponse(
-                200,
-                [],
-                reports,
-                "Reports retrieved successfully"
-            )
-        );
+        return res.status(200).json(new ApiResponse(200, [], reports, "Reports retrieved successfully"));
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(
-                500,
-                [{ message: error.message }],
-                null,
-                "Failed to retrieve reports"
-            )
-        );
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve reports"));
     }
 };

@@ -36,7 +36,6 @@ const leadRelations = {
 
 export const getSalesLeads = asyncHandler(async (req, res) => {
     const leads = await prisma.lead.findMany({
-        where: { organizationId: req.organizationId },
         include: leadRelations,
         orderBy: { createdAt: "desc" },
     });
@@ -48,7 +47,7 @@ export const getSalesLeads = asyncHandler(async (req, res) => {
 
 export const getSalesLeadById = asyncHandler(async (req, res) => {
     const lead = await prisma.lead.findFirst({
-        where: { id: req.params.leadId, organizationId: req.organizationId },
+        where: { id: req.params.leadId },
         include: {
             ...leadRelations,
             convertedBy: {
@@ -58,7 +57,6 @@ export const getSalesLeadById = asyncHandler(async (req, res) => {
                 select: { id: true, companyId: true },
             },
             tasks: {
-                where: { organizationId: req.organizationId },
                 select: {
                     id: true,
                     title: true,
@@ -69,10 +67,6 @@ export const getSalesLeadById = asyncHandler(async (req, res) => {
                 orderBy: { dueDate: "asc" },
             },
             activities: {
-                where: {
-                    organizationId: req.organizationId,
-                    performedBy: { is: { organizationId: req.organizationId } },
-                },
                 select: {
                     id: true,
                     type: true,
@@ -197,14 +191,14 @@ export const updateSalesLeadStatus = asyncHandler(async (req, res) => {
     }
 
     const lead = await prisma.lead.findFirst({
-        where: { id: req.params.leadId, organizationId: req.organizationId },
+        where: { id: req.params.leadId },
         select: { id: true, status: true },
     });
     if (!lead) throw new ApiError(404, "Lead not found");
     if (lead.status === LeadStatus.CONVERTED) throw new ApiError(409, "Converted leads cannot change status");
 
     const updatedLead = await prisma.lead.update({
-        where: { id: lead.id, organizationId: req.organizationId },
+        where: { id: lead.id },
         data: { status },
         include: leadRelations,
     });
@@ -216,20 +210,20 @@ export const updateSalesLeadStatus = asyncHandler(async (req, res) => {
 
 export const deleteSalesLead = asyncHandler(async (req, res) => {
     const lead = await prisma.lead.findFirst({
-        where: { id: req.params.leadId, organizationId: req.organizationId },
+        where: { id: req.params.leadId },
         select: { id: true },
     });
     if (!lead) throw new ApiError(404, "Lead not found");
 
     const [tasks, activities] = await Promise.all([
-        prisma.task.count({ where: { leadId: lead.id, organizationId: req.organizationId } }),
-        prisma.activity.count({ where: { leadId: lead.id, organizationId: req.organizationId } }),
+        prisma.task.count({ where: { leadId: lead.id } }),
+        prisma.activity.count({ where: { leadId: lead.id } }),
     ]);
     if (tasks || activities) throw new ApiError(409, "Delete related tasks and activities before deleting this lead");
 
     try {
         await prisma.lead.delete({
-            where: { id: lead.id, organizationId: req.organizationId },
+            where: { id: lead.id },
         });
     } catch (error) {
         if (error?.code === "P2003") throw new ApiError(409, "This lead has related records and cannot be deleted");
@@ -244,14 +238,14 @@ export const deleteSalesLead = asyncHandler(async (req, res) => {
 export const convertSalesLead = asyncHandler(async (req, res) => {
     const result = await prisma.$transaction(async (tx) => {
         const lead = await tx.lead.findFirst({
-            where: { id: req.params.leadId, organizationId: req.organizationId },
+            where: { id: req.params.leadId },
             select: { id: true, status: true, companyId: true, customerId: true, assignedToId: true },
         });
         if (!lead) throw new ApiError(404, "Lead not found");
         if (!lead.companyId) throw new ApiError(400, "Associate a company before converting this lead");
 
         const company = await tx.company.findFirst({
-            where: { id: lead.companyId, organizationId: req.organizationId },
+            where: { id: lead.companyId },
             select: { id: true },
         });
         if (!company) throw new ApiError(409, "Lead company was not found in this organization");
@@ -289,7 +283,7 @@ export const convertSalesLead = asyncHandler(async (req, res) => {
             select: { id: true, companyId: true },
         });
         await tx.lead.update({
-            where: { id: lead.id, organizationId: req.organizationId },
+            where: { id: lead.id },
             data: {
                 status: LeadStatus.CONVERTED,
                 convertedAt: new Date(),
