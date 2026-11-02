@@ -7,20 +7,7 @@ import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes"
 
 
 function App() {
-  // const path = window.location.pathname;
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // if (path === "/login") {
-  //   return <Login />;
-  // }
-
-  // if (path === "/signup") {
-  //   return <Signup />;
-  // }
-
-  // if(path === "/client-admin"){
-  //   return <ClientAdmin/>
-  // }
 
   const closeMenu = () => setMenuOpen(false);
 
