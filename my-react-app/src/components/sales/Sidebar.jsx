@@ -22,7 +22,6 @@ const navigationItems = [
   { label: "Notes", icon: NotebookPen, path: "/notes" },
   { label: "Products", icon: Package, path: "/products" },
   { label: "Analytics", icon: BarChart3, path: "/analytics" },
-  { label: "Notifications", icon: Bell, path: "/notifications" }
 ];
 
  

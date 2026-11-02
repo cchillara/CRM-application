@@ -15,7 +15,6 @@ import SalesCalendar from "./pages/sales/SalesCalendar.jsx";
 import SalesNotes from "./pages/sales/SalesNotes.jsx";
 import SalesProducts from "./pages/sales/SalesProducts.jsx";
 import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
-import SalesNotifications from "./pages/sales/SalesNotifications.jsx";
 import SalesProfile from "./pages/sales/SalesProfile.jsx";
 import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes";
 
@@ -684,7 +683,6 @@ function App() {
               <Route path="/notes" element={<SalesNotes />} />
               <Route path="/products" element={<SalesProducts />} />
               <Route path="/analytics" element={<SalesAnalytics />} />
-              <Route path="/notifications" element={<SalesNotifications />} />
               <Route path="/profile" element={<SalesProfile />} />
             </Route>
           </Route>
