@@ -1,9 +1,10 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { SalesDataProvider } from "./SalesDataContext.jsx";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Calendar  } from "lucide-react";
 import { auth } from "../../firebase.js";
 import { signOut } from "firebase/auth";
+import ToggleTheme from "../../components/common/ThemeToggle.jsx";
 import "./SalesLayout.css";
 
 function SalesLayout({ children }) {
@@ -28,6 +29,17 @@ function SalesLayout({ children }) {
             <div className="crm-top-header-left"></div>
 
             <div className="crm-top-header-actions">
+              <ToggleTheme/>
+              <button
+                type="button"
+                className="crm-header-icon-btn"
+                title="Calendar"x
+                aria-label="Calendar"
+                onClick={() => navigate("/calendar")}
+              >
+                <Calendar size={18} />
+              </button>
+              
               <button
                 type="button"
                 className="crm-header-icon-btn"
