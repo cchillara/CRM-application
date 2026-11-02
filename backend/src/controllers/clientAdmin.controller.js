@@ -1087,3 +1087,177 @@ export const getReports = async (req, res) => {
         return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve reports"));
     }
 };
+
+export const createLead = async (req, res) => {
+    try {
+        const { title, name, contact, email, phone, tier, numericValue, value, status, source } = req.body;
+        const leadTitle = title || name;
+        if (!leadTitle) return res.status(400).json(new ApiResponse(400, [{ message: "title or name is required" }], null, "Validation error"));
+
+        const org = await prisma.organization.findFirst();
+        const orgId = req.organizationId || org?.id || "101";
+
+        let companyId = null;
+        if (name) {
+            const co = await prisma.company.create({
+                data: { name, email: email || null, phone: phone || null, organizationId: orgId }
+            });
+            companyId = co.id;
+        }
+
+        let contactId = null;
+        if (contact) {
+            const [firstName, ...rest] = String(contact).split(/\s+/);
+            const ct = await prisma.contact.create({
+                data: {
+                    firstName,
+                    lastName: rest.join(" ") || null,
+                    email: email || null,
+                    phone: phone || null,
+                    companyId: companyId,
+                }
+            });
+            contactId = ct.id;
+        }
+
+        const meta = {
+            name: leadTitle,
+            contact: contact || null,
+            email: email || null,
+            phone: phone || null,
+            tier: tier || "Growth",
+            numericValue: Number(numericValue) || 0,
+            value: value || "",
+            status: status || "NEW",
+            source: source || "Website",
+        };
+
+        const lead = await prisma.lead.create({
+            data: {
+                title: leadTitle,
+                description: JSON.stringify(meta),
+                status: (status && status.toUpperCase() === "ACTIVE") ? "NEW" : (status || "NEW"),
+                source: source || "Website",
+                organizationId: orgId,
+                companyId,
+                contactId,
+                assignedToId: req.user.id,
+            }
+        });
+
+        return res.status(201).json(new ApiResponse(201, [], lead, "Lead created successfully"));
+    } catch (error) {
+        console.error("[createLead]", error);
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create lead"));
+    }
+};
+
+export const updateLead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, name, contact, email, phone, tier, numericValue, value, status, source } = req.body;
+
+        const existing = await prisma.lead.findUnique({
+            where: { id },
+            include: { company: true, contact: true }
+        });
+        if (!existing) return res.status(404).json(new ApiResponse(404, [], null, "Lead not found"));
+
+        let meta = {};
+        if (existing.description && existing.description.startsWith("{")) {
+            try { meta = JSON.parse(existing.description); } catch (_) {}
+        }
+        if (name) meta.name = name;
+        if (contact) meta.contact = contact;
+        if (email) meta.email = email;
+        if (phone) meta.phone = phone;
+        if (tier) meta.tier = tier;
+        if (numericValue !== undefined) meta.numericValue = Number(numericValue);
+        if (value !== undefined) meta.value = value;
+        if (status) meta.status = status;
+        if (source) meta.source = source;
+
+        const newStatus = status ? (status.toUpperCase() === "ACTIVE" ? "NEW" : status.toUpperCase()) : existing.status;
+
+        if (existing.companyId && (name || email || phone)) {
+            await prisma.company.update({
+                where: { id: existing.companyId },
+                data: {
+                    ...(name && { name }),
+                    ...(email && { email }),
+                    ...(phone && { phone }),
+                }
+            }).catch(() => {});
+        }
+
+        if (existing.contactId && (contact || email || phone)) {
+            const [firstName, ...rest] = String(contact || "").split(/\s+/);
+            await prisma.contact.update({
+                where: { id: existing.contactId },
+                data: {
+                    ...(firstName && { firstName }),
+                    ...(rest.length > 0 && { lastName: rest.join(" ") }),
+                    ...(email && { email }),
+                    ...(phone && { phone }),
+                }
+            }).catch(() => {});
+        }
+
+        const updated = await prisma.lead.update({
+            where: { id },
+            data: {
+                ...(title || name ? { title: title || name } : {}),
+                description: JSON.stringify(meta),
+                ...(newStatus ? { status: newStatus } : {}),
+                ...(source ? { source } : {}),
+            }
+        });
+
+        return res.status(200).json(new ApiResponse(200, [], updated, "Lead updated successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update lead"));
+    }
+};
+
+export const deleteLead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const existing = await prisma.lead.findUnique({ where: { id } });
+        if (!existing) return res.status(404).json(new ApiResponse(404, [], null, "Lead not found"));
+
+        await prisma.lead.delete({ where: { id } });
+        return res.status(200).json(new ApiResponse(200, [], null, "Lead deleted successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete lead"));
+    }
+};
+
+export const updateCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const existing = await prisma.customer.findUnique({ where: { id } });
+        if (!existing) return res.status(404).json(new ApiResponse(404, [], null, "Customer not found"));
+
+        const updated = await prisma.customer.update({
+            where: { id },
+            data: { ...(status && { status }) }
+        });
+        return res.status(200).json(new ApiResponse(200, [], updated, "Customer updated successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update customer"));
+    }
+};
+
+export const deleteCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const existing = await prisma.customer.findUnique({ where: { id } });
+        if (!existing) return res.status(404).json(new ApiResponse(404, [], null, "Customer not found"));
+
+        await prisma.customer.delete({ where: { id } });
+        return res.status(200).json(new ApiResponse(200, [], null, "Customer deleted successfully"));
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete customer"));
+    }
+};

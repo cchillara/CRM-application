@@ -43,6 +43,8 @@ function eventFormFromCalendarEvent(event) {
     endTime: end && !allDay ? timeInputValue(end) : "",
     relatedTo: event.relatedTo || "",
     notes: event.notes || "",
+    
+
   };
 }
 
@@ -473,6 +475,8 @@ function SalesCalendar() {
             <div className="sales-calendar-detail-block">
               <span>Notes</span>
               <p>{selectedEvent.notes || "No notes added."}</p>
+              {/* <span> Client : {selectedEvent.} </span>  */}
+
             </div>
             <div className="sales-calendar-dialog-actions sales-calendar-detail-actions">
               <button type="button" className="sales-calendar-delete-button" onClick={() => setDeleteConfirmation(true)}><Trash2 size={16} /> Delete</button>

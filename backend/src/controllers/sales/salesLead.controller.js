@@ -299,3 +299,75 @@ export const convertSalesLead = asyncHandler(async (req, res) => {
         new ApiResponse(200, [], result, "Lead converted successfully")
     );
 });
+
+export const updateSalesLead = asyncHandler(async (req, res) => {
+    const { title, name, contact: contactInput, email, phone, tier, numericValue, value, status, source } = req.body || {};
+
+    const lead = await prisma.lead.findFirst({
+        where: { id: req.params.leadId },
+        include: { company: true, contact: true },
+    });
+    if (!lead) throw new ApiError(404, "Lead not found");
+
+    const newTitle = title || name || lead.title;
+    const newStatus = status ? (status.toUpperCase() === "ACTIVE" ? "NEW" : status.toUpperCase()) : lead.status;
+    const newSource = source || lead.source;
+
+    let meta = {};
+    if (lead.description && lead.description.startsWith("{")) {
+        try { meta = JSON.parse(lead.description); } catch (_) {}
+    }
+    if (name) meta.name = name;
+    if (contactInput) meta.contact = typeof contactInput === "string" ? contactInput : contactInput.name;
+    if (email) meta.email = email;
+    if (phone) meta.phone = phone;
+    if (tier) meta.tier = tier;
+    if (numericValue !== undefined) meta.numericValue = Number(numericValue);
+    if (value !== undefined) meta.value = value;
+    if (newStatus) meta.status = newStatus;
+    if (newSource) meta.source = newSource;
+
+    const descStr = Object.keys(meta).length > 0 ? JSON.stringify(meta) : (lead.description || null);
+
+    const updateData = {
+        title: newTitle,
+        description: descStr,
+        status: newStatus,
+        source: newSource,
+    };
+
+    if (lead.companyId && (name || email || phone)) {
+        await prisma.company.update({
+            where: { id: lead.companyId },
+            data: {
+                ...(name && { name }),
+                ...(email && { email }),
+                ...(phone && { phone }),
+            },
+        }).catch(() => {});
+    }
+
+    if (lead.contactId && (contactInput || email || phone)) {
+        const contactName = typeof contactInput === "string" ? contactInput : contactInput?.name || "";
+        const [firstName, ...lastNameParts] = contactName.split(/\s+/);
+        await prisma.contact.update({
+            where: { id: lead.contactId },
+            data: {
+                ...(firstName && { firstName }),
+                ...(lastNameParts.length > 0 && { lastName: lastNameParts.join(" ") }),
+                ...(email && { email }),
+                ...(phone && { phone }),
+            },
+        }).catch(() => {});
+    }
+
+    const updated = await prisma.lead.update({
+        where: { id: lead.id },
+        data: updateData,
+        include: leadRelations,
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, [], updated, "Lead updated successfully")
+    );
+});
