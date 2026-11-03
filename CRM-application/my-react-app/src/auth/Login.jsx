@@ -26,18 +26,17 @@ function Login() {
                 throw new Error("Firebase is not configured. Copy .env.example to .env, add your Firebase web app settings, and restart Vite.");
             }
 
-            const userCredential =
-                await signInWithEmailAndPassword(
-                    auth,
-                    email,
-                    password
-                );
+            const userCredential = await signInWithEmailAndPassword(
+                auth,
+                email.trim(),
+                password
+            );
 
             const idToken =
                 await userCredential.user.getIdToken();
 
             const headers = { Authorization: `Bearer ${idToken}` };
-            const superAdminResponse = await fetch(`${API_BASE_URL}/super-admin/organizations`, { headers });
+            const superAdminResponse = await fetch(`${API_BASE_URL}/auth/super-admin/session`, { headers });
             const superAdminData = await superAdminResponse.json().catch(() => ({}));
 
             if (superAdminResponse.ok) {
@@ -56,9 +55,15 @@ function Login() {
             if (!response.ok) throw new Error(data.message || "Backend authentication failed");
             alert("Login successful!");
         } catch (error) {
-            console.error(error);
-
-            setError(error.message);
+            const firebaseMessages = {
+                "auth/invalid-credential": "Email or password is incorrect.",
+                "auth/user-not-found": "No account was found for this email.",
+                "auth/wrong-password": "Email or password is incorrect.",
+                "auth/invalid-email": "Enter a valid email address.",
+                "auth/too-many-requests": "Too many sign-in attempts. Try again shortly.",
+                "auth/network-request-failed": "Could not reach the authentication service. Check your connection.",
+            };
+            setError(firebaseMessages[error.code] || error.message || "Sign in failed. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -118,8 +123,7 @@ function Login() {
                         <h2>Welcome back</h2>
 
                         <p>
-                            Sign in to continue to your SHNOOR CRM
-                            account.
+                            Sign in to continue to your SHNOOR CRM account.
                         </p>
                     </div>
 
@@ -198,7 +202,7 @@ function Login() {
                     </form>
 
                     <p className="auth-switch">
-                        Don't have an account?{" "}
+                        Need a CRM account?{" "}
                         <a href="/signup">
                             Create an account
                         </a>

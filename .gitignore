@@ -1,0 +1,10 @@
+# Local environment files (keep example templates)
+.env
+.env.*
+!.env.example
+
+# Installed dependencies
+node_modules/
+
+# Vite cache
+.vite/

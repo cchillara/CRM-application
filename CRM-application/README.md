@@ -6,7 +6,7 @@ The application has three top-level parts:
 - `my-react-app` — CRM landing page, signup, and the existing login form.
 - `my-react-app/SuperAdmin-frontend` — protected Super Admin dashboard.
 
-The login form signs in through Firebase, then calls `GET /api/v1/super-admin/organizations`. The backend verifies the Firebase ID token and checks its UID against the `SuperAdmin` table. Authorized Super Admins are redirected to the dashboard. Other registered CRM users continue through the existing `/api/v1/auth/protected` route.
+The login form signs in through Firebase, then calls `GET /api/v1/auth/super-admin/session`. The backend verifies the Firebase ID token and checks its UID against the `SuperAdmin` table. Authorized Super Admins are redirected to the dashboard. Other registered CRM users continue through the existing `/api/v1/auth/protected` route.
 
 ## Local setup
 
