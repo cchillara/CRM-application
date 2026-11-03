@@ -32,6 +32,7 @@ export default function Settings({ accountMode = false }) {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -236,9 +237,10 @@ export default function Settings({ accountMode = false }) {
       <Modal open title="Change Password" onClose={() => { setView("account"); setPasswordMessage({ type: "", text: "" }); }}>
         <form className="form-stack account-modal-form" onSubmit={submitPassword}>
           <p className="account-modal-intro">Choose a new password with at least 8 characters.</p>
-          <label>Current Password<input required type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} /></label>
-          <label>New Password<input required type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} /></label>
-          <label>Confirm New Password<input required type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} /></label>
+          <label>Current Password<input required type={showPasswords ? "text" : "password"} autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} /></label>
+          <label>New Password<input required type={showPasswords ? "text" : "password"} autoComplete="new-password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} /></label>
+          <label>Confirm New Password<input required type={showPasswords ? "text" : "password"} autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} /></label>
+          <label className="password-visibility-toggle"><input type="checkbox" checked={showPasswords} onChange={(e) => setShowPasswords(e.target.checked)} /> Show passwords</label>
           <div className="password-info-row">
             <div><strong>Last changed</strong><span>{data.security?.passwordLastChangedAt || "Not changed yet"}</span></div>
           </div>
@@ -432,7 +434,7 @@ export default function Settings({ accountMode = false }) {
                 Current Password
                 <input
                   required
-                  type="password"
+                  type={showPasswords ? "text" : "password"}
                   autoComplete="current-password"
                   value={passwordForm.currentPassword}
                   onChange={(e) =>
@@ -448,7 +450,7 @@ export default function Settings({ accountMode = false }) {
                 New Password
                 <input
                   required
-                  type="password"
+                  type={showPasswords ? "text" : "password"}
                   autoComplete="new-password"
                   value={passwordForm.newPassword}
                   onChange={(e) =>
@@ -464,7 +466,7 @@ export default function Settings({ accountMode = false }) {
                 Confirm New Password
                 <input
                   required
-                  type="password"
+                  type={showPasswords ? "text" : "password"}
                   autoComplete="new-password"
                   value={passwordForm.confirmPassword}
                   onChange={(e) =>
@@ -476,6 +478,8 @@ export default function Settings({ accountMode = false }) {
                 />
               </label>
             </div>
+
+            <label className="password-visibility-toggle"><input type="checkbox" checked={showPasswords} onChange={(e) => setShowPasswords(e.target.checked)} /> Show passwords</label>
 
             <div className="password-info-row">
               <div>

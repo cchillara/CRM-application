@@ -1337,6 +1337,8 @@ th { font-size: 13px; }
 .account-modal-form { gap: 14px; }
 .account-modal-intro { margin: 0; color: #6b7d93; font-size: 13px; line-height: 1.55; }
 .account-modal-form .form-grid { gap: 13px; }
+.password-visibility-toggle { display: flex !important; align-items: center; gap: 8px !important; width: fit-content; cursor: pointer; }
+.password-visibility-toggle input[type="checkbox"] { width: 15px; height: 15px; margin: 0; padding: 0; border: 0; background: transparent; accent-color: var(--blue-primary); }
 .modal-success-message { margin-right: auto; padding: 7px 10px; border-radius: 7px; color: #26744d; background: #e9f7ef; font-size: 12px; }
 .app[data-theme="dark"] .account-modal-intro { color: #b1bdcf; }
 .app[data-theme="dark"] .modal-success-message { color: #9de0ba; background: #19392d; }

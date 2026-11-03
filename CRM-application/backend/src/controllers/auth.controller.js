@@ -18,6 +18,26 @@ const getProtectedProfile = asyncHandler(async (req, res) => {
     );
 });
 
+const getSuperAdminSession = asyncHandler(async (req, res) => {
+  const firebaseUid = req.user?.uid;
+  if (!firebaseUid) {
+    throw new ApiError(401, "Invalid authentication token");
+  }
+
+  const superAdmin = await prisma.superAdmin.findUnique({
+    where: { firebaseUid },
+    select: { id: true, firebaseUid: true, email: true, name: true },
+  });
+
+  if (!superAdmin) {
+    throw new ApiError(403, "This account does not have Super Admin access");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, superAdmin, "Super Admin session verified"),
+  );
+});
+
 const registerUser = asyncHandler(async (req, res) => {
   const { firstName, lastName, organizationId, role } = req.body;
 
@@ -71,4 +91,4 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, user, "User registered successfully"));
 });
 
-export { getProtectedProfile, registerUser };
+export { getProtectedProfile, getSuperAdminSession, registerUser };
