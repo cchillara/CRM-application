@@ -16,6 +16,7 @@ import SalesNotes from "./pages/sales/SalesNotes.jsx";
 import SalesProducts from "./pages/sales/SalesProducts.jsx";
 import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
 import SalesProfile from "./pages/sales/SalesProfile.jsx";
+import SalesSettings from "./pages/sales/SalesSettings.jsx";
 import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes";
 
 function RequireAuthentication({ authState }) {
@@ -55,7 +56,6 @@ function LandingPage() {
 
   return (
     <div className="site">
-      {/* ================= HEADER ================= */}
       <header className="navbar">
         <a href="#home" className="logo" onClick={closeMenu}>
           SHNOOR<span>.</span>
@@ -684,6 +684,7 @@ function App() {
               <Route path="/products" element={<SalesProducts />} />
               <Route path="/analytics" element={<SalesAnalytics />} />
               <Route path="/profile" element={<SalesProfile />} />
+              <Route path="/settings" element={<SalesSettings />} />
             </Route>
           </Route>
         </Route>

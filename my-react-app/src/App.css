@@ -2,7 +2,9 @@
    SHNOOR DESIGN SYSTEM
    ========================================================= */
 
-:root {
+:root,
+[data-theme="light"],
+[data-theme="white"] {
   --primary: #0F141C;
   --primary-dark: #0A0E14;
 
@@ -56,8 +58,9 @@
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-[data-theme="dark"] {
-  --primary: #f8fafc;
+[data-theme="dark"],
+[data-theme="black"] {
+  --primary: #f4f4f5;
   --primary-dark: #ffffff;
 
   --red: #ef4444;
@@ -67,37 +70,82 @@
   --blue: #3b82f6;
   --blue-light: rgba(59, 130, 246, 0.15);
 
-  --heading: #f8fafc;
-  --body: #94a3b8;
-  --muted: #64748b;
+  --heading: #f4f4f5;
+  --body: #a1a1aa;
+  --muted: #71717a;
 
-  --background: #0b0f19;
-  --white: #111827;
-  --border: #1e293b;
+  --background: #09090b;
+  --white: #121214;
+  --border: #27272a;
 
-  --sidebar-bg: #090d16;
-  --sidebar-hover: #131c31;
-  --sidebar-active: #3b82f6;
-  --sidebar-text: #94a3b8;
+  --sidebar-bg: #000000;
+  --sidebar-hover: #18181b;
+  --sidebar-active: #2563eb;
+  --sidebar-text: #a1a1aa;
   --sidebar-text-active: #ffffff;
 
-  --bg-main: #0b0f19;
-  --bg-card: #111827;
-  --bg-card-subtle: #1e293b;
+  --bg-main: #09090b;
+  --bg-card: #121214;
+  --bg-card-subtle: #1c1c20;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-light: #64748b;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-light: #71717a;
 
-  --border-light: #1e293b;
-  --border-subtle: #182234;
+  --border-light: #27272a;
+  --border-subtle: #1f1f23;
 
   --blue-primary: #3b82f6;
   --green-accent: #10b981;
   --orange-accent: #f59e0b;
   --red-accent: #ef4444;
 
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+[data-theme="blue"] {
+  --primary: #f0f8ff;
+  --primary-dark: #ffffff;
+
+  --red: #f87171;
+  --red-dark: #ef4444;
+  --red-light: rgba(248, 113, 113, 0.18);
+
+  --blue: #38bdf8;
+  --blue-light: rgba(56, 189, 248, 0.22);
+
+  --heading: #f0f8ff;
+  --body: #93c5fd;
+  --muted: #60a5fa;
+
+  --background: #0a192f;
+  --white: #112240;
+  --border: #1e3a63;
+
+  --sidebar-bg: #081426;
+  --sidebar-hover: #132644;
+  --sidebar-active: #0284c7;
+  --sidebar-text: #93c5fd;
+  --sidebar-text-active: #ffffff;
+
+  --bg-main: #0a192f;
+  --bg-card: #112240;
+  --bg-card-subtle: #1d3557;
+
+  --text-main: #f0f8ff;
+  --text-muted: #93c5fd;
+  --text-light: #60a5fa;
+
+  --border-light: #1e3a63;
+  --border-subtle: #152d4e;
+
+  --blue-primary: #38bdf8;
+  --green-accent: #34d399;
+  --orange-accent: #fbbf24;
+  --red-accent: #f87171;
+
+  --shadow-card: 0 4px 14px rgba(8, 20, 38, 0.6);
   color-scheme: dark;
 }
 

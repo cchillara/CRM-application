@@ -4,15 +4,13 @@ import {
   Plus, X, Pencil, Trash2, Building, Timer,
   History, User, Calendar, Check,
 } from "lucide-react";
-import SidePanel from "../../client-admin-portal/components/Side-panel";
+import SidePanel from "./SidePanel.jsx";
 import { formatToMonthDateYear } from "../../client-admin-portal/components/FormatDate";
-import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../client-admin-portal/Api/followUp";
+import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../sales-api/followUp.js";
+import { getTasks, createTask, updateTask, updateTaskStatus, deleteTask } from "../../sales-api/Tasks.js";
 import { auth } from "../../firebase.js";
 import "../../client-admin-portal/styles/Leads.css";
 import "./SalesTasks.css";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
 const EMPTY_FORM = { title: "", client: "", assignedTo: "Sarah Jenkins", due: "", priority: "Medium" };
 const OWNERS = ["Sarah Jenkins", "Arjun Kumar", "David Miller", "Elena Rostova", "Marcus Vance", "Meena Patel", "Vikram Singh"];
@@ -42,13 +40,8 @@ export default function SalesTasks() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      const headers = { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) };
-      const res = await fetch(`${SALES_API_URL}/tasks`, { headers });
-      const result = await res.json();
-      const data = result.data || [];
-
-      const mapped = data.map((t) => {
+      const data = await getTasks();
+      const mapped = (Array.isArray(data) ? data : []).map((t) => {
         let meta = {};
         if (t.description && t.description.startsWith("{")) { try { meta = JSON.parse(t.description); } catch (_) {} }
         const clientName = meta.client || t.client || t.customer?.company?.name || t.lead?.title || t.deal?.title || "—";
@@ -146,15 +139,11 @@ export default function SalesTasks() {
     const target = tasks.find((t) => t.id === id);
     if (!target) return;
     const newCompleted = !target.completed;
+    const newStatus = newCompleted ? "COMPLETED" : "TODO";
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: newCompleted } : t));
     if (selectedTask?.id === id) setSelectedTask((prev) => ({ ...prev, completed: newCompleted }));
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      await fetch(`${SALES_API_URL}/tasks/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
-        body: JSON.stringify({ status: newCompleted ? "COMPLETED" : "TODO" }),
-      });
+      await updateTaskStatus(id, newStatus);
     } catch (err) { console.error("[SalesTasks] Toggle error:", err); }
   };
 
@@ -169,20 +158,17 @@ export default function SalesTasks() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const idToken = await auth.currentUser?.getIdToken();
-    const headers = { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) };
     const payload = { title: form.title.trim(), description: JSON.stringify({ client: form.client.trim(), assignedTo: form.assignedTo, due: form.due, priority: form.priority }), dueDate: form.due || null, priority: form.priority, status: "TODO" };
 
     if (editingTask) {
       const optimistic = { ...editingTask, title: form.title.trim(), client: form.client.trim() || "—", assignedTo: form.assignedTo, due: form.due ? formatToMonthDateYear(form.due) : "Upcoming", rawDue: form.due, priority: form.priority };
       setTasks((prev) => prev.map((t) => t.id === editingTask.id ? optimistic : t));
       if (selectedTask?.id === editingTask.id) setSelectedTask(optimistic);
-      try { await fetch(`${SALES_API_URL}/tasks/${editingTask.id}`, { method: "PATCH", headers, body: JSON.stringify(payload) }); } catch (err) { console.warn("Update error:", err.message); }
+      try { await updateTask(editingTask.id, payload); } catch (err) { console.warn("Update error:", err.message); }
     } else {
       try {
-        const res = await fetch(`${SALES_API_URL}/tasks`, { method: "POST", headers, body: JSON.stringify(payload) });
-        const saved = await res.json();
-        const newTask = { id: saved?.data?.id || Date.now(), title: form.title.trim(), client: form.client.trim() || "—", assignedTo: form.assignedTo, due: form.due ? formatToMonthDateYear(form.due) : "Upcoming", rawDue: form.due, priority: form.priority, completed: false };
+        const saved = await createTask(payload);
+        const newTask = { id: saved?.id || Date.now(), title: form.title.trim(), client: form.client.trim() || "—", assignedTo: form.assignedTo, due: form.due ? formatToMonthDateYear(form.due) : "Upcoming", rawDue: form.due, priority: form.priority, completed: false };
         setTasks((prev) => [newTask, ...prev]);
       } catch (err) { console.warn("Create error:", err.message); }
     }
@@ -194,8 +180,7 @@ export default function SalesTasks() {
     setTasks((prev) => prev.filter((t) => t.id !== id));
     if (selectedTask?.id === id) setSelectedTask(null);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      await fetch(`${SALES_API_URL}/tasks/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
+      await deleteTask(id);
     } catch (err) { console.warn("Delete error:", err.message); }
   };
 

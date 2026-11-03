@@ -5,28 +5,13 @@ import DataTable from "../../components/common/DataTable.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import CustomerForm from "../../components/sales/CustomerForm.jsx";
-import SidePanel from "../../client-admin-portal/components/Side-panel.jsx";
-import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../client-admin-portal/Api/followUp";
+import SidePanel from "./SidePanel.jsx";
+import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../sales-api/followUp.js";
+import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from "../../sales-api/Customers.js";
 import { formatToMonthDateYear } from "../../client-admin-portal/components/FormatDate";
 import { auth } from "../../firebase.js";
 import "../../client-admin-portal/styles/Leads.css";
 import "./SalesCustomers.css";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-const SALES_CUSTOMERS_URL = `${API_BASE_URL}/api/v1/sales/customers`;
-
-async function requestCustomers(user, { scope, id, ...options } = {}) {
-  if (!user) throw new Error("Please sign in to view customers.");
-  const idToken = await user.getIdToken();
-  const url = id ? `${SALES_CUSTOMERS_URL}/${id}` : scope === "mine" ? `${SALES_CUSTOMERS_URL}?scope=mine` : SALES_CUSTOMERS_URL;
-  const response = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}`, ...options.headers },
-  });
-  const result = await response.json();
-  if (!response.ok || result.success === false) throw new Error(result.message || "Unable to complete the customer request.");
-  return result.data;
-}
 
 function formatDate(value) {
   if (!value) return "—";
@@ -59,13 +44,13 @@ export default function SalesCustomers() {
   const [followUpList, setFollowUpList] = useState([]);
   const [editingFollowUpId, setEditingFollowUpId] = useState(null);
 
-  const fetchCustomers = useCallback(async (user) => {
+  const fetchCustomersData = useCallback(async () => {
     setLoading(true);
     setLoadError("");
     try {
       const [customers, assignedCustomers] = await Promise.all([
-        requestCustomers(user),
-        requestCustomers(user, { scope: "mine" }),
+        getCustomers(),
+        getCustomers("mine"),
       ]);
       setAllCustomers(Array.isArray(customers) ? customers : []);
       setMyCustomers(Array.isArray(assignedCustomers) ? assignedCustomers : []);
@@ -78,7 +63,10 @@ export default function SalesCustomers() {
     }
   }, []);
 
-  useEffect(() => onAuthStateChanged(auth, (user) => { fetchCustomers(user); }), [fetchCustomers]);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => { if (user) fetchCustomersData(); else setLoading(false); });
+    return unsub;
+  }, [fetchCustomersData]);
 
   // Load follow-ups when customer selected
   useEffect(() => {
@@ -139,11 +127,14 @@ export default function SalesCustomers() {
 
   // Customer CRUD
   const handleCreateCustomer = async (values) => {
-    const user = auth.currentUser;
-    const customer = await requestCustomers(user, { method: "POST", body: JSON.stringify(values) });
-    setAllCustomers((current) => [customer, ...current]);
-    setMyCustomers((current) => [customer, ...current]);
-    setShowCustomerForm(false);
+    try {
+      const customer = await createCustomer(values);
+      setAllCustomers((current) => [customer, ...current]);
+      setMyCustomers((current) => [customer, ...current]);
+      setShowCustomerForm(false);
+    } catch (err) {
+      alert("Failed to create customer: " + err.message);
+    }
   };
 
   const openEdit = (e, customer) => {
@@ -156,10 +147,12 @@ export default function SalesCustomers() {
     e.preventDefault();
     if (!editingCustomer) return;
     try {
-      const user = auth.currentUser;
-      const updated = await requestCustomers(user, {
-        method: "PATCH", id: editingCustomer.id,
-        body: JSON.stringify({ name: editForm.name.trim(), companyName: editForm.company.trim(), email: editForm.email.trim(), phone: editForm.phone.trim(), status: editForm.status }),
+      const updated = await updateCustomer(editingCustomer.id, {
+        name: editForm.name.trim(),
+        companyName: editForm.company.trim(),
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim(),
+        status: editForm.status,
       });
       const merge = (prev) => prev.map((c) => c.id === editingCustomer.id ? { ...c, ...updated } : c);
       setAllCustomers(merge);
@@ -173,10 +166,7 @@ export default function SalesCustomers() {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
     try {
-      const user = auth.currentUser;
-      const idToken = await user?.getIdToken();
-      const res = await fetch(`${SALES_CUSTOMERS_URL}/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
-      if (!res.ok) throw new Error("Failed to delete customer");
+      await deleteCustomer(id);
       setAllCustomers((prev) => prev.filter((c) => c.id !== id));
       setMyCustomers((prev) => prev.filter((c) => c.id !== id));
       if (selectedCustomer?.id === id) setSelectedCustomer(null);

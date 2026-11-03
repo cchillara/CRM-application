@@ -1,3 +1,52 @@
+function parseEventNotes(rawNotes) {
+  if (!rawNotes) return null;
+  if (typeof rawNotes === "object") return rawNotes;
+  const str = String(rawNotes).trim();
+  if (!str) return null;
+  if (str.startsWith("{") && str.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(str);
+      if (typeof parsed === "object" && parsed !== null) return parsed;
+    } catch (_) {}
+  }
+  if ((str.startsWith("{") && str.endsWith("}")) || (str.includes(":") && str.includes(","))) {
+    try {
+      const clean = str.replace(/^\{|\}$/g, "").trim();
+      const pairs = clean.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      const result = {};
+      for (const pair of pairs) {
+        const colonIdx = pair.indexOf(":");
+        if (colonIdx > 0) {
+          const k = pair.substring(0, colonIdx).trim().replace(/^['"]|['"]$/g, "");
+          const v = pair.substring(colonIdx + 1).trim().replace(/^['"]|['"]$/g, "");
+          if (k) result[k] = v;
+        }
+      }
+      if (Object.keys(result).length > 0) return result;
+    } catch (_) {}
+  }
+  return null;
+}
+
+const KEY_LABELS = {
+  client: "Client / Organization",
+  assignedto: "Assigned Owner",
+  assigned_to: "Assigned Owner",
+  due: "Due Date",
+  duedate: "Due Date",
+  due_date: "Due Date",
+  priority: "Priority",
+  status: "Status",
+  description: "Description",
+  notes: "Notes",
+  title: "Title",
+};
+
+function formatKeyLabel(rawKey) {
+  const norm = String(rawKey).toLowerCase().replace(/[\s_-]+/g, "");
+  if (KEY_LABELS[norm]) return KEY_LABELS[norm];
+  return rawKey.replace(/([A-Z])/g, " $1").replace(/[_-]/g, " ").replace(/^\w/, (c) => c.toUpperCase()).trim();
+}
 import React, { useState, useEffect } from "react";
 import {
   Plus,
@@ -415,7 +464,33 @@ export default function Calendar() {
             <div className="sales-calendar-dialog-heading"><div><span className={`sales-calendar-type-badge type-${selectedEvent.type.toLowerCase().replace("-", "")}`}>{selectedEvent.type}</span><h2 id="sales-calendar-detail-title">{selectedEvent.title}</h2></div><button className="sales-calendar-icon-button" type="button" aria-label="Close" onClick={() => setSelectedEventId(null)}><X size={19} /></button></div>
             <div className="sales-calendar-detail-line"><Clock3 size={17} /><span>{displayDate(new Date(selectedEvent.start))}{selectedEvent.start.includes("T") ? `, ${displayTime(new Date(selectedEvent.start))}${selectedEvent.end ? ` – ${displayTime(new Date(selectedEvent.end))}` : ""}` : " · All day"}</span></div>
             {selectedEvent.relatedTo && <div className="sales-calendar-detail-block"><span>Related to</span><strong>{relatedNames[selectedEvent.relatedTo] || "Record unavailable"}</strong></div>}
-            {/* <div className="sales-calendar-detail-block"><span>Notes</span><p>{selectedEvent.notes || "No notes added."}</p></div> */}
+                        {(() => {
+              const parsed = parseEventNotes(selectedEvent.notes);
+              if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                return (
+                  <div className="sales-calendar-detail-block">
+                    <span>Event Details</span>
+                    <div className="sales-calendar-kv-list">
+                      {Object.entries(parsed).map(([key, val]) => (
+                        <div key={key} className="sales-calendar-kv-item">
+                          <span className="sales-calendar-kv-key">{formatKeyLabel(key)}:</span>
+                          <span className="sales-calendar-kv-val">{String(val || "�")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              if (selectedEvent.notes) {
+                return (
+                  <div className="sales-calendar-detail-block">
+                    <span>Notes</span>
+                    <p>{selectedEvent.notes}</p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
             <div className="sales-calendar-detail-block"><span>Assigned To</span><p>{resolveOwnerName(selectedEvent.extendedProps?.assignedTo, selectedEvent.title)}</p></div>
 
             <div className="sales-calendar-dialog-actions sales-calendar-detail-actions"><button type="button" className="sales-calendar-delete-button" onClick={() => setDeleteConfirmation(true)}><Trash2 size={16} /> Delete</button><button type="button" className="sales-calendar-secondary-button" onClick={openEditEvent}><Pencil size={15} /> Edit event</button></div>

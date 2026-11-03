@@ -18,6 +18,7 @@ import {
   EyeOff,
   X,
 } from "lucide-react";
+import { getProfile, updateProfile } from "../../sales-api/Profile.js";
 import "./SalesProfile.css";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")

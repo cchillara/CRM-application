@@ -10,6 +10,10 @@ import PipelineCard from "../../components/sales/PipelineCard.jsx";
 import TodayTasks from "../../components/sales/TodaysTask.jsx";
 import RecentActivities from "../../components/sales/RecentActivities.jsx";
 import UpcomingFollowUps from "../../components/sales/UpcomingFollowUps.jsx";
+import { getLeads } from "../../sales-api/Leads.js";
+import { getCustomers } from "../../sales-api/Customers.js";
+import { getTasks } from "../../sales-api/Tasks.js";
+import { getProfile } from "../../sales-api/Profile.js";
 
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")

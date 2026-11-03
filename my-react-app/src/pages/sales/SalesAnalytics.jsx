@@ -4,6 +4,7 @@ import { auth } from "../../firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip,XAxis,YAxis} from "recharts";
 // REMOVED: import { analyticsActivities, analyticsDeals, analyticsLeads, analyticsTasks } from "../../data/salesAnalyticsData.js";
+import { getAnalytics as fetchAnalyticsApi } from "../../sales-api/Analytics.js";
 import "./SalesAnalytics.css";
 
 // STEP 2: Build the API base URL from env (same safe pattern used across all sales pages)

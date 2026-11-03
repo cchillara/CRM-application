@@ -9,7 +9,7 @@ import {
   NotebookPen,
   Package,
   BarChart3,
-  Bell
+  Settings,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import "./Sidebar.css";
@@ -22,6 +22,7 @@ const navigationItems = [
   { label: "Notes", icon: NotebookPen, path: "/notes" },
   { label: "Products", icon: Package, path: "/products" },
   { label: "Analytics", icon: BarChart3, path: "/analytics" },
+  { label : "Settings", icon: Settings, path: "/settings" }
 ];
 
  

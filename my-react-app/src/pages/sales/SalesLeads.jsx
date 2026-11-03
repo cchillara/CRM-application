@@ -6,14 +6,12 @@ import {
 } from "lucide-react";
 import SearchInput from "../../client-admin-portal/components/Search";
 import { formatToMonthDateYear } from "../../client-admin-portal/components/FormatDate";
-import SidePanel from "../../client-admin-portal/components/Side-panel";
-import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../client-admin-portal/Api/followUp";
+import SidePanel from "./SidePanel.jsx";
+import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../sales-api/followUp.js";
+import { getLeads, createLead, updateLead, deleteLead } from "../../sales-api/Leads.js";
 import { auth } from "../../firebase.js";
 import "../../client-admin-portal/styles/Leads.css";
 import "./SalesLeads.css";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
 const EMPTY_FORM = {
   name: "", contact: "", email: "", phone: "",
@@ -41,7 +39,6 @@ export default function SalesLeads() {
   const [editingLead, setEditingLead] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
-  const [leadToDelete, setLeadToDelete] = useState(null);
 
   // Side panel
   const [selectedLead, setSelectedLead] = useState(null);
@@ -54,16 +51,8 @@ export default function SalesLeads() {
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      const headers = {
-        "Content-Type": "application/json",
-        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
-      };
-      const res = await fetch(`${SALES_API_URL}/leads`, { headers });
-      const result = await res.json();
-      const data = result.data || [];
-
-      const mapped = data.map((l) => {
+      const data = await getLeads();
+      const mapped = (Array.isArray(data) ? data : []).map((l) => {
         let meta = {};
         if (l.description && l.description.startsWith("{")) {
           try { meta = JSON.parse(l.description); } catch (_) {}
@@ -184,8 +173,6 @@ export default function SalesLeads() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const idToken = await auth.currentUser?.getIdToken();
-    const headers = { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) };
     const numVal = Number(form.numericValue) || 0;
     const payload = {
       title: form.name.trim(),
@@ -198,12 +185,11 @@ export default function SalesLeads() {
       const optimistic = { ...editingLead, name: form.name.trim(), contact: form.contact.trim(), email: form.email.trim(), phone: form.phone.trim(), tier: form.tier, status: displaySt, statusType: displaySt.toLowerCase(), value: numVal ? `$${numVal.toLocaleString()}` : editingLead.value, numericValue: numVal, source: form.source, assignedTo: form.assignedTo.trim() };
       setLeadsList((prev) => prev.map((l) => l.id === editingLead.id ? optimistic : l));
       if (selectedLead?.id === editingLead.id) setSelectedLead(optimistic);
-      try { await fetch(`${SALES_API_URL}/leads/${editingLead.id}`, { method: "PATCH", headers, body: JSON.stringify(payload) }); } catch (err) { console.warn("Update error:", err.message); }
+      try { await updateLead(editingLead.id, payload); } catch (err) { console.warn("Update error:", err.message); }
     } else {
       try {
-        const res = await fetch(`${SALES_API_URL}/leads`, { method: "POST", headers, body: JSON.stringify(payload) });
-        const saved = await res.json();
-        const newLead = { id: saved?.data?.id || Date.now(), name: form.name.trim(), contact: form.contact.trim(), email: form.email.trim(), phone: form.phone.trim(), tier: form.tier, avatarInitials: form.name.trim().split(/\s+/).map((w) => w[0]).join("").substring(0, 2).toUpperCase(), status: displaySt, statusType: displaySt.toLowerCase(), value: numVal ? `$${numVal.toLocaleString()}` : "$0", numericValue: numVal, source: form.source, assignedTo: form.assignedTo.trim(), date: "Today" };
+        const saved = await createLead(payload);
+        const newLead = { id: saved?.id || Date.now(), name: form.name.trim(), contact: form.contact.trim(), email: form.email.trim(), phone: form.phone.trim(), tier: form.tier, avatarInitials: form.name.trim().split(/\s+/).map((w) => w[0]).join("").substring(0, 2).toUpperCase(), status: displaySt, statusType: displaySt.toLowerCase(), value: numVal ? `$${numVal.toLocaleString()}` : "$0", numericValue: numVal, source: form.source, assignedTo: form.assignedTo.trim(), date: "Today" };
         setLeadsList((prev) => [newLead, ...prev]);
       } catch (err) { console.warn("Create error:", err.message); }
     }
@@ -215,8 +201,7 @@ export default function SalesLeads() {
     setLeadsList((prev) => prev.filter((l) => l.id !== id));
     if (selectedLead?.id === id) setSelectedLead(null);
     try {
-      const idToken = await auth.currentUser?.getIdToken();
-      await fetch(`${SALES_API_URL}/leads/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
+      await deleteLead(id);
     } catch (err) { console.warn("Delete error:", err.message); }
   };
 

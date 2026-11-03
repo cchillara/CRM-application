@@ -7,15 +7,12 @@ import DataTable from "../../components/common/DataTable.jsx";
 import StatusBadge from "../../components/common/StatusBadge.jsx";
 import AddButton from "../../components/sales/AddButton.jsx";
 import ProductForm from "../../components/sales/ProductForm.jsx";
-import SidePanel from "../../client-admin-portal/components/Side-panel.jsx";
-import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../client-admin-portal/Api/followUp";
+import SidePanel from "./SidePanel.jsx";
+import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../sales-api/followUp.js";
+import { getProducts, createProduct, updateProduct, deleteProduct as apiDeleteProduct } from "../../sales-api/Products.js";
 import { formatToMonthDateYear } from "../../client-admin-portal/components/FormatDate";
 import "../../client-admin-portal/styles/Leads.css";
 import "./SalesProducts.css";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
-  .replace(/\/api\/v1.*$/, "").replace(/\/$/, "");
-const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
 export default function SalesProducts() {
   const [products, setProducts] = useState([]);
@@ -36,15 +33,12 @@ export default function SalesProducts() {
   const [followUpList, setFollowUpList] = useState([]);
   const [editingFollowUpId, setEditingFollowUpId] = useState(null);
 
-  const fetchProducts = async () => {
+  const fetchProductsData = async () => {
     setLoading(true);
     setError("");
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch(`${SALES_API_URL}/products`, { headers: { Authorization: `Bearer ${idToken}` } });
-      if (!response.ok) throw new Error(`Failed to load products (${response.status})`);
-      const json = await response.json();
-      setProducts(json.data || []);
+      const data = await getProducts();
+      setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Failed to load products.");
     } finally {
@@ -53,7 +47,7 @@ export default function SalesProducts() {
   };
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => { if (user) fetchProducts(); else setLoading(false); });
+    const unsub = onAuthStateChanged(auth, (user) => { if (user) fetchProductsData(); else setLoading(false); });
     return unsub;
   }, []);
 
@@ -125,7 +119,7 @@ export default function SalesProducts() {
 
   const formatPrice = (p) => new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "INR" }).format(Number(p.price) || 0);
 
-  const saveProduct = (values) => {
+  const saveProduct = async (values) => {
     if (formProduct) {
       setProducts((curr) => curr.map((p) => p.id === formProduct.id ? { ...p, ...values } : p));
       if (selectedProduct?.id === formProduct.id) setSelectedProduct((prev) => ({ ...prev, ...values }));
@@ -136,7 +130,7 @@ export default function SalesProducts() {
     setFormProduct(null);
   };
 
-  const deleteProduct = () => {
+  const deleteProduct = async () => {
     if (selectedProduct?.id === productToDelete?.id) setSelectedProduct(null);
     setProducts((curr) => curr.filter((p) => p.id !== productToDelete.id));
     setProductToDelete(null);

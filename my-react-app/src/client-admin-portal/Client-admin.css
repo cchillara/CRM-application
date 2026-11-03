@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 
 :root {
@@ -35,32 +35,60 @@
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-[data-theme="dark"] {
-  --sidebar-bg: #090d16;
-  --sidebar-hover: #131c31;
-  --sidebar-active: #3b82f6;
-  --sidebar-text: #94a3b8;
+:is([data-theme="dark"], [data-theme="black"]) {
+  --sidebar-bg: #000000;
+  --sidebar-hover: #18181b;
+  --sidebar-active: #2563eb;
+  --sidebar-text: #a1a1aa;
   --sidebar-text-active: #ffffff;
   --sidebar-width: 250px;
   --sidebar-collapsed-width: 72px;
 
-  --bg-main: #0b0f19;
-  --bg-card: #111827;
-  --bg-card-subtle: #1e293b;
+  --bg-main: #09090b;
+  --bg-card: #121214;
+  --bg-card-subtle: #1c1c20;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-light: #64748b;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-light: #71717a;
 
-  --border-light: #1e293b;
-  --border-subtle: #182234;
+  --border-light: #27272a;
+  --border-subtle: #1f1f23;
 
   --blue-primary: #3b82f6;
   --green-accent: #10b981;
   --orange-accent: #f59e0b;
   --red-accent: #ef4444;
 
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="blue"] {
+  --sidebar-bg: #081426;
+  --sidebar-hover: #132644;
+  --sidebar-active: #0284c7;
+  --sidebar-text: #93c5fd;
+  --sidebar-text-active: #ffffff;
+  --sidebar-width: 250px;
+  --sidebar-collapsed-width: 72px;
+
+  --bg-main: #0a192f;
+  --bg-card: #112240;
+  --bg-card-subtle: #1d3557;
+
+  --text-main: #f0f8ff;
+  --text-muted: #93c5fd;
+  --text-light: #60a5fa;
+
+  --border-light: #1e3a63;
+  --border-subtle: #152d4e;
+
+  --blue-primary: #38bdf8;
+  --green-accent: #34d399;
+  --orange-accent: #fbbf24;
+  --red-accent: #f87171;
+
+  --shadow-card: 0 4px 14px rgba(8, 20, 38, 0.6);
 }
 
 *,
@@ -97,7 +125,7 @@ button {
   overflow-x: hidden;
 }
 
-/* ΓöÇΓöÇ Top Header Bar attached with margin: 0 ΓöÇΓöÇ */
+/* G��G�� Top Header Bar attached with margin: 0 G��G�� */
 .crm-top-header-bar {
   position: sticky;
   top: 0;
@@ -179,7 +207,7 @@ button {
   border-color: var(--red-accent);
 }
 
-/* ΓöÇΓöÇ Three lines menu button (Hamburger) ΓöÇΓöÇ */
+/* G��G�� Three lines menu button (Hamburger) G��G�� */
 .crm-hamburger-btn {
   width: 38px;
   height: 38px;
@@ -199,7 +227,7 @@ button {
   color: var(--blue-primary);
 }
 
-/* ΓöÇΓöÇ Sidebar (Slide-in Drawer / Collapsible Sidebar) ΓöÇΓöÇ */
+/* G��G�� Sidebar (Slide-in Drawer / Collapsible Sidebar) G��G�� */
 .crm-sidebar {
   width: var(--sidebar-width);
   background-color: var(--sidebar-bg);
@@ -443,7 +471,7 @@ button {
   margin-left: 2px;
 }
 
-/* ΓöÇΓöÇ Collapsed Sidebar Specific Styles ΓöÇΓöÇ */
+/* G��G�� Collapsed Sidebar Specific Styles G��G�� */
 .crm-sidebar.collapsed .crm-brand-header {
   padding: 16px 0;
   justify-content: center;
@@ -748,451 +776,451 @@ button {
   transform: translateY(-1px);
 }
 
-html[data-theme="dark"],
-[data-theme="dark"] body {
+html:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]),
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) body {
   background-color: var(--bg-main) !important;
   color: var(--text-main) !important;
 }
 
 
-[data-theme="dark"] .crm-form-input,
-[data-theme="dark"] .crm-form-select,
-[data-theme="dark"] .crm-search-box,
-[data-theme="dark"] .crm-search-input,
-[data-theme="dark"] .crm-fu-textarea,
-[data-theme="dark"] .crm-fu-input-date,
-[data-theme="dark"] .calendar-form-group input,
-[data-theme="dark"] .calendar-form-group select,
-[data-theme="dark"] .crm-settings-input,
-[data-theme="dark"] .crm-settings-select {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-form-input,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-form-select,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-search-box,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-search-input,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-textarea,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-input-date,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-form-group input,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-form-group select,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-input,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-select {
   background-color: var(--bg-card-subtle) !important;
   color: var(--text-main) !important;
   border-color: var(--border-light) !important;
 }
 
-[data-theme="dark"] .crm-form-input:focus,
-[data-theme="dark"] .crm-form-select:focus,
-[data-theme="dark"] .crm-search-box:focus-within,
-[data-theme="dark"] .crm-fu-textarea:focus,
-[data-theme="dark"] .crm-fu-input-date:focus,
-[data-theme="dark"] .calendar-form-group input:focus,
-[data-theme="dark"] .calendar-form-group select:focus,
-[data-theme="dark"] .crm-settings-input:focus,
-[data-theme="dark"] .crm-settings-select:focus {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-form-input:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-form-select:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-search-box:focus-within,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-textarea:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-input-date:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-form-group input:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-form-group select:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-input:focus,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-select:focus {
   background-color: var(--bg-card) !important;
   border-color: var(--blue-primary) !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
 }
 
-[data-theme="dark"] .crm-form-label,
-[data-theme="dark"] .calendar-form-group label {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-form-label,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-form-group label {
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-banner-btn,
-[data-theme="dark"] .crm-btn-secondary,
-[data-theme="dark"] .crm-action-button,
-[data-theme="dark"] .calendar-secondary-btn,
-[data-theme="dark"] .crm-fu-cancel-btn {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-banner-btn,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-btn-secondary,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-action-button,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-secondary-btn,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-cancel-btn {
   background-color: var(--bg-card-subtle) !important;
   border-color: var(--border-light) !important;
   color: var(--text-main) !important;
 }
 
-[data-theme="dark"] .crm-banner-btn:hover,
-[data-theme="dark"] .crm-btn-secondary:hover,
-[data-theme="dark"] .crm-action-button:hover,
-[data-theme="dark"] .calendar-secondary-btn:hover,
-[data-theme="dark"] .crm-fu-cancel-btn:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-banner-btn:hover,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-btn-secondary:hover,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-action-button:hover,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-secondary-btn:hover,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-cancel-btn:hover {
   background-color: var(--bg-card) !important;
   border-color: var(--blue-primary) !important;
   color: var(--blue-primary) !important;
 }
 
-[data-theme="dark"] .crm-role-badge {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-role-badge {
   background-color: var(--bg-card-subtle);
   border-color: var(--border-light);
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-filter-pill {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-filter-pill {
   background-color: var(--bg-card-subtle);
   border-color: var(--border-light);
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-filter-pill:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-filter-pill:hover {
   background-color: var(--bg-card);
   color: var(--text-main);
   border-color: var(--blue-primary);
 }
 
-[data-theme="dark"] .crm-filter-pill.active {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-filter-pill.active {
   background-color: var(--blue-primary);
   color: #ffffff;
   border-color: var(--blue-primary);
 }
 
-[data-theme="dark"] .crm-action-icon-btn {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-action-icon-btn {
   background-color: var(--bg-card-subtle);
   border-color: var(--border-light);
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-action-icon-btn:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-action-icon-btn:hover {
   background-color: rgba(59, 130, 246, 0.15);
   border-color: var(--blue-primary);
   color: var(--blue-primary);
 }
 
-[data-theme="dark"] .crm-action-icon-btn.danger:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-action-icon-btn.danger:hover {
   background-color: rgba(239, 68, 68, 0.15);
   border-color: var(--red-accent);
   color: var(--red-accent);
 }
 
-[data-theme="dark"] .crm-modal-backdrop,
-[data-theme="dark"] .calendar-modal-overlay {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-modal-backdrop,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-modal-overlay {
   background-color: rgba(3, 7, 18, 0.75);
 }
 
-[data-theme="dark"] .crm-modal-card,
-[data-theme="dark"] .calendar-modal {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-modal-card,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-modal {
   background-color: var(--bg-card);
   border-color: var(--border-light);
   color: var(--text-main);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
-[data-theme="dark"] .crm-modal-header,
-[data-theme="dark"] .calendar-modal-header {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-modal-header,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-modal-header {
   border-bottom-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-modal-footer,
-[data-theme="dark"] .calendar-form-actions {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-modal-footer,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-form-actions {
   background-color: var(--bg-card-subtle);
   border-top-color: var(--border-light);
 }
 
 
-[data-theme="dark"] .crm-table th {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-table th {
   background-color: var(--bg-card-subtle);
   color: var(--text-muted);
   border-bottom-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-table td {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-table td {
   border-bottom-color: var(--border-subtle);
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-table tbody tr:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-table tbody tr:hover {
   background-color: var(--bg-card-subtle);
 }
 
-[data-theme="dark"] .crm-status-pill {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-pill {
   background-color: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.25);
 }
 
-[data-theme="dark"] .crm-status-pill .crm-status-value {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-pill .crm-status-value {
   color: #34d399;
 }
 
-[data-theme="dark"] .crm-status-badge.badge-active,
-[data-theme="dark"] .crm-status-badge.badge-qualified {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-badge.badge-active,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-badge.badge-qualified {
   background-color: rgba(16, 185, 129, 0.15);
   color: #34d399;
   border-color: rgba(16, 185, 129, 0.3);
 }
 
-[data-theme="dark"] .crm-status-badge.badge-pending,
-[data-theme="dark"] .crm-status-badge.badge-open {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-badge.badge-pending,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-badge.badge-open {
   background-color: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
   border-color: rgba(245, 158, 11, 0.3);
 }
 
-[data-theme="dark"] .crm-status-badge.badge-progress {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-status-badge.badge-progress {
   background-color: rgba(59, 130, 246, 0.15);
   color: #60a5fa;
   border-color: rgba(59, 130, 246, 0.3);
 }
 
-[data-theme="dark"] .crm-kpi-icon-pill.icon-blue {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-kpi-icon-pill.icon-blue {
   background-color: rgba(59, 130, 246, 0.15);
   color: #60a5fa;
 }
 
-[data-theme="dark"] .crm-kpi-icon-pill.icon-green {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-kpi-icon-pill.icon-green {
   background-color: rgba(16, 185, 129, 0.15);
   color: #34d399;
 }
 
-[data-theme="dark"] .crm-kpi-icon-pill.icon-orange {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-kpi-icon-pill.icon-orange {
   background-color: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
 }
 
-[data-theme="dark"] .crm-kpi-icon-pill.icon-red {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-kpi-icon-pill.icon-red {
   background-color: rgba(239, 68, 68, 0.15);
   color: #f87171;
 }
 
-[data-theme="dark"] .crm-avatar-pill {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-avatar-pill {
   background-color: #1e293b;
   color: #93c5fd;
 }
 
-[data-theme="dark"] .crm-lead-row {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-lead-row {
   background-color: var(--bg-card-subtle);
   border-color: var(--border-subtle);
 }
 
-[data-theme="dark"] .crm-lead-row:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-lead-row:hover {
   background-color: #172033;
 }
 
-[data-theme="dark"] .crm-slideover-backdrop {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-backdrop {
   background: rgba(3, 7, 18, 0.7);
 }
 
-[data-theme="dark"] .crm-slideover-panel {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-panel {
   background: var(--bg-card);
   border-color: var(--border-light);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
-[data-theme="dark"] .crm-slideover-header {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-header {
   background: var(--bg-card);
   border-bottom-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-slideover-title {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-title {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-slideover-close-btn {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-close-btn {
   background: var(--bg-card-subtle);
   border-color: var(--border-light);
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-slideover-close-btn:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-close-btn:hover {
   background: var(--bg-card);
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-slideover-body {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-body {
   background: var(--bg-main);
 }
 
-[data-theme="dark"] .crm-slideover-section {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-section {
   background: var(--bg-card);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-slideover-section-header {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-section-header {
   border-bottom-color: var(--border-subtle);
 }
 
-[data-theme="dark"] .crm-slideover-section-title {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-section-title {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-slideover-tab-bar {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-tab-bar {
   background: var(--bg-card);
   border-bottom-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-slideover-tab-btn {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-tab-btn {
   background: var(--bg-card-subtle);
   border-color: var(--border-light);
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-slideover-tab-btn.active,
-[data-theme="dark"] .crm-slideover-tab-btn:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-tab-btn.active,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-slideover-tab-btn:hover {
   background: var(--bg-card);
   color: var(--blue-primary);
   border-color: var(--blue-primary);
 }
 
-[data-theme="dark"] .crm-lead-detail-item {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-lead-detail-item {
   background: var(--bg-card-subtle);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-lead-detail-label {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-lead-detail-label {
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-lead-detail-value,
-[data-theme="dark"] .crm-lead-detail-desc {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-lead-detail-value,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-lead-detail-desc {
   color: var(--text-main);
 }
 
 
-[data-theme="dark"] .crm-fu-timeline-card {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-timeline-card {
   background: var(--bg-card);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-fu-timeline-desc {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-timeline-desc {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-fu-timeline-date,
-[data-theme="dark"] .crm-fu-timeline-author {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-timeline-date,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-timeline-author {
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-fu-timeline-next-badge {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-fu-timeline-next-badge {
   background: rgba(59, 130, 246, 0.15);
   color: #93c5fd;
   border-color: rgba(59, 130, 246, 0.25);
 }
 
 
-[data-theme="dark"] .crm-overdue-widget {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-widget {
   background: var(--bg-card);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-overdue-widget-label {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-widget-label {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-overdue-collapsed-preview,
-[data-theme="dark"] .crm-overdue-item {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-collapsed-preview,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-item {
   background: var(--bg-card-subtle);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-overdue-collapsed-preview:hover,
-[data-theme="dark"] .crm-overdue-item:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-collapsed-preview:hover,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-item:hover {
   background: #172033;
 }
 
-[data-theme="dark"] .crm-overdue-task-title {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-task-title {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-overdue-alert-msg,
-[data-theme="dark"] .crm-overdue-more-text {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-alert-msg,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-more-text {
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-overdue-dropdown-list {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-overdue-dropdown-list {
   background: var(--bg-card);
   border-color: var(--border-light);
 }
 
 
-[data-theme="dark"] .crm-calendar {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-calendar {
   background: var(--bg-main);
   color: var(--text-main);
 }
 
-[data-theme="dark"] .calendar-stat-card,
-[data-theme="dark"] .calendar-agenda,
-[data-theme="dark"] .calendar-layout {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-stat-card,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-agenda,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-layout {
   background: var(--bg-card);
   border-color: var(--border-light);
   color: var(--text-main);
 }
 
-[data-theme="dark"] .calendar-stat-card h2,
-[data-theme="dark"] .calendar-agenda-title {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-stat-card h2,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-agenda-title {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .calendar-stat-card span,
-[data-theme="dark"] .calendar-agenda-subtitle,
-[data-theme="dark"] .calendar-agenda-date {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-stat-card span,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-agenda-subtitle,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-agenda-date {
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .calendar-agenda-item {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-agenda-item {
   background: var(--bg-card-subtle);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .calendar-agenda-item:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .calendar-agenda-item:hover {
   background: #172033;
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .fc .fc-toolbar-title {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-toolbar-title {
   color: var(--text-main) !important;
 }
 
-[data-theme="dark"] .fc .fc-button-primary {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-button-primary {
   background: var(--bg-card-subtle) !important;
   color: var(--text-main) !important;
   border-color: var(--border-light) !important;
 }
 
-[data-theme="dark"] .fc .fc-button-primary:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-button-primary:hover {
   background: var(--bg-card) !important;
   color: var(--blue-primary) !important;
   border-color: var(--blue-primary) !important;
 }
 
-[data-theme="dark"] .fc .fc-button-primary.fc-button-active {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-button-primary.fc-button-active {
   background: var(--blue-primary) !important;
   color: #ffffff !important;
   border-color: var(--blue-primary) !important;
 }
 
-[data-theme="dark"] .fc-theme-standard th,
-[data-theme="dark"] .fc-theme-standard td,
-[data-theme="dark"] .fc-theme-standard .fc-scrollgrid {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc-theme-standard th,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc-theme-standard td,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc-theme-standard .fc-scrollgrid {
   border-color: var(--border-light) !important;
 }
 
-[data-theme="dark"] .fc .fc-col-header-cell-cushion,
-[data-theme="dark"] .fc .fc-daygrid-day-number {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-col-header-cell-cushion,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-daygrid-day-number {
   color: var(--text-main) !important;
 }
 
-[data-theme="dark"] .fc .fc-daygrid-day:hover {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-daygrid-day:hover {
   background-color: var(--bg-card-subtle);
 }
 
-[data-theme="dark"] .fc .fc-day-today {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .fc .fc-day-today {
   background-color: rgba(59, 130, 246, 0.12) !important;
 }
 
-[data-theme="dark"] .crm-settings-card,
-[data-theme="dark"] .crm-settings-hero {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-card,
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-hero {
   background: var(--bg-card);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-settings-hero h3 {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-hero h3 {
   color: var(--text-main);
 }
 
-[data-theme="dark"] .crm-settings-nav-item {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-nav-item {
   background: var(--bg-card-subtle);
   border-color: var(--border-light);
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .crm-settings-nav-item.active {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-settings-nav-item.active {
   background: var(--bg-card);
   color: var(--blue-primary);
   border-color: var(--blue-primary);
 }
 
-[data-theme="dark"] .crm-account-card {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-account-card {
   background: var(--bg-card);
   border-color: var(--border-light);
 }
 
-[data-theme="dark"] .crm-account-avatar {
+:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) .crm-account-avatar {
   background-color: var(--bg-card-subtle);
   color: var(--text-muted);
 }

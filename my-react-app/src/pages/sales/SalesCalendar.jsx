@@ -56,6 +56,38 @@ function displayTime(date) {
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
+function parseCalendarNotes(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  if (str.startsWith("{") && str.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(str);
+      if (typeof parsed === "object" && parsed !== null) return parsed;
+    } catch (_) {}
+  }
+
+  if ((str.startsWith("{") && str.endsWith("}")) || (str.includes(":") && (str.includes(",") || str.includes("\n")))) {
+    try {
+      const clean = str.replace(/^\{|\}$/g, "").trim();
+      const parts = clean.split(/[,\n]/);
+      const result = {};
+      for (const part of parts) {
+        const idx = part.indexOf(":");
+        if (idx > 0) {
+          const key = part.slice(0, idx).trim().replace(/^['"]|['"]$/g, "");
+          const val = part.slice(idx + 1).trim().replace(/^['"]|['"]$/g, "");
+          if (key) result[key] = val;
+        }
+      }
+      if (Object.keys(result).length > 0) return result;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function getLeadContactName(lead) {
   if (!lead) return "";
   const name = [lead.contact?.firstName, lead.contact?.lastName].filter(Boolean).join(" ");
@@ -472,11 +504,24 @@ function SalesCalendar() {
                 <strong>{relatedNames[selectedEvent.relatedTo] || "Record unavailable"}</strong>
               </div>
             )}
-            <div className="sales-calendar-detail-block">
+                        <div className="sales-calendar-detail-block">
               <span>Notes</span>
-              <p>{selectedEvent.notes || "No notes added."}</p>
-              {/* <span> Client : {selectedEvent.} </span>  */}
-
+              {(() => {
+                const parsed = parseCalendarNotes(selectedEvent.notes);
+                if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                      {Object.entries(parsed).map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "4px 0", borderBottom: "1px solid rgba(226, 232, 240, 0.5)" }}>
+                          <strong style={{ textTransform: "capitalize", color: "var(--text-muted, #64748b)" }}>{k.replace(/([A-Z])/g, " $1").trim()}:</strong>
+                          <span style={{ color: "var(--text-main, #0f172a)", fontWeight: "500" }}>{String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return <p>{selectedEvent.notes || "No notes added."}</p>;
+              })()}
             </div>
             <div className="sales-calendar-dialog-actions sales-calendar-detail-actions">
               <button type="button" className="sales-calendar-delete-button" onClick={() => setDeleteConfirmation(true)}><Trash2 size={16} /> Delete</button>
