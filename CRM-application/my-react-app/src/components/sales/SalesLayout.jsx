@@ -33,7 +33,7 @@ function SalesLayout({ children }) {
               <button
                 type="button"
                 className="crm-header-icon-btn"
-                title="Calendar"x
+                title="Calendar"
                 aria-label="Calendar"
                 onClick={() => navigate("/calendar")}
               >

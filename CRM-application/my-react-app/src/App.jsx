@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import "./App.css";
 import Login from "./auth/Login";
 import Signup from "./auth/Signup";
@@ -17,6 +17,11 @@ import SalesProducts from "./pages/sales/SalesProducts.jsx";
 import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
 import SalesProfile from "./pages/sales/SalesProfile.jsx";
 import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes";
+import { PlatformProvider } from "../SuperAdmin-frontend/src/context/PlatformContext.jsx";
+
+const SuperAdminApp = lazy(() => import("../SuperAdmin-frontend/src/App.jsx"));
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
 
 function RequireAuthentication({ authState }) {
   if (authState.loading) return <div>Loading...</div>;
@@ -31,6 +36,25 @@ function RequireRole({ authState, role }) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
+}
+
+function RequireAnyRole({ authState, roles }) {
+  if (!roles.includes(authState.crmUser?.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
+function SuperAdminPortal() {
+  return (
+    <div className="super-admin-app">
+      <PlatformProvider>
+        <Suspense fallback={<div>Loading Super Admin dashboard...</div>}>
+          <SuperAdminApp />
+        </Suspense>
+      </PlatformProvider>
+    </div>
+  );
 }
 
 function RoleDashboard({ authState }) {
@@ -636,8 +660,7 @@ function App() {
 
       try {
         const idToken = await firebaseUser.getIdToken();
-        console.log("Firebase Auth Token (ID Token):", idToken);
-        const response = await fetch("http://localhost:5000/api/v1/auth/protected", {
+        const response = await fetch(`${API_BASE_URL}/auth/protected`, {
           headers: { Authorization: `Bearer ${idToken}` },
         });
         const result = await response.json();
@@ -669,9 +692,11 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/client-admin/*" element={<ClientAdminRoutes />} />
-
+        <Route path="/super-admin/*" element={<SuperAdminPortal />} />
         <Route element={<RequireAuthentication authState={authState} />}>
+          <Route element={<RequireAnyRole authState={authState} roles={["MANAGER", "ORGANIZATION_ADMIN"]} />}>
+            <Route path="/client-admin/*" element={<ClientAdminRoutes />} />
+          </Route>
           <Route path="/dashboard" element={<RoleDashboard authState={authState} />} />
           <Route element={<RequireRole authState={authState} role="SALES" />}>
             <Route element={<SalesLayout />}>

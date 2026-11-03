@@ -1,26 +1,19 @@
 // In local development Vite proxies /api to the Node API. Set
 // VITE_API_BASE_URL only when the dashboard is deployed outside that proxy.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
-const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login";
-
-function getToken() {
-  return localStorage.getItem("shnoorSuperAdminToken") || localStorage.getItem("superAdminToken");
-}
+const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
 
 export async function superAdminRequest(path, options = {}) {
-  const token = getToken();
-  if (!token) throw new Error("Your Super Admin session is missing. Please sign in again.");
-
   let response;
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 15000);
   try {
     response = await fetch(`${API_BASE_URL}/super-admin${path}`, {
       ...options,
+      credentials: "include",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
         ...options.headers
       }
     });
@@ -40,7 +33,6 @@ export async function superAdminRequest(path, options = {}) {
     const error = new Error(`${method} ${endpoint}: ${result.message || `Request failed (${response.status})`}`);
     error.status = response.status;
     if (response.status === 401 || response.status === 403) {
-      ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
       window.location.replace(LOGIN_URL);
     }
     throw error;
@@ -49,13 +41,10 @@ export async function superAdminRequest(path, options = {}) {
 }
 
 export async function superAdminDownload(path, fallbackFilename) {
-  const token = getToken();
-  if (!token) throw new Error("Your Super Admin session is missing. Please sign in again.");
-
   let response;
   try {
     response = await fetch(`${API_BASE_URL}/super-admin${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     });
   } catch {
     const target = API_BASE_URL.startsWith("/") ? `${window.location.origin}${API_BASE_URL}` : API_BASE_URL;
@@ -67,7 +56,6 @@ export async function superAdminDownload(path, fallbackFilename) {
     const error = new Error(`GET ${API_BASE_URL}/super-admin${path}: ${result.message || `Request failed (${response.status})`}`);
     error.status = response.status;
     if (response.status === 401 || response.status === 403) {
-      ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
       window.location.replace(LOGIN_URL);
     }
     throw error;
@@ -84,4 +72,11 @@ export async function superAdminDownload(path, fallbackFilename) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function logoutSuperAdmin() {
+  await fetch(`${API_BASE_URL}/auth/super-admin/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
 }

@@ -5,7 +5,6 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
-const SUPER_ADMIN_URL = import.meta.env.VITE_SUPER_ADMIN_URL || "http://localhost:5174";
 
 function Login() {
     const navigate = useNavigate();
@@ -38,11 +37,15 @@ function Login() {
                 await userCredential.user.getIdToken();
 
             const headers = { Authorization: `Bearer ${idToken}` };
-            const superAdminResponse = await fetch(`${API_BASE_URL}/auth/super-admin/session`, { headers });
+            const superAdminResponse = await fetch(`${API_BASE_URL}/auth/super-admin/session`, {
+                method: "POST",
+                credentials: "include",
+                headers,
+            });
             const superAdminData = await superAdminResponse.json().catch(() => ({}));
 
             if (superAdminResponse.ok) {
-                window.location.assign(`${SUPER_ADMIN_URL}/#token=${encodeURIComponent(idToken)}`);
+                window.location.replace("/super-admin/");
                 return;
             }
 
@@ -55,7 +58,18 @@ function Login() {
             const response = await fetch(`${API_BASE_URL}/auth/protected`, { headers });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.message || "Backend authentication failed");
-            alert("Login successful!");
+
+            const destinations = {
+                SALES: "/dashboard",
+                MANAGER: "/client-admin",
+                ORGANIZATION_ADMIN: "/client-admin",
+            };
+            const destination = destinations[data.data?.role];
+            if (!destination) {
+                throw new Error("Your account does not have a supported CRM role.");
+            }
+
+            navigate(destination, { replace: true });
         } catch (error) {
             const firebaseMessages = {
                 "auth/invalid-credential": "Email or password is incorrect.",

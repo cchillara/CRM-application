@@ -1,13 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { CircleUserRound, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { logoutSuperAdmin } from "../api/superAdminApi";
 
 export default function Header({ sidebarCollapsed, onToggleSidebar, theme, onToggleTheme }) {
   const navigate = useNavigate();
 
-  function logout() {
-    ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
+  async function logout() {
+    try {
+      await logoutSuperAdmin();
+    } catch (error) {
+      console.warn("Super Admin logout could not clear the server session:", error.message);
+    }
     sessionStorage.clear();
-    window.location.href = import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login";
+    window.location.replace(import.meta.env.VITE_LOGIN_URL || "/login");
   }
 
   return (

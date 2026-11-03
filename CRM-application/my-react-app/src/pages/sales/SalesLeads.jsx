@@ -187,11 +187,22 @@ export default function SalesLeads() {
     const idToken = await auth.currentUser?.getIdToken();
     const headers = { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) };
     const numVal = Number(form.numericValue) || 0;
+    const contactName = form.contact.trim();
+    const [contactFirstName, ...contactLastName] = contactName.split(/\s+/).filter(Boolean);
     const payload = {
       title: form.name.trim(),
       description: JSON.stringify({ contact: form.contact.trim() || "Direct Contact", email: form.email.trim(), phone: form.phone.trim(), tier: form.tier, value: numVal, assignedTo: form.assignedTo.trim() || "Unassigned", source: form.source }),
-      status: form.status,
       source: form.source.toUpperCase().replace(/\s+/g, "_"),
+      company: { mode: "new", name: form.name.trim() },
+      ...(contactFirstName ? {
+        contact: {
+          mode: "new",
+          firstName: contactFirstName,
+          lastName: contactLastName.join(" ") || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+        },
+      } : {}),
     };
     const displaySt = normalizeStatusDisplay(form.status);
     if (editingLead) {
@@ -202,10 +213,17 @@ export default function SalesLeads() {
     } else {
       try {
         const res = await fetch(`${SALES_API_URL}/leads`, { method: "POST", headers, body: JSON.stringify(payload) });
-        const saved = await res.json();
+        const saved = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(saved?.message || `HTTP ${res.status}: Request failed`);
+        }
         const newLead = { id: saved?.data?.id || Date.now(), name: form.name.trim(), contact: form.contact.trim(), email: form.email.trim(), phone: form.phone.trim(), tier: form.tier, avatarInitials: form.name.trim().split(/\s+/).map((w) => w[0]).join("").substring(0, 2).toUpperCase(), status: displaySt, statusType: displaySt.toLowerCase(), value: numVal ? `$${numVal.toLocaleString()}` : "$0", numericValue: numVal, source: form.source, assignedTo: form.assignedTo.trim(), date: "Today" };
         setLeadsList((prev) => [newLead, ...prev]);
-      } catch (err) { console.warn("Create error:", err.message); }
+      } catch (err) {
+        console.warn("Create error:", err.message);
+        alert(`Failed to create lead: ${err.message}`);
+        return;
+      }
     }
     handleClose();
   };

@@ -1,12 +1,14 @@
 import "./config/env.js";
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import authRouter from "./routes/auth.routes.js";
 import superAdminRouter from "./routes/superAdmin.routes.js";
 import { errorHandler } from "./middleware/errormiddleware.js";
 import clientAdminRouter from "./routes/clientAdmin.routes.js";
 import salesRouter from "./routes/sales.routes.js";
+import managerRouter from "./routes/manager.routes.js";
 
 const app = express();
 const allowedOrigins = new Set([
@@ -19,6 +21,7 @@ const allowedOrigins = new Set([
 
 app.use(
   cors({
+    credentials: true,
     origin(origin, callback) {
       if (!origin || allowedOrigins.has(origin)) return callback(null, true);
       return callback(new Error(`CORS blocked origin: ${origin}`));
@@ -26,6 +29,7 @@ app.use(
   }),
 );
 
+app.use(cookieParser());
 app.use(express.json());
 
 app.get("/health", (req, res) => {
@@ -40,10 +44,9 @@ app.get("/health", (req, res) => {
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/super-admin", superAdminRouter);
-app.use(
-  "/api/v1/client-admin",
-  clientAdminRouter
-);
+app.use("/api/v1/client-admin", clientAdminRouter);
+app.use("/api/v1/sales", salesRouter);
+app.use("/api/v1/manager", managerRouter);
 
 app.use(errorHandler);
 

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -10,20 +10,15 @@ import AuditLogs from "./pages/AuditLogs";
 import Support from "./pages/Support";
 import Settings from "./pages/Settings";
 import { superAdminRequest } from "./api/superAdminApi";
+import "./styles.css";
 
-const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login";
+const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
 
 function ProtectedLayout() {
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("shnoorSuperAdminToken") || localStorage.getItem("superAdminToken");
-    if (!token) {
-      window.location.replace(LOGIN_URL);
-      return;
-    }
-
     let active = true;
     superAdminRequest("/organizations")
       .then(() => { if (active) setAuthorized(true); })
@@ -46,8 +41,7 @@ function ProtectedLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
         <Route element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="organizations" element={<Organizations />} />
@@ -59,8 +53,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="account" element={<Settings accountMode />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+        <Route path="*" element={<Navigate to="/super-admin/" replace />} />
+    </Routes>
   );
 }

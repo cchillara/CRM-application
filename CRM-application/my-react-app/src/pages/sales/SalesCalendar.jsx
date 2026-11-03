@@ -11,10 +11,8 @@ import { auth } from "../../firebase.js";
 import "./SalesCalendar.css";
 
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
-  .replace(/\/api\/v1.*$/, "")
-  .replace(/\/$/, "");
-const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/sales`;
 
 const eventTypes = ["Call", "Meeting", "Follow-up", "Task"];
 const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin];
@@ -100,7 +98,7 @@ function SalesCalendar() {
       };
 
       const [eventsRes, leadsRes, customersRes] = await Promise.all([
-        fetch(`${SALES_API_URL}/calendar/events`, { headers }),
+        fetch(`${SALES_API_URL}/calendar/events`, { headers, cache: "no-store" }),
         fetch(`${SALES_API_URL}/leads`, { headers }),
         fetch(`${SALES_API_URL}/customers`, { headers }),
       ]);

@@ -1,6 +1,8 @@
 import { auth } from "../firebase-admin.js";
 import { ApiError } from "../utils/apiError.js";
 import prisma from "../db/index.js";
+import { findSuperAdminForFirebaseUser } from "../utils/superAdminAuth.js";
+import { SUPER_ADMIN_SESSION_COOKIE } from "../utils/superAdminSession.js";
 
 const extractAndVerifyToken = async (req) => {
   if (req.user?.uid) {
@@ -197,12 +199,11 @@ export const requireClientAdmin = async (req, res, next) => {
 
 export const requireSuperAdmin = async (req, res, next) => {
   try {
-    const decodedToken = await extractAndVerifyToken(req);
-    const superAdmin = await prisma.superAdmin.findUnique({
-      where: {
-        firebaseUid: decodedToken.uid,
-      },
-    });
+    const sessionCookie = req.cookies?.[SUPER_ADMIN_SESSION_COOKIE];
+    const decodedToken = sessionCookie
+      ? await auth.verifySessionCookie(sessionCookie, true)
+      : await extractAndVerifyToken(req);
+    const superAdmin = await findSuperAdminForFirebaseUser(decodedToken);
 
     if (!superAdmin) {
       throw new ApiError(403, "Access denied: Super Admin privileges required");
