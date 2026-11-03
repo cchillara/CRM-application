@@ -1,0 +1,5 @@
+CREATE TYPE "CalendarEventType" AS ENUM ('CALL', 'MEETING', 'FOLLOW_UP', 'TASK');
+
+ALTER TABLE "Task"
+ADD COLUMN "endDate" TIMESTAMP(3),
+ADD COLUMN "eventType" "CalendarEventType" NOT NULL DEFAULT 'TASK';
