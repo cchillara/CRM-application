@@ -1,389 +1,425 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { Ellipsis, Search, Trash2 } from "lucide-react";
-import DataTable from "../../components/common/DataTable.jsx";
-import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
-import StatusBadge from "../../components/common/StatusBadge.jsx";
-import AddButton from "../../components/sales/AddButton.jsx";
-import TaskForm from "../../components/sales/TaskForm.jsx";
+import {
+  Plus, X, Pencil, Trash2, Building, Timer,
+  History, User, Calendar, Check,
+} from "lucide-react";
+import SidePanel from "../../client-admin-portal/components/Side-panel";
+import { formatToMonthDateYear } from "../../client-admin-portal/components/FormatDate";
+import { getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp } from "../../client-admin-portal/Api/followUp";
 import { auth } from "../../firebase.js";
+import "../../client-admin-portal/styles/Leads.css";
 import "./SalesTasks.css";
-
-const taskTabs = [
-  { label: "All Tasks", value: "ALL" },
-  { label: "To Do", value: "TODO" },
-  { label: "In Progress", value: "IN_PROGRESS" },
-  { label: "Completed", value: "COMPLETED" },
-  { label: "Cancelled", value: "CANCELLED" },
-];
-
-const statusVariants = {
-  TODO: "neutral",
-  IN_PROGRESS: "info",
-  COMPLETED: "success",
-  CANCELLED: "danger",
-};
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
 const SALES_API_URL = `${API_BASE_URL}/api/v1/sales`;
 
-function mapTask(task) {
-  const relatedTo = task.lead
-    ? { type: "Lead", name: task.lead.title }
-    : task.customer
-      ? { type: "Customer", name: task.customer.company.name }
-      : task.deal
-        ? { type: "Deal", name: task.deal.title }
-        : null;
+const EMPTY_FORM = { title: "", client: "", assignedTo: "Sarah Jenkins", due: "", priority: "Medium" };
+const OWNERS = ["Sarah Jenkins", "Arjun Kumar", "David Miller", "Elena Rostova", "Marcus Vance", "Meena Patel", "Vikram Singh"];
 
-  return {
-    ...task,
-    dueDate: task.dueDate ? task.dueDate.slice(0, 10) : null,
-    relatedTo,
-  };
-}
+const priorityClass = (p) => {
+  const pr = String(p || "").toLowerCase();
+  if (pr === "high") return "badge-pending";
+  if (pr === "medium") return "badge-progress";
+  return "badge-active";
+};
 
-function getTodayString() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function SalesTasks() {
+export default function SalesTasks() {
   const [tasks, setTasks] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [activeTab, setActiveTab] = useState("ALL");
-  const [search, setSearch] = useState("");
-  const [dueDateFilter, setDueDateFilter] = useState("ALL");
-  const [openMenuTaskId, setOpenMenuTaskId] = useState(null);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
 
-  const fetchTaskPageData = useCallback(async () => {
+  // Side panel
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [activeTab, setActiveTab] = useState("followup");
+  const [followUpDesc, setFollowUpDesc] = useState("");
+  const [nextFollowUpDate, setNextFollowUpDate] = useState("");
+  const [followUpList, setFollowUpList] = useState([]);
+  const [editingFollowUpId, setEditingFollowUpId] = useState(null);
+
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
-    setError("");
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      };
-      const [tasksResponse, leadsResponse, customersResponse] = await Promise.all([
-        fetch(`${SALES_API_URL}/tasks`, { headers }),
-        fetch(`${SALES_API_URL}/leads`, { headers }),
-        fetch(`${SALES_API_URL}/customers`, { headers }),
-      ]);
-      const [tasksResult, leadsResult, customersResult] = await Promise.all([
-        tasksResponse.json(),
-        leadsResponse.json(),
-        customersResponse.json(),
-      ]);
+      const idToken = await auth.currentUser?.getIdToken();
+      const headers = { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) };
+      const res = await fetch(`${SALES_API_URL}/tasks`, { headers });
+      const result = await res.json();
+      const data = result.data || [];
 
-      if (!tasksResponse.ok || tasksResult.success === false) {
-        throw new Error(tasksResult.message || "Unable to load tasks.");
-      }
-      if (!leadsResponse.ok || leadsResult.success === false) {
-        throw new Error(leadsResult.message || "Unable to load leads.");
-      }
-      if (!customersResponse.ok || customersResult.success === false) {
-        throw new Error(customersResult.message || "Unable to load customers.");
-      }
-
-      setTasks(Array.isArray(tasksResult.data) ? tasksResult.data.map(mapTask) : []);
-      setLeads(Array.isArray(leadsResult.data) ? leadsResult.data : []);
-      setCustomers(Array.isArray(customersResult.data) ? customersResult.data : []);
-    } catch (requestError) {
-      setTasks([]);
-      setLeads([]);
-      setCustomers([]);
-      setError(requestError.message || "Unable to load tasks.");
+      const mapped = data.map((t) => {
+        let meta = {};
+        if (t.description && t.description.startsWith("{")) { try { meta = JSON.parse(t.description); } catch (_) {} }
+        const clientName = meta.client || t.client || t.customer?.company?.name || t.lead?.title || t.deal?.title || "—";
+        const assignedOwner = (t.assignedTo ? `${t.assignedTo.firstName} ${t.assignedTo.lastName || ""}`.trim() : null) || meta.assignedTo || t.assignedTo || "Sarah Jenkins";
+        const rawDue = meta.due || t.dueDate || t.due;
+        return {
+          id: t.id,
+          title: t.title,
+          client: clientName,
+          assignedTo: assignedOwner,
+          due: rawDue ? formatToMonthDateYear(rawDue) : "Upcoming",
+          rawDue,
+          priority: meta.priority || t.priority || "Medium",
+          completed: t.status === "COMPLETED",
+        };
+      });
+      setTasks(mapped);
+    } catch (err) {
+      console.error("[SalesTasks] Fetch error:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => onAuthStateChanged(auth, (user) => {
-    if (user) {
-      fetchTaskPageData();
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => { if (user) fetchTasks(); else { setTasks([]); setLoading(false); } });
+    return unsub;
+  }, [fetchTasks]);
+
+  // Load follow-ups when task selected
+  useEffect(() => {
+    if (selectedTask) {
+      setFollowUpList([]);
+      setEditingFollowUpId(null);
+      setFollowUpDesc("");
+      setNextFollowUpDate("");
+      getFollowUps("task", selectedTask.id)
+        .then((data) => setFollowUpList(Array.isArray(data) ? data : []))
+        .catch((err) => { console.warn("Follow-ups load error:", err.message); setFollowUpList([]); });
+    }
+  }, [selectedTask]);
+
+  const handleAddFollowUp = async (e) => {
+    e.preventDefault();
+    if (!followUpDesc.trim()) return;
+
+    if (editingFollowUpId) {
+      try {
+        const updated = await updateFollowUp(editingFollowUpId, {
+          description: followUpDesc.trim(),
+          nextFollowUpDate: nextFollowUpDate ? formatToMonthDateYear(nextFollowUpDate) : null,
+        });
+        setFollowUpList((prev) => prev.map((f) => f.id === editingFollowUpId
+          ? { ...f, description: followUpDesc.trim(), nextFollowUpDate: nextFollowUpDate ? formatToMonthDateYear(nextFollowUpDate) : f.nextFollowUpDate, ...(updated && typeof updated === "object" ? updated : {}) }
+          : f));
+      } catch (err) {
+        setFollowUpList((prev) => prev.map((f) => f.id === editingFollowUpId ? { ...f, description: followUpDesc.trim() } : f));
+      }
+      setEditingFollowUpId(null);
+      setFollowUpDesc("");
+      setNextFollowUpDate("");
     } else {
-      setTasks([]);
-      setLeads([]);
-      setCustomers([]);
-      setLoading(false);
-    }
-  }), [fetchTaskPageData]);
-
-  const relatedOptions = useMemo(() => {
-    const leadOptions = leads.map((lead) => ({
-      id: lead.id,
-      type: "Lead",
-      name: [lead.contact?.firstName, lead.contact?.lastName].filter(Boolean).join(" ") || lead.title,
-    }));
-    const customerOptions = customers.map((customer) => ({
-      id: customer.id,
-      type: "Customer",
-      name: customer.name,
-    }));
-    const dealOptions = Array.from(new Map(tasks
-      .filter((task) => task.deal)
-      .map((task) => [task.deal.id, { id: task.deal.id, type: "Deal", name: task.deal.title }])).values());
-
-    return [...leadOptions, ...customerOptions, ...dealOptions];
-  }, [customers, leads, tasks]);
-
-  const handleCreateTask = async (values) => {
-    try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch(`${SALES_API_URL}/tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(values),
-      });
-      const result = await response.json();
-
-      if (!response.ok || result.success === false) {
-        throw new Error(result.message || "Unable to create task.");
+      const payload = {
+        entityType: "task",
+        entityId: String(selectedTask.id),
+        description: followUpDesc.trim(),
+        nextFollowUpDate: nextFollowUpDate ? formatToMonthDateYear(nextFollowUpDate) : null,
+        author: selectedTask.assignedTo,
+      };
+      try {
+        const saved = await createFollowUp(payload);
+        setFollowUpList((prev) => [saved, ...prev]);
+        setFollowUpDesc("");
+        setNextFollowUpDate("");
+      } catch (err) {
+        alert("Failed to save follow-up: " + err.message);
       }
-
-      setTasks((currentTasks) => [mapTask(result.data), ...currentTasks]);
-      setShowTaskForm(false);
-      setError("");
-    } catch (requestError) {
-      setError(requestError.message || "Unable to create task.");
-      throw requestError;
     }
   };
 
-  const handleTaskCompletion = async (taskId, isCompleted) => {
+  const handleDeleteFollowUp = async (id) => {
+    try { await deleteFollowUp(id); setFollowUpList((prev) => prev.filter((f) => f.id !== id)); }
+    catch (err) { alert("Failed to delete follow-up: " + err.message); }
+  };
+
+  const handleEditFollowUp = (item) => {
+    setEditingFollowUpId(item.id);
+    setFollowUpDesc(item.description);
+    setNextFollowUpDate(item.nextFollowUpDate || "");
+  };
+
+  const handleCancelEditFollowUp = () => { setEditingFollowUpId(null); setFollowUpDesc(""); setNextFollowUpDate(""); };
+
+  const toggleTask = async (id) => {
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+    const newCompleted = !target.completed;
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: newCompleted } : t));
+    if (selectedTask?.id === id) setSelectedTask((prev) => ({ ...prev, completed: newCompleted }));
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch(`${SALES_API_URL}/tasks/${encodeURIComponent(taskId)}/status`, {
+      const idToken = await auth.currentUser?.getIdToken();
+      await fetch(`${SALES_API_URL}/tasks/${id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ status: isCompleted ? "COMPLETED" : "TODO" }),
+        headers: { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
+        body: JSON.stringify({ status: newCompleted ? "COMPLETED" : "TODO" }),
       });
-      const result = await response.json();
-
-      if (!response.ok || result.success === false) {
-        throw new Error(result.message || "Unable to update task status.");
-      }
-
-      const updatedTask = mapTask(result.data);
-      setTasks((currentTasks) => currentTasks.map((currentTask) =>
-        currentTask.id === taskId ? updatedTask : currentTask
-      ));
-      setError("");
-    } catch (requestError) {
-      setError(requestError.message || "Unable to update task status.");
-    }
+    } catch (err) { console.error("[SalesTasks] Toggle error:", err); }
   };
 
-  const handleDeleteTask = async () => {
+  const openAdd = () => { setEditingTask(null); setForm(EMPTY_FORM); setIsModalOpen(true); };
+  const openEdit = (task) => {
+    setEditingTask(task);
+    setForm({ title: task.title, client: task.client === "—" ? "" : task.client, assignedTo: task.assignedTo, due: task.rawDue ? String(task.rawDue).slice(0, 10) : "", priority: task.priority });
+    setIsModalOpen(true);
+  };
+  const handleClose = () => { setIsModalOpen(false); setEditingTask(null); setForm(EMPTY_FORM); };
+  const handleChange = (e) => { const { name, value } = e.target; setForm((p) => ({ ...p, [name]: value })); };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    const idToken = await auth.currentUser?.getIdToken();
+    const headers = { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) };
+    const payload = { title: form.title.trim(), description: JSON.stringify({ client: form.client.trim(), assignedTo: form.assignedTo, due: form.due, priority: form.priority }), dueDate: form.due || null, priority: form.priority, status: "TODO" };
+
+    if (editingTask) {
+      const optimistic = { ...editingTask, title: form.title.trim(), client: form.client.trim() || "—", assignedTo: form.assignedTo, due: form.due ? formatToMonthDateYear(form.due) : "Upcoming", rawDue: form.due, priority: form.priority };
+      setTasks((prev) => prev.map((t) => t.id === editingTask.id ? optimistic : t));
+      if (selectedTask?.id === editingTask.id) setSelectedTask(optimistic);
+      try { await fetch(`${SALES_API_URL}/tasks/${editingTask.id}`, { method: "PATCH", headers, body: JSON.stringify(payload) }); } catch (err) { console.warn("Update error:", err.message); }
+    } else {
+      try {
+        const res = await fetch(`${SALES_API_URL}/tasks`, { method: "POST", headers, body: JSON.stringify(payload) });
+        const saved = await res.json();
+        const newTask = { id: saved?.data?.id || Date.now(), title: form.title.trim(), client: form.client.trim() || "—", assignedTo: form.assignedTo, due: form.due ? formatToMonthDateYear(form.due) : "Upcoming", rawDue: form.due, priority: form.priority, completed: false };
+        setTasks((prev) => [newTask, ...prev]);
+      } catch (err) { console.warn("Create error:", err.message); }
+    }
+    handleClose();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this task? This cannot be undone.")) return;
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTask?.id === id) setSelectedTask(null);
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch(`${SALES_API_URL}/tasks/${encodeURIComponent(taskToDelete.id)}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const result = await response.json();
-      if (!response.ok || result.success === false) {
-        throw new Error(result.message || "Unable to delete task.");
-      }
-
-      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskToDelete.id));
-      setOpenMenuTaskId(null);
-      setTaskToDelete(null);
-      setError("");
-    } catch (requestError) {
-      setTaskToDelete(null);
-      setError(requestError.message || "Unable to delete task.");
-    }
+      const idToken = await auth.currentUser?.getIdToken();
+      await fetch(`${SALES_API_URL}/tasks/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
+    } catch (err) { console.warn("Delete error:", err.message); }
   };
-
-  const filteredTasks = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    const today = getTodayString();
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    const nextWeekString = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, "0")}-${String(nextWeek.getDate()).padStart(2, "0")}`;
-
-    return tasks.filter((task) => {
-      const matchesTab = activeTab === "ALL" || task.status === activeTab;
-      const searchableValues = [
-        task.title,
-        task.description,
-        task.relatedTo?.type,
-        task.relatedTo?.name,
-      ];
-      const matchesSearch =
-        !normalizedSearch ||
-        searchableValues.some((value) => value?.toLowerCase().includes(normalizedSearch));
-
-      let matchesDueDate = true;
-      if (dueDateFilter === "OVERDUE") {
-        matchesDueDate =
-          Boolean(task.dueDate) &&
-          task.dueDate < today &&
-          task.status !== "COMPLETED" &&
-          task.status !== "CANCELLED";
-      } else if (dueDateFilter === "TODAY") {
-        matchesDueDate = task.dueDate === today;
-      } else if (dueDateFilter === "NEXT_7_DAYS") {
-        matchesDueDate = Boolean(task.dueDate) && task.dueDate >= today && task.dueDate <= nextWeekString;
-      } else if (dueDateFilter === "NO_DATE") {
-        matchesDueDate = !task.dueDate;
-      }
-
-      return matchesTab && matchesSearch && matchesDueDate;
-    });
-  }, [activeTab, dueDateFilter, search, tasks]);
 
   return (
-    <div className="sales-tasks-page">
-      <header className="sales-tasks-header">
+    <div className="crm-dashboard">
+      <div className="crm-top-header">
         <div>
-          <h1>Tasks</h1>
-          <p>Manage your upcoming and pending work.</p>
+          <h1 className="crm-page-title">Tasks</h1>
+          <p className="crm-page-subtitle">Administrative and sales team action items</p>
         </div>
-        <AddButton onClick={() => setShowTaskForm(true)}>Add Task</AddButton>
-      </header>
+        <button type="button" className="crm-banner-btn crm-btn-primary" onClick={openAdd}>
+          <Plus size={16} /><span>Add Task</span>
+        </button>
+      </div>
 
-      <section className="sales-tasks-card" aria-label="Tasks">
-        <div className="sales-tasks-toolbar">
-          <div className="sales-tasks-tabs" role="tablist" aria-label="Task views">
-            {taskTabs.map((tab) => (
-              <button
-                key={tab.value}
-                className={`sales-tasks-tab ${activeTab === tab.value ? "active" : ""}`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.value}
-                onClick={() => setActiveTab(tab.value)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="sales-tasks-filters">
-            <div className="sales-tasks-search">
-              <Search size={17} strokeWidth={1.8} aria-hidden="true" />
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search tasks"
-                aria-label="Search tasks"
-              />
+      {/* ── Add / Edit Modal ── */}
+      {isModalOpen && (
+        <div className="crm-modal-backdrop" onClick={handleClose}>
+          <div className="crm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="crm-modal-header">
+              <div>
+                <h2 className="crm-modal-title">{editingTask ? "Edit Task" : "Add New Task"}</h2>
+                <p className="crm-card-subtitle" style={{ margin: 0 }}>{editingTask ? `Editing: ${editingTask.title}` : "Fill in the details to create a task"}</p>
+              </div>
+              <button type="button" className="crm-modal-close-btn" onClick={handleClose}><X size={18} /></button>
             </div>
-            <div className="sales-tasks-select-label">
-              <select
-                aria-label="Filter tasks by due date"
-                value={dueDateFilter}
-                onChange={(event) => setDueDateFilter(event.target.value)}
-              >
-                <option value="ALL">All due dates</option>
-                <option value="OVERDUE">Overdue</option>
-                <option value="TODAY">Due today</option>
-                <option value="NEXT_7_DAYS">Next 7 days</option>
-                <option value="NO_DATE">No due date</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {error && <p className="sales-tasks-error" role="alert">{error}</p>}
-        {loading && <p className="sales-tasks-loading" role="status">Loading tasks…</p>}
-        <DataTable
-          headers={["Task", "Related To", "Due Date", "Status", "Actions"]}
-          emptyMessage={loading ? "Loading tasks…" : error ? "Tasks could not be loaded." : "No tasks match your search or filters."}
-          tableClassName="sales-tasks-table"
-        >
-          {filteredTasks.map((task) => (
-            <tr key={task.id}>
-              <td>
-                <div className="sales-tasks-task-row">
-                  <input
-                    className="sales-tasks-completion-checkbox"
-                    type="checkbox"
-                    checked={task.status === "COMPLETED"}
-                    disabled={task.status === "CANCELLED"}
-                    aria-label={`${task.status === "COMPLETED" ? "Mark as not completed" : "Mark as completed"}: ${task.title}`}
-                    onChange={(event) => handleTaskCompletion(task.id, event.target.checked)}
-                  />
-                  <span className="sales-tasks-task-copy">
-                    <span className="sales-tasks-title">{task.title}</span>
-                    {task.description && (
-                      <span className="sales-tasks-description">{task.description}</span>
-                    )}
-                  </span>
+            <form onSubmit={handleSave}>
+              <div className="crm-modal-body">
+                <div className="crm-form-group">
+                  <label className="crm-form-label">Task Title *</label>
+                  <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. Follow up with ABC Technologies" className="crm-form-input" required autoFocus />
                 </div>
-              </td>
-              <td>
-                {task.relatedTo ? (
-                  <span className="sales-tasks-related-copy">
-                    <span className="sales-tasks-related-name">{task.relatedTo.name}</span>
-                    <span className="sales-tasks-related-type">{task.relatedTo.type}</span>
-                  </span>
-                ) : (
-                  <span className="sales-tasks-related-type">—</span>
-                )}
-              </td>
-              <td><span className="sales-tasks-due-date">{task.dueDate || "No due date"}</span></td>
-              <td>
-                <StatusBadge status={task.status} variant={statusVariants[task.status] ?? "neutral"} />
-              </td>
-              <td>
-                <div className="sales-tasks-actions">
-                  <button
-                    className="sales-tasks-row-action"
-                    type="button"
-                    aria-label={`More actions for ${task.title}`}
-                    aria-haspopup="menu"
-                    aria-expanded={openMenuTaskId === task.id}
-                    onClick={() => setOpenMenuTaskId((currentId) => currentId === task.id ? null : task.id)}
-                  >
-                    <Ellipsis size={19} strokeWidth={1.8} />
-                  </button>
-                  {openMenuTaskId === task.id && (
-                    <div className="sales-tasks-action-menu" role="menu">
-                      <button
-                        className="sales-tasks-delete-action"
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setTaskToDelete(task); setOpenMenuTaskId(null); }}
-                      >
-                        <Trash2 size={15} strokeWidth={1.8} />
-                        Delete
-                      </button>
-                    </div>
+                <div className="crm-form-row">
+                  <div className="crm-form-group">
+                    <label className="crm-form-label">Related Client</label>
+                    <input type="text" name="client" value={form.client} onChange={handleChange} placeholder="e.g. ABC Technologies" className="crm-form-input" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-form-label">Assigned Owner</label>
+                    <select name="assignedTo" value={form.assignedTo} onChange={handleChange} className="crm-form-select">
+                      {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="crm-form-row">
+                  <div className="crm-form-group">
+                    <label className="crm-form-label">Due Date</label>
+                    <input type="date" name="due" value={form.due} onChange={handleChange} className="crm-form-input" />
+                  </div>
+                  <div className="crm-form-group">
+                    <label className="crm-form-label">Priority</label>
+                    <select name="priority" value={form.priority} onChange={handleChange} className="crm-form-select">
+                      {["High", "Medium", "Low"].map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="crm-modal-footer">
+                <button type="button" className="crm-btn-secondary" onClick={handleClose}>Cancel</button>
+                <button type="submit" className="crm-banner-btn crm-btn-primary">{editingTask ? "Update Task" : "Save Task"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Side Panel ── */}
+      <SidePanel
+        isOpen={Boolean(selectedTask)}
+        onClose={() => setSelectedTask(null)}
+        title={selectedTask?.title}
+        badges={selectedTask && (
+          <>
+            <span className={`crm-status-badge ${priorityClass(selectedTask.priority)}`}>{selectedTask.priority} Priority</span>
+            <span className={`crm-status-badge ${selectedTask.completed ? "badge-active" : "badge-progress"}`}>{selectedTask.completed ? "Completed" : "In Progress"}</span>
+          </>
+        )}
+        tabs={[
+          { id: "followup", label: "Follow Up History", icon: History, badge: followUpList.length > 0 ? followUpList.length : null },
+          { id: "details", label: "Task Details", icon: Building },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      >
+        {/* ── Follow Up Tab ── */}
+        {activeTab === "followup" && (
+          <section className="crm-slideover-section" aria-label="Follow up history">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title"><History size={16} /><span>Follow Up History</span></div>
+            </div>
+            <form className="crm-fu-form-card" onSubmit={handleAddFollowUp}>
+              <div className="crm-fu-form-group">
+                <label className="crm-fu-form-label" htmlFor="task-fu-desc">Add follow up Note *</label>
+                <textarea id="task-fu-desc" className="crm-fu-textarea" placeholder="Eg: Task discussed with client. Next action planned." value={followUpDesc} onChange={(e) => setFollowUpDesc(e.target.value)} required />
+              </div>
+              <div className="crm-fu-form-row">
+                <div className="crm-fu-form-group">
+                  <label className="crm-fu-form-label" htmlFor="task-fu-date">Next follow up date</label>
+                  <input id="task-fu-date" type="date" className="crm-fu-input-date" value={nextFollowUpDate} onChange={(e) => setNextFollowUpDate(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  {editingFollowUpId && (
+                    <button type="button" onClick={handleCancelEditFollowUp} style={{ padding: "6px 12px", fontSize: "13px", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#f8fafc", cursor: "pointer" }}>Cancel</button>
                   )}
+                  <button type="submit" className="crm-fu-add-btn">
+                    {editingFollowUpId ? <Check size={15} /> : <Plus size={15} />}
+                    <span>{editingFollowUpId ? "Update" : "Add"}</span>
+                  </button>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </section>
-      {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} relatedOptions={relatedOptions} onSubmit={handleCreateTask} />}
-      {taskToDelete && <ConfirmDialog title="Delete task?" message={`Are you sure you want to delete “${taskToDelete.title}”? This action cannot be undone.`} onCancel={() => setTaskToDelete(null)} onConfirm={handleDeleteTask} />}
+              </div>
+            </form>
+            <div className="crm-fu-timeline">
+              {followUpList.length > 0 ? followUpList.map((item) => (
+                <div key={item.id} className="crm-fu-timeline-item">
+                  <div className="crm-fu-timeline-dot"><div className="crm-fu-timeline-dot-inner" /></div>
+                  <div className="crm-fu-timeline-card">
+                    <div className="crm-fu-timeline-top">
+                      <span className="crm-fu-timeline-date">{item.createdAt}</span>
+                      {item.author && <span className="crm-fu-timeline-author">{item.author}</span>}
+                    </div>
+                    <p className="crm-fu-timeline-desc">{item.description}</p>
+                    <div className="crm-row-actions">
+                      <button type="button" className="crm-action-icon-btn" title="Edit" onClick={() => handleEditFollowUp(item)}><Pencil size={14} /></button>
+                      <button type="button" className="crm-action-icon-btn danger" title="Delete" onClick={() => handleDeleteFollowUp(item.id)}><Trash2 size={14} /></button>
+                    </div>
+                    {item.nextFollowUpDate && (
+                      <div className="crm-fu-timeline-next-badge">
+                        <Calendar size={12} />
+                        <span>Next Follow-up: <strong>{item.nextFollowUpDate}</strong></span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )) : (
+                <div className="crm-fu-empty">No earlier follow-up history recorded for this task yet.</div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Details Tab ── */}
+        {activeTab === "details" && selectedTask && (
+          <section className="crm-slideover-section" aria-label="Task details">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title"><Building size={16} /><span>Task Details</span></div>
+            </div>
+            <div className="crm-lead-details-grid">
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">ID</span>
+                <span className="crm-lead-detail-value">{selectedTask.id}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><Building size={12} /> Client</span>
+                <span className="crm-lead-detail-value">{selectedTask.client}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><User size={12} /> Assigned Owner</span>
+                <span className="crm-lead-detail-value">{selectedTask.assignedTo}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><Timer size={12} /> Due Date</span>
+                <span className="crm-lead-detail-value">{selectedTask.due}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Status</span>
+                <span className="crm-lead-detail-value">
+                  <span className={`crm-status-badge ${selectedTask.completed ? "badge-active" : "badge-progress"}`}>
+                    {selectedTask.completed ? "Completed" : "In-Progress"}
+                  </span>
+                </span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Priority</span>
+                <span className="crm-lead-detail-value">
+                  <span className={`crm-status-badge ${priorityClass(selectedTask.priority)}`}>{selectedTask.priority}</span>
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+      </SidePanel>
+
+      {/* ── Tasks Table ── */}
+      <div className="crm-card">
+        <div className="crm-table-container">
+          <table className="crm-table">
+            <thead>
+              <tr>
+                <th style={{ width: "40px" }}>Done</th>
+                <th>Task &amp; ID</th>
+                <th>Related Client</th>
+                <th>Assigned Owner</th>
+                <th>Due Date</th>
+                <th>Priority</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map((t) => (
+                <tr key={t.id} className="crm-clickable-row" onClick={() => { setSelectedTask(t); setActiveTab("followup"); }} title="Click to view follow up history & task details">
+                  <td>
+                    <input type="checkbox" checked={t.completed} onChange={() => toggleTask(t.id)} onClick={(e) => e.stopPropagation()} style={{ width: "16px", height: "16px", accentColor: "var(--blue-primary)", cursor: "pointer" }} />
+                  </td>
+                  <td>
+                    <span className="crm-table-primary-text" style={{ textDecoration: t.completed ? "line-through" : "none", color: t.completed ? "#94a3b8" : "inherit" }}>{t.title}</span>
+                    <span className="crm-table-sub-text">{t.id}</span>
+                  </td>
+                  <td><span className="crm-table-primary-text">{t.client}</span></td>
+                  <td><span className="crm-table-primary-text">{t.assignedTo}</span></td>
+                  <td><span className="crm-table-sub-text">{t.due}</span></td>
+                  <td><span className={`crm-status-badge ${priorityClass(t.priority)}`}>{t.priority}</span></td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div className="crm-row-actions">
+                      <button type="button" className="crm-action-icon-btn" title="Edit task" onClick={(e) => { e.stopPropagation(); openEdit(t); }}><Pencil size={14} /></button>
+                      <button type="button" className="crm-action-icon-btn danger" title="Delete task" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {tasks.length === 0 && <div className="crm-empty-state">{loading ? "Loading tasks…" : "No tasks found."}</div>}
+        </div>
+      </div>
     </div>
   );
 }
-
-export default SalesTasks;

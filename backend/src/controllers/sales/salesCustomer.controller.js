@@ -52,11 +52,9 @@ const formatCustomer = (customer) => {
 export const getSalesCustomers = asyncHandler(async (req, res) => {
     const customers = await prisma.customer.findMany({
         where: {
-            organizationId: req.organizationId,
-            company: { is: { organizationId: req.organizationId } },
             ...(req.query.scope === "mine" ? { assignedToId: req.user.id } : {}),
         },
-        include: customerRelations(req.organizationId),
+        include: customerRelations(),
         orderBy: { createdAt: "desc" },
     });
 
@@ -72,7 +70,7 @@ export const getSalesCustomerById = asyncHandler(async (req, res) => {
             organizationId: req.organizationId,
             company: { is: { organizationId: req.organizationId } },
         },
-        include: customerRelations(req.organizationId),
+        include: customerRelations(),
     });
     if (!customer) throw new ApiError(404, "Customer not found");
 
@@ -129,7 +127,7 @@ export const createSalesCustomer = asyncHandler(async (req, res) => {
                     assignedToId: req.user.id,
                     status,
                 },
-                include: customerRelations(req.organizationId),
+                include: customerRelations(),
             });
         });
 
@@ -225,12 +223,8 @@ export const updateSalesCustomer = asyncHandler(async (req, res) => {
             }
 
             return tx.customer.findFirst({
-                where: {
-                    id: existingCustomer.id,
-                    organizationId: req.organizationId,
-                    company: { is: { organizationId: req.organizationId } },
-                },
-                include: customerRelations(req.organizationId),
+                where: { id: existingCustomer.id },
+                include: customerRelations(),
             });
         });
 
@@ -242,4 +236,19 @@ export const updateSalesCustomer = asyncHandler(async (req, res) => {
         if (error?.code === "P2002") throw new ApiError(409, "A company with this name already exists");
         throw error;
     }
+});
+
+export const deleteSalesCustomer = asyncHandler(async (req, res) => {
+    const customer = await prisma.customer.findFirst({
+        where: { id: req.params.customerId },
+        select: { id: true, companyId: true },
+    });
+    if (!customer) throw new ApiError(404, "Customer not found");
+
+    // Detach or delete customer
+    await prisma.customer.delete({ where: { id: customer.id } });
+
+    return res.status(200).json(
+        new ApiResponse(200, [], { id: customer.id }, "Customer deleted successfully")
+    );
 });

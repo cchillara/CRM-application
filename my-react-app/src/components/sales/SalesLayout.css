@@ -94,6 +94,9 @@
   flex: 1;
   min-width: 0;
   overflow-x: hidden;
+padding: 28px;
+/* margin : 28px 28px 28px 28px */
+/* margin-left : 10px; */
 }
 
 /* ── Dark Mode Overrides for Layout ── */

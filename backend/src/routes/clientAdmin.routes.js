@@ -13,34 +13,58 @@ import {
     updateRole,
     deleteRole,
     listLeads,
+    createLead,
+    updateLead,
+    deleteLead,
     listCustomers,
+    updateCustomer,
+    deleteCustomer,
     listCompanies,
     listDeals,
+    listTasks,
+    createTask,
+    updateTask,
+    deleteTask,
     getReports,
 } from "../controllers/clientAdmin.controller.js";
 
-import { verifyFirebaseToken } from "../middleware/authmiddleware.js";
+import { requireClientAdmin, requireRoles } from "../middleware/authmiddleware.js";
 
 const router = Router();
 
-router.get("/users", verifyFirebaseToken, listUsers);
-router.get("/users/:id", verifyFirebaseToken, getUser);
-router.post("/users", verifyFirebaseToken, createUser);
-router.patch("/users/:id", verifyFirebaseToken, updateUser);
-router.patch("/users/:id/status", verifyFirebaseToken, updateUserStatus);
-router.delete("/users/:id", verifyFirebaseToken, deleteUser);
+// All client-admin routes require authentication + org resolution
+router.use(requireClientAdmin);
 
-router.get("/roles", verifyFirebaseToken, listRoles);
-router.get("/roles/:id", verifyFirebaseToken, getRole);
-router.post("/roles", verifyFirebaseToken, createRole);
-router.patch("/roles/:id", verifyFirebaseToken, updateRole);
-router.delete("/roles/:id", verifyFirebaseToken, deleteRole);
+// Users
+router.get("/users", listUsers);
+router.get("/users/:id", getUser);
+router.post("/users", createUser);
+router.patch("/users/:id", updateUser);
+router.patch("/users/:id/status", updateUserStatus);
+router.delete("/users/:id", deleteUser);
 
-router.get("/leads", verifyFirebaseToken, listLeads);
-router.get("/customers", verifyFirebaseToken, listCustomers);
-router.get("/companies", verifyFirebaseToken, listCompanies);
-router.get("/deals", verifyFirebaseToken, listDeals);
+// Roles
+router.get("/roles", listRoles);
+router.get("/roles/:id", getRole);
+router.post("/roles", createRole);
+router.patch("/roles/:id", updateRole);
+router.delete("/roles/:id", deleteRole);
 
-router.get("/reports", verifyFirebaseToken, getReports);
+// Leads (org-filtered, includes legacy PENDING rows)
+router.get("/leads", listLeads);
+
+// Customers, Companies, Deals (org-filtered)
+router.get("/customers", listCustomers);
+router.get("/companies", listCompanies);
+router.get("/deals", listDeals);
+
+// Tasks (same table as Sales — filtered by org)
+router.get("/tasks", listTasks);
+router.post("/tasks", createTask);
+router.patch("/tasks/:taskId", updateTask);
+router.delete("/tasks/:taskId", deleteTask);
+
+// Reports
+router.get("/reports", getReports);
 
 export default router;

@@ -99,6 +99,102 @@ export const requireRoles = (...roles) => {
 
 export const authorizeRoles = requireRoles;
 
+/**
+ * requireClientAdmin — middleware for /api/v1/client-admin routes.
+ * Verifies Firebase token, resolves the CRM User + Organization,
+ * and attaches req.user + req.organizationId.
+ * Accepts ORGANIZATION_ADMIN and MANAGER roles.
+ */
+export const requireClientAdmin = async (req, res, next) => {
+  try {
+    const decodedToken = await extractAndVerifyToken(req);
+    const uid = decodedToken.uid;
+    const email = decodedToken.email;
+
+    const userSelect = {
+      id: true,
+      firebaseUid: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      status: true,
+      organizationId: true,
+    };
+
+    // Step 1 — look up by Firebase UID
+    let user = await prisma.user.findUnique({
+      where: { firebaseUid: uid },
+      select: userSelect,
+    });
+
+    // Step 2 — fall back to email lookup and sync firebaseUid
+    if (!user && email) {
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: userSelect,
+      });
+      if (user) {
+        await prisma.user.update({ where: { id: user.id }, data: { firebaseUid: uid } });
+      }
+    }
+
+    // Step 3 — create user record if still not found
+    if (!user) {
+      let org = await prisma.organization.findFirst();
+      if (!org) {
+        org = await prisma.organization.create({
+          data: { name: "SHNOOR CRM Organization", email: email || "admin@crmclient.com", status: "ACTIVE" },
+        });
+      }
+      user = await prisma.user.create({
+        data: {
+          firebaseUid: uid,
+          email: email || `user_${uid.slice(0, 8)}@crmclient.com`,
+          firstName: "Client",
+          lastName: "Admin",
+          role: "ORGANIZATION_ADMIN",
+          status: "ACTIVE",
+          organizationId: org.id,
+        },
+        select: userSelect,
+      });
+    }
+
+    // Step 4 — assign org if missing
+    if (!user.organizationId) {
+      let org = await prisma.organization.findFirst();
+      if (!org) {
+        org = await prisma.organization.create({
+          data: { name: "SHNOOR CRM Organization", email: email || "admin@crmclient.com", status: "ACTIVE" },
+        });
+      }
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { organizationId: org.id },
+        select: userSelect,
+      });
+    }
+
+    // Step 5 — block suspended / deactivated
+    if (user.status === "SUSPENDED") {
+      return res.status(403).json({ message: "User account is suspended" });
+    }
+    if (user.status === "DEACTIVATED") {
+      return res.status(403).json({ message: "User account is deactivated" });
+    }
+
+    req.user = { ...user, uid };
+    req.organizationId = user.organizationId;
+    next();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    return res.status(401).json({ message: "Invalid or expired authentication token" });
+  }
+};
+
 export const requireSuperAdmin = async (req, res, next) => {
   try {
     const decodedToken = await extractAndVerifyToken(req);

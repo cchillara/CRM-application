@@ -31,7 +31,7 @@ const formatEvent = (task) => ({
 });
 
 export const getSalesCalendarEvents = asyncHandler(async (req, res) => {
-    const where = { organizationId: req.organizationId, dueDate: { not: null } };
+    const where = { dueDate: { not: null } };
     if (req.query.start && req.query.end) {
         where.dueDate = { gte: new Date(req.query.start), lt: new Date(req.query.end) };
     }
@@ -48,7 +48,7 @@ export const getSalesCalendarEvents = asyncHandler(async (req, res) => {
 
 export const getSalesCalendarEventById = asyncHandler(async (req, res) => {
     const task = await prisma.task.findFirst({
-        where: { id: req.params.taskId, organizationId: req.organizationId },
+        where: { id: req.params.taskId },
     });
     if (!task) throw new ApiError(404, "Calendar event not found");
 
@@ -79,14 +79,14 @@ export const createSalesCalendarEvent = asyncHandler(async (req, res) => {
 
     if (relatedTo) {
         const lead = await prisma.lead.findFirst({
-            where: { id: relatedTo, organizationId: req.organizationId },
+            where: { id: relatedTo },
             select: { id: true },
         });
         if (lead) {
             data.leadId = lead.id;
         } else {
             const customer = await prisma.customer.findFirst({
-                where: { id: relatedTo, organizationId: req.organizationId },
+                where: { id: relatedTo },
                 select: { id: true },
             });
             if (!customer) throw new ApiError(404, "Related lead or customer not found");
@@ -103,7 +103,7 @@ export const createSalesCalendarEvent = asyncHandler(async (req, res) => {
 
 export const updateSalesCalendarEvent = asyncHandler(async (req, res) => {
     const task = await prisma.task.findFirst({
-        where: { id: req.params.taskId, organizationId: req.organizationId },
+        where: { id: req.params.taskId },
     });
     if (!task) throw new ApiError(404, "Calendar event not found");
 
@@ -125,14 +125,14 @@ export const updateSalesCalendarEvent = asyncHandler(async (req, res) => {
         data.customerId = null;
         if (relatedTo) {
             const lead = await prisma.lead.findFirst({
-                where: { id: relatedTo, organizationId: req.organizationId },
+                where: { id: relatedTo },
                 select: { id: true },
             });
             if (lead) {
                 data.leadId = lead.id;
             } else {
                 const customer = await prisma.customer.findFirst({
-                    where: { id: relatedTo, organizationId: req.organizationId },
+                    where: { id: relatedTo },
                     select: { id: true },
                 });
                 if (!customer) throw new ApiError(404, "Related lead or customer not found");
@@ -153,7 +153,7 @@ export const updateSalesCalendarEvent = asyncHandler(async (req, res) => {
 
 export const deleteSalesCalendarEvent = asyncHandler(async (req, res) => {
     const task = await prisma.task.findFirst({
-        where: { id: req.params.taskId, organizationId: req.organizationId },
+        where: { id: req.params.taskId },
         select: { id: true },
     });
     if (!task) throw new ApiError(404, "Calendar event not found");

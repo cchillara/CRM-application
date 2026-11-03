@@ -10,7 +10,7 @@ import PipelineCard from "../../components/sales/PipelineCard.jsx";
 import TodayTasks from "../../components/sales/TodaysTask.jsx";
 import RecentActivities from "../../components/sales/RecentActivities.jsx";
 import UpcomingFollowUps from "../../components/sales/UpcomingFollowUps.jsx";
-import ToggleTheme from "../../components/common/ThemeToggle.jsx";
+
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000")
   .replace(/\/api\/v1.*$/, "")
@@ -112,27 +112,7 @@ function SalesDashboard() {
 
   return (
     <div className="sales-dashboard">
-      <section className="sales-overview-header-card">
-        <div className="sales-overview-header-left">
-          <h2>Platform Overview</h2>
-          <p>SHNOOR CRM · Sales</p>
-        </div>
 
-        <div className="sales-overview-header-right">
-          <ToggleTheme/>
-          <button
-            type="button"
-            className="crm-header-icon-btn"
-            title="Calendar"
-            aria-label="Calendar"
-            onClick={() => navigate("/calendar")}
-          >
-            <Calendar size={18} />
-          </button>
-        </div>
-      </section>
-
-    
       {loading && <p className="sales-form-loading">Loading dashboard…</p>}
       {error && <p className="sales-form-error" role="alert">{error}</p>}
 
