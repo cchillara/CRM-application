@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import {
   leadsByStatus as fallbackStatusBars,
-  recentLeads, deals,
+  recentLeads, deals, initialTasks,
 } from '../data';
 import { getStored } from '../storage';
 import { getDashboard } from './../Api/Dashboard';
@@ -58,11 +58,75 @@ function formatToMonthDateYear(dateInput) {
   return str;
 }
 
+function parseTaskDate(raw) {
+  if (!raw || raw === 'Upcoming') return null;
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  if (/^\d{4}-\d{1,2}-\d{1,2}/.test(str)) {
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (match) {
+    const p1 = Number(match[1]);
+    const p2 = Number(match[2]);
+    const year = Number(match[3]);
+    let month, day;
+    if (p1 > 12) {
+      day = p1;
+      month = p2;
+    } else if (p2 > 12) {
+      month = p1;
+      day = p2;
+    } else {
+      month = p1;
+      day = p2;
+    }
+    const d = new Date(year, month - 1, day);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function processOverdueTasks(list) {
+  if (!Array.isArray(list)) return [];
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  return list
+    .filter((t) => {
+      if (t.completed === true || t.status === 'COMPLETED' || t.status === 'DONE') return false;
+      const d = parseTaskDate(t.dueDate) || parseTaskDate(t.due);
+      if (!d) return false;
+      d.setHours(0, 0, 0, 0);
+      return d < todayStart;
+    })
+    .map((t, idx) => {
+      const d = parseTaskDate(t.dueDate) || parseTaskDate(t.due);
+      d.setHours(0, 0, 0, 0);
+      const daysLate = Math.max(1, Math.floor((todayStart - d) / (1000 * 60 * 60 * 24)));
+      const rawDue = t.due || (t.dueDate ? String(t.dueDate).split('T')[0] : '');
+      return {
+        ...t,
+        daysLate,
+        due: formatToMonthDateYear(rawDue),
+        assignedTo: resolveOwnerName(t.assignedTo, t.title || idx)
+      };
+    })
+    .sort((a, b) => b.daysLate - a.daysLate);
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
   const storedLeads = getStored('leads', recentLeads);
   const storedDeals = getStored('deals', deals);
+  const storedTasks = getStored('tasks', initialTasks);
 
   const [stats, setStats] = useState(() => ({
     totalLeads: storedLeads.length,
@@ -76,7 +140,7 @@ export default function Dashboard() {
   const [leadList, setLeadList] = useState(() => (storedLeads.length > 0 ? storedLeads.slice(0, 6) : recentLeads));
   const [statusBars, setStatusBars] = useState(() => fallbackStatusBars);
   const [loading, setLoading] = useState(false);
-  const [overdueTasks, setOverdueTasks] = useState([]);
+  const [overdueTasks, setOverdueTasks] = useState(() => processOverdueTasks(storedTasks));
   const [isOverdueOpen, setIsOverdueOpen] = useState(false);
 
 
@@ -108,59 +172,20 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const parseDate = (raw) => {
-      if (!raw || raw === 'Upcoming') return null;
-      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-        const d = new Date(raw);
-        return isNaN(d.getTime()) ? null : d;
-      }
-
-      const mdyDash = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-      if (mdyDash) {
-        const d = new Date(Number(mdyDash[3]), Number(mdyDash[1]) - 1, Number(mdyDash[2]));
-        return isNaN(d.getTime()) ? null : d;
-      }
-
-      const mdySlash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      if (mdySlash) {
-        const d = new Date(Number(mdySlash[3]), Number(mdySlash[1]) - 1, Number(mdySlash[2]));
-        return isNaN(d.getTime()) ? null : d;
-      }
-
-      const d = new Date(raw);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
     getTasks()
       .then((data) => {
-        if (!Array.isArray(data)) return;
-        const overdue = data
-          .filter((t) => {
-            if (t.completed === true || t.status === 'COMPLETED') return false;
-            const d = parseDate(t.dueDate) || parseDate(t.due);
-            if (!d) return false;
-            d.setHours(0, 0, 0, 0);
-            return d < todayStart;
-          })
-          .map((t, idx) => {
-            const d = parseDate(t.dueDate) || parseDate(t.due);
-            d.setHours(0, 0, 0, 0);
-            const daysLate = Math.max(1, Math.floor((todayStart - d) / (1000 * 60 * 60 * 24)));
-            const rawDue = t.due || (t.dueDate ? t.dueDate.split('T')[0] : '');
-            return {
-              ...t,
-              daysLate,
-              due: formatToMonthDateYear(rawDue),
-              assignedTo: resolveOwnerName(t.assignedTo, t.title || idx)
-            };
-          })
-          .sort((a, b) => b.daysLate - a.daysLate);
-        setOverdueTasks(overdue);
+        if (Array.isArray(data) && data.length > 0) {
+          setOverdueTasks(processOverdueTasks(data));
+        } else {
+          const local = getStored('tasks', initialTasks);
+          setOverdueTasks(processOverdueTasks(local));
+        }
       })
-      .catch(() => { });
+      .catch((err) => {
+        console.warn('[Dashboard] Tasks API unavailable, using local tasks:', err.message);
+        const local = getStored('tasks', initialTasks);
+        setOverdueTasks(processOverdueTasks(local));
+      });
   }, []);
 
   const handleLogout = () => {
