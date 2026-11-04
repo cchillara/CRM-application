@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "dotenv": "^18.0.9",
+    "prisma": "^7.10.1"
+  }
+}
