@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   UserCheck,
@@ -20,13 +20,14 @@ import { getDashboard } from './../Api/Dashboard';
 import { getTasks } from './../Api/Tasks';
 import { useNavigate } from 'react-router-dom';
 import ToggleTheme from '../components/ThemeToggle';
+import '../Client-admin.css';
 
 const OWNER_NAMES = ['Sarah Jenkins', 'David Miller', 'Arjun Kumar', 'Elena Rostova', 'Marcus Vance', 'Meena Patel', 'Vikram Singh'];
 
 function resolveOwnerName(raw, fallbackSeed = 0) {
   if (typeof raw === 'string') {
     const trimmed = raw.trim();
-    if (trimmed && trimmed !== 'Client Admin' && trimmed !== 'ΓÇö' && trimmed !== 'Unknown') {
+    if (trimmed && trimmed !== 'Client Admin' && trimmed !== '—' && trimmed !== 'Unknown') {
       return trimmed;
     }
   } else if (raw && typeof raw === 'object') {
@@ -207,7 +208,7 @@ export default function Dashboard() {
 
         {overdueTasks.length === 0 ? (
           <div className="crm-overdue-widget-clear">
-            Γ£à No overdue tasks right now.
+            ✅ No overdue tasks right now.
           </div>
         ) : (
           <>
@@ -220,15 +221,15 @@ export default function Dashboard() {
                 }}
               >
                 <p className="crm-overdue-widget-msg">
-                  ≡ƒÜ¿ <strong>{overdueTasks[0].title}</strong> is {overdueTasks[0].daysLate} day{overdueTasks[0].daysLate > 1 ? 's' : ''} past its deadline.
+                  🚨 <strong>{overdueTasks[0].title}</strong> is {overdueTasks[0].daysLate} day{overdueTasks[0].daysLate > 1 ? 's' : ''} past its deadline.
                   {overdueTasks.length > 1 && (
                     <span className="crm-overdue-more-text"> +{overdueTasks.length - 1} more overdue alert{overdueTasks.length > 2 ? 's' : ''}</span>
                   )}
                 </p>
                 <div className="crm-overdue-widget-meta">
                   <span>Due: <strong>{overdueTasks[0].due}</strong></span>
-                  <span>Assigned: <strong>{typeof overdueTasks[0].assignedTo === 'string' ? overdueTasks[0].assignedTo : (overdueTasks[0].assignedTo?.firstName || 'ΓÇö')}</strong></span>
-                  <span>Org: <strong>{overdueTasks[0].client || 'ΓÇö'}</strong></span>
+                  <span>Assigned: <strong>{typeof overdueTasks[0].assignedTo === 'string' ? overdueTasks[0].assignedTo : (overdueTasks[0].assignedTo?.firstName || '—')}</strong></span>
+                  <span>Org: <strong>{overdueTasks[0].client || '—'}</strong></span>
                 </div>
               </div>
             ) : (
@@ -236,12 +237,12 @@ export default function Dashboard() {
                 {overdueTasks.map((task) => (
                   <div key={task.id} className="crm-overdue-widget-body">
                     <p className="crm-overdue-widget-msg">
-                      ≡ƒÜ¿ <strong>{task.title}</strong> is {task.daysLate} day{task.daysLate > 1 ? 's' : ''} past its deadline.
+                      🚨 <strong>{task.title}</strong> is {task.daysLate} day{task.daysLate > 1 ? 's' : ''} past its deadline.
                     </p>
                     <div className="crm-overdue-widget-meta">
                       <span>Due: <strong>{task.due}</strong></span>
-                      <span>Assigned: <strong>{typeof task.assignedTo === 'string' ? task.assignedTo : (task.assignedTo?.firstName || 'ΓÇö')}</strong></span>
-                      <span>Org: <strong>{task.client || 'ΓÇö'}</strong></span>
+                      <span>Assigned: <strong>{typeof task.assignedTo === 'string' ? task.assignedTo : (task.assignedTo?.firstName || '—')}</strong></span>
+                      <span>Org: <strong>{task.client || '—'}</strong></span>
                       {task.priority && <span>Priority: <strong>{task.priority}</strong></span>}
                     </div>
                   </div>
@@ -375,7 +376,7 @@ export default function Dashboard() {
                     <span className="crm-lead-value">
                       {typeof lead.value === 'number'
                         ? `$${lead.value.toLocaleString()}`
-                        : (String(lead.value || '').startsWith('$') || String(lead.value || '').startsWith('Γé╣')
+                        : (String(lead.value || '').startsWith('$') || String(lead.value || '').startsWith('₹')
                           ? lead.value
                           : `$${Number(lead.value || 0).toLocaleString()}`)}
                     </span>

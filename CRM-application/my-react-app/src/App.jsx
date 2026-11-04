@@ -127,8 +127,6 @@ function LandingPage() {
           <span></span>
         </button>
       </header>
-
-      {/* ================= HERO ================= */}
       <main>
         <section className="hero" id="home">
           <div className="hero-content">

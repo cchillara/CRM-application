@@ -48,6 +48,7 @@ function formatKeyLabel(rawKey) {
   return rawKey.replace(/([A-Z])/g, " $1").replace(/[_-]/g, " ").replace(/^\w/, (c) => c.toUpperCase()).trim();
 }
 import React, { useState, useEffect } from "react";
+import "../styles/Calendar.css";
 import {
   Plus,
   X,
