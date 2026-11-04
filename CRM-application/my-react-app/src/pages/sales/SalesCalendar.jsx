@@ -1,0 +1,545 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
+import interactionPlugin from "@fullcalendar/interaction";
+import { onAuthStateChanged } from "firebase/auth";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Pencil, Plus, Trash2, X } from "lucide-react";
+import ConfirmDialog from "../../components/common/ConfirmDialog.jsx";
+import { auth } from "../../firebase.js";
+import "./SalesCalendar.css";
+
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+const SALES_API_URL = `${API_BASE_URL}/sales`;
+
+const eventTypes = ["Call", "Meeting", "Follow-up", "Task"];
+const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin];
+const emptyForm = { title: "", type: "Call", date: "", startTime: "", endTime: "", relatedTo: "", notes: "" };
+
+function dateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function timeInputValue(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function eventFormFromCalendarEvent(event) {
+  const start = new Date(event.start);
+  const end = event.end ? new Date(event.end) : null;
+  const allDay = !String(event.start).includes("T");
+  return {
+    title: event.title || "",
+    type: event.type || "Call",
+    date: dateInputValue(start),
+    startTime: allDay ? "" : timeInputValue(start),
+    endTime: end && !allDay ? timeInputValue(end) : "",
+    relatedTo: event.relatedTo || "",
+    notes: event.notes || "",
+    
+
+  };
+}
+
+function displayDate(date) {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(date);
+}
+
+function displayTime(date) {
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
+}
+
+function parseCalendarNotes(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  if (str.startsWith("{") && str.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(str);
+      if (typeof parsed === "object" && parsed !== null) return parsed;
+    } catch (_) {}
+  }
+
+  if ((str.startsWith("{") && str.endsWith("}")) || (str.includes(":") && (str.includes(",") || str.includes("\n")))) {
+    try {
+      const clean = str.replace(/^\{|\}$/g, "").trim();
+      const parts = clean.split(/[,\n]/);
+      const result = {};
+      for (const part of parts) {
+        const idx = part.indexOf(":");
+        if (idx > 0) {
+          const key = part.slice(0, idx).trim().replace(/^['"]|['"]$/g, "");
+          const val = part.slice(idx + 1).trim().replace(/^['"]|['"]$/g, "");
+          if (key) result[key] = val;
+        }
+      }
+      if (Object.keys(result).length > 0) return result;
+    } catch (_) {}
+  }
+  return null;
+}
+
+function getLeadContactName(lead) {
+  if (!lead) return "";
+  const name = [lead.contact?.firstName, lead.contact?.lastName].filter(Boolean).join(" ");
+  return name || lead.title || "Unknown Lead";
+}
+
+function SalesCalendar() {
+
+  const [events, setEvents] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [visibleTypes, setVisibleTypes] = useState(eventTypes);
+  const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
+  const [calendarApi, setCalendarApi] = useState(null);
+  const [rangeTitle, setRangeTitle] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [form, setForm] = useState(null);
+  const [formError, setFormError] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+
+ 
+  const fetchCalendarData = useCallback(async (user) => {
+    if (!user) {
+      setEvents([]);
+      setLeads([]);
+      setCustomers([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const idToken = await user.getIdToken();
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      };
+
+      const [eventsRes, leadsRes, customersRes] = await Promise.all([
+        fetch(`${SALES_API_URL}/calendar/events`, { headers, cache: "no-store" }),
+        fetch(`${SALES_API_URL}/leads`, { headers }),
+        fetch(`${SALES_API_URL}/customers`, { headers }),
+      ]);
+
+      const [eventsResult, leadsResult, customersResult] = await Promise.all([
+        eventsRes.json(),
+        leadsRes.json(),
+        customersRes.json(),
+      ]);
+
+      if (!eventsRes.ok || eventsResult.success === false) {
+        throw new Error(eventsResult.message || "Failed to fetch calendar events");
+      }
+
+      setEvents(Array.isArray(eventsResult.data) ? eventsResult.data : []);
+      setLeads(Array.isArray(leadsResult.data) ? leadsResult.data : []);
+      setCustomers(Array.isArray(customersResult.data) ? customersResult.data : []);
+    } catch (err) {
+      console.error("[SalesCalendar] Fetch error:", err);
+      setError(err.message || "Unable to load calendar events.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      fetchCalendarData(user);
+    });
+    return () => unsubscribe();
+  }, [fetchCalendarData]);
+
+
+  const relatedChoices = useMemo(() => [
+    ...leads.map((lead) => ({ id: lead.id, kind: "Lead", name: getLeadContactName(lead), company: lead.company?.name })),
+    ...customers.map((customer) => ({ id: customer.id, kind: "Customer", name: customer.name, company: customer.company })),
+  ], [leads, customers]);
+
+  const relatedNames = useMemo(() => Object.fromEntries(
+    relatedChoices.map((choice) => [choice.id, `${choice.name}${choice.company ? ` · ${choice.company}` : ""}`])
+  ), [relatedChoices]);
+
+  const visibleEvents = useMemo(() => {
+    return events.filter((event) => visibleTypes.includes(event.type));
+  }, [events, visibleTypes]);
+
+  const agendaEvents = useMemo(() => {
+    return visibleEvents
+      .filter((event) => {
+        if (!event.start) return false;
+        const eventStart = new Date(`${event.start.slice(0, 10)}T00:00:00`);
+        return eventStart >= dateRange.start && eventStart < dateRange.end;
+      })
+      .sort((first, second) => (first.start || "").localeCompare(second.start || ""));
+  }, [visibleEvents, dateRange]);
+
+  const selectedEvent = useMemo(() => {
+    return events.find((event) => event.id === selectedEventId);
+  }, [events, selectedEventId]);
+
+  const toggleType = (type) => {
+    setVisibleTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : [...current, type]);
+  };
+
+  const openNewEvent = (date, endDate) => {
+    const start = date || new Date();
+    setForm({
+      mode: "create",
+      eventId: null,
+      values: {
+        ...emptyForm,
+        date: dateInputValue(start),
+        startTime: date && !endDate ? "" : timeInputValue(start),
+        endTime: endDate ? timeInputValue(endDate) : "",
+      },
+    });
+    setFormError("");
+    setSelectedEventId(null);
+  };
+
+  const openEditEvent = () => {
+    if (!selectedEvent) return;
+    setForm({ mode: "edit", eventId: selectedEvent.id, values: eventFormFromCalendarEvent(selectedEvent) });
+    setFormError("");
+    setSelectedEventId(null);
+  };
+
+  const saveEvent = async (submitEvent) => {
+    submitEvent.preventDefault();
+    const { title, type, date, startTime, endTime, relatedTo, notes } = form.values;
+    if (!title.trim() || !type || !date) {
+      setFormError("Add a title, event type, and date.");
+      return;
+    }
+    if (["Call", "Meeting"].includes(type) && (!startTime || !endTime)) {
+      setFormError("Calls and meetings need a start and end time.");
+      return;
+    }
+    if (startTime && endTime && endTime <= startTime) {
+      setFormError("End time must be later than start time.");
+      return;
+    }
+
+    const startsAt = startTime ? `${date}T${startTime}:00` : `${date}T00:00:00`;
+    const endsAt = endTime ? `${date}T${endTime}:00` : null;
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Authentication required.");
+
+      const isEdit = form.mode === "edit" && form.eventId;
+      const url = isEdit
+        ? `${SALES_API_URL}/calendar/events/${encodeURIComponent(form.eventId)}`
+        : `${SALES_API_URL}/calendar/events`;
+
+      const method = isEdit ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          type,
+          start: startsAt,
+          end: endsAt,
+          relatedTo: relatedTo || null,
+          notes: notes ? notes.trim() : null,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Failed to save calendar event.");
+      }
+
+      const saved = result.data;
+      setEvents((current) =>
+        isEdit
+          ? current.map((event) => (event.id === saved.id ? saved : event))
+          : [...current, saved]
+      );
+
+      setVisibleTypes((current) => (current.includes(type) ? current : [...current, type]));
+      setForm(null);
+      setFormError("");
+      setError("");
+    } catch (err) {
+      console.error("[SalesCalendar] Save error:", err);
+      setFormError(err.message || "Unable to save calendar event.");
+    }
+  };
+
+  const deleteEvent = async () => {
+    if (!selectedEvent) return;
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Authentication required.");
+
+      const response = await fetch(`${SALES_API_URL}/calendar/events/${encodeURIComponent(selectedEvent.id)}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Failed to delete calendar event.");
+      }
+
+      setEvents((current) => current.filter((event) => event.id !== selectedEvent.id));
+      setSelectedEventId(null);
+      setDeleteConfirmation(false);
+      setError("");
+    } catch (err) {
+      console.error("[SalesCalendar] Delete error:", err);
+      setError(err.message || "Unable to delete calendar event.");
+      setDeleteConfirmation(false);
+    }
+  };
+
+  const goToToday = () => calendarApi?.today();
+  const changeRange = (direction) => calendarApi?.[direction]();
+
+  return (
+    <div className="sales-calendar-page">
+      <header className="sales-calendar-header">
+        <div>
+          <h1>Calendar</h1>
+          <p>Keep track of your calls, meetings, and follow-ups.</p>
+        </div>
+        <button className="sales-calendar-primary-button" type="button" onClick={() => openNewEvent(new Date())}>
+          <Plus size={17} /> Add Event
+        </button>
+      </header>
+
+      {/* Global alert for API errors */}
+      {error && <p className="sales-calendar-error" role="alert" style={{ color: "var(--red-accent, #ef4444)", padding: "10px 0", margin: 0 }}>{error}</p>}
+
+      <div className="sales-calendar-filters" aria-label="Filter calendar events">
+        <span className="sales-calendar-filter-label">Show</span>
+        {eventTypes.map((type) => (
+          <label className={`sales-calendar-filter ${visibleTypes.includes(type) ? "selected" : ""}`} key={type}>
+            <input type="checkbox" checked={visibleTypes.includes(type)} onChange={() => toggleType(type)} />
+            <span className={`sales-calendar-dot type-${type.toLowerCase().replace("-", "")}`} />
+            {type}
+          </label>
+        ))}
+      </div>
+
+      <div className="sales-calendar-layout">
+        <section className="sales-calendar-card" aria-label="Calendar">
+          <div className="sales-calendar-toolbar">
+            <div className="sales-calendar-navigation">
+              <button type="button" aria-label="Previous date range" onClick={() => changeRange("prev")}><ChevronLeft size={18} /></button>
+              <button type="button" aria-label="Next date range" onClick={() => changeRange("next")}><ChevronRight size={18} /></button>
+              <button className="sales-calendar-today" type="button" onClick={goToToday}>Today</button>
+              <h2>{rangeTitle}</h2>
+            </div>
+            <div className="sales-calendar-views" aria-label="Calendar view">
+              {[{ label: "Week", view: "timeGridWeek" }, { label: "Month", view: "dayGridMonth" }, { label: "Day", view: "timeGridDay" }, { label: "List", view: "listWeek" }].map(({ label, view }) => (
+                <button key={view} className={calendarApi?.view.type === view ? "active" : ""} type="button" onClick={() => calendarApi?.changeView(view)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="sales-calendar-grid">
+            <FullCalendar
+              plugins={plugins}
+              initialView="dayGridMonth"
+              headerToolbar={false}
+              height="auto"
+              allDaySlot
+              nowIndicator
+              selectable
+              selectMirror
+              dayMaxEvents
+              events={visibleEvents.map((event) => ({
+                id: event.id,
+                title: event.title,
+                start: event.start,
+                end: event.end,
+                classNames: [`calendar-event-${(event.type || "task").toLowerCase().replace("-", "")}`],
+              }))}
+              eventClick={({ event }) => setSelectedEventId(event.id)}
+              select={({ start, end, allDay }) => {
+                openNewEvent(start, allDay ? null : end);
+                calendarApi?.unselect();
+              }}
+              datesSet={({ view, start, end }) => {
+                setCalendarApi(view.calendar);
+                setDateRange({ start, end });
+                setRangeTitle(view.title);
+              }}
+              eventTimeFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
+              slotMinTime="07:00:00"
+              slotMaxTime="20:00:00"
+              expandRows
+            />
+          </div>
+        </section>
+
+        <aside className="sales-calendar-agenda" aria-label="Upcoming agenda">
+          <div className="sales-calendar-agenda-heading">
+            <div><CalendarDays size={17} /><h2>Upcoming</h2></div>
+            <span>{loading ? "…" : agendaEvents.length}</span>
+          </div>
+          <p className="sales-calendar-agenda-range">{rangeTitle}</p>
+          {loading ? (
+            <p className="sales-calendar-empty">Loading calendar events…</p>
+          ) : agendaEvents.length ? (
+            <div className="sales-calendar-agenda-list">
+              {agendaEvents.map((event) => {
+                const starts = new Date(event.start);
+                return (
+                  <button type="button" className="sales-calendar-agenda-item" key={event.id} onClick={() => setSelectedEventId(event.id)}>
+                    <span className={`sales-calendar-agenda-marker type-${(event.type || "task").toLowerCase().replace("-", "")}`} />
+                    <span className="sales-calendar-agenda-copy">
+                      <span className="sales-calendar-agenda-date">{displayDate(starts)}{!event.end && !String(event.start).includes("T") ? " · All day" : ` · ${displayTime(starts)}`}</span>
+                      <strong>{event.title}</strong>
+                      <span className="sales-calendar-agenda-meta">{event.type}{event.relatedTo && relatedNames[event.relatedTo] ? ` · ${relatedNames[event.relatedTo].split(" · ")[0]}` : ""}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="sales-calendar-empty">No events in this date range.</p>
+          )}
+        </aside>
+      </div>
+
+      {form && (
+        <div className="sales-calendar-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setForm(null); }}>
+          <section className="sales-calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="sales-calendar-form-title">
+            <div className="sales-calendar-dialog-heading">
+              <div><h2 id="sales-calendar-form-title">{form.mode === "edit" ? "Edit event" : "Add event"}</h2><p>Enter the details for this calendar event.</p></div>
+              <button className="sales-calendar-icon-button" type="button" aria-label="Close" onClick={() => setForm(null)}><X size={19} /></button>
+            </div>
+            <form onSubmit={saveEvent}>
+              <label className="sales-calendar-field sales-calendar-field-full">Title <span>*</span>
+                <input autoFocus required value={form.values.title} onChange={(event) => setForm({ ...form, values: { ...form.values, title: event.target.value } })} placeholder="e.g. Product walkthrough" />
+              </label>
+              <div className="sales-calendar-form-row">
+                <label className="sales-calendar-field">Event type <span>*</span>
+                  <select required value={form.values.type} onChange={(event) => setForm({ ...form, values: { ...form.values, type: event.target.value } })}>{eventTypes.map((type) => <option key={type}>{type}</option>)}</select>
+                </label>
+                <label className="sales-calendar-field">Date <span>*</span>
+                  <input type="date" required value={form.values.date} onChange={(event) => setForm({ ...form, values: { ...form.values, date: event.target.value } })} />
+                </label>
+              </div>
+              <div className="sales-calendar-form-row">
+                <label className="sales-calendar-field">Start time{["Call", "Meeting"].includes(form.values.type) ? <span> *</span> : null}
+                  <input type="time" required={["Call", "Meeting"].includes(form.values.type)} value={form.values.startTime} onChange={(event) => setForm({ ...form, values: { ...form.values, startTime: event.target.value } })} />
+                </label>
+                <label className="sales-calendar-field">End time{["Call", "Meeting"].includes(form.values.type) ? <span> *</span> : null}
+                  <input type="time" required={["Call", "Meeting"].includes(form.values.type)} value={form.values.endTime} onChange={(event) => setForm({ ...form, values: { ...form.values, endTime: event.target.value } })} />
+                </label>
+              </div>
+              <label className="sales-calendar-field sales-calendar-field-full">Related lead or customer
+                <select value={form.values.relatedTo} onChange={(event) => setForm({ ...form, values: { ...form.values, relatedTo: event.target.value } })}>
+                  <option value="">None</option>
+                  <optgroup label="Leads">
+                    {relatedChoices.filter((choice) => choice.kind === "Lead").map((choice) => (
+                      <option key={choice.id} value={choice.id}>{choice.name}{choice.company ? ` · ${choice.company}` : ""}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Customers">
+                    {relatedChoices.filter((choice) => choice.kind === "Customer").map((choice) => (
+                      <option key={choice.id} value={choice.id}>{choice.name}{choice.company ? ` · ${choice.company}` : ""}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </label>
+              <label className="sales-calendar-field sales-calendar-field-full">Notes
+                <textarea rows="3" value={form.values.notes} onChange={(event) => setForm({ ...form, values: { ...form.values, notes: event.target.value } })} placeholder="Add a note for this event" />
+              </label>
+              {formError && <p className="sales-calendar-form-error" role="alert">{formError}</p>}
+              <div className="sales-calendar-dialog-actions">
+                <button type="button" className="sales-calendar-secondary-button" onClick={() => setForm(null)}>Cancel</button>
+                <button type="submit" className="sales-calendar-primary-button">{form.mode === "edit" ? "Save changes" : "Create event"}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {selectedEvent && (
+        <div className="sales-calendar-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedEventId(null); }}>
+          <section className="sales-calendar-dialog sales-calendar-details" role="dialog" aria-modal="true" aria-labelledby="sales-calendar-detail-title">
+            <div className="sales-calendar-dialog-heading">
+              <div>
+                <span className={`sales-calendar-type-badge type-${(selectedEvent.type || "task").toLowerCase().replace("-", "")}`}>{selectedEvent.type}</span>
+                <h2 id="sales-calendar-detail-title">{selectedEvent.title}</h2>
+              </div>
+              <button className="sales-calendar-icon-button" type="button" aria-label="Close" onClick={() => setSelectedEventId(null)}><X size={19} /></button>
+            </div>
+            <div className="sales-calendar-detail-line">
+              <Clock3 size={17} />
+              <span>{displayDate(new Date(selectedEvent.start))}{String(selectedEvent.start).includes("T") ? `, ${displayTime(new Date(selectedEvent.start))}${selectedEvent.end ? ` – ${displayTime(new Date(selectedEvent.end))}` : ""}` : " · All day"}</span>
+            </div>
+            {selectedEvent.relatedTo && (
+              <div className="sales-calendar-detail-block">
+                <span>Related to</span>
+                <strong>{relatedNames[selectedEvent.relatedTo] || "Record unavailable"}</strong>
+              </div>
+            )}
+                        <div className="sales-calendar-detail-block">
+              <span>Notes</span>
+              {(() => {
+                const parsed = parseCalendarNotes(selectedEvent.notes);
+                if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                      {Object.entries(parsed).map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "4px 0", borderBottom: "1px solid rgba(226, 232, 240, 0.5)" }}>
+                          <strong style={{ textTransform: "capitalize", color: "var(--text-muted, #64748b)" }}>{k.replace(/([A-Z])/g, " $1").trim()}:</strong>
+                          <span style={{ color: "var(--text-main, #0f172a)", fontWeight: "500" }}>{String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return <p>{selectedEvent.notes || "No notes added."}</p>;
+              })()}
+            </div>
+            <div className="sales-calendar-dialog-actions sales-calendar-detail-actions">
+              <button type="button" className="sales-calendar-delete-button" onClick={() => setDeleteConfirmation(true)}><Trash2 size={16} /> Delete</button>
+              <button type="button" className="sales-calendar-secondary-button" onClick={openEditEvent}><Pencil size={15} /> Edit event</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {deleteConfirmation && selectedEvent && (
+        <ConfirmDialog
+          title="Delete this event?"
+          message={`“${selectedEvent.title}” will be removed from your calendar.`}
+          onCancel={() => setDeleteConfirmation(false)}
+          onConfirm={deleteEvent}
+          confirmLabel="Delete event"
+        />
+      )}
+    </div>
+  );
+}
+
+export default SalesCalendar;

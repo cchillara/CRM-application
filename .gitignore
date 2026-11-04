@@ -1,0 +1,22 @@
+# Local environment files (keep example templates)
+.env
+.env.*
+!.env.example
+
+node_modules/
+.vite/
+dist/
+dist-ssr/
+build/
+coverage/
+logs/
+*.log
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+crmbackend-*.json
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
