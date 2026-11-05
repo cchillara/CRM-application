@@ -26,7 +26,6 @@ app.use(
     credentials: true,
     origin(origin, callback) {
       if (!origin || allowedOrigins.has(origin)) return callback(null, true);
-      // In development allow any localhost
       if (/^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
         return callback(null, true);
       }

@@ -7,7 +7,6 @@ import { Pool } from "pg";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Always load .env from backend root regardless of CWD
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const connectionString = process.env.DATABASE_URL;
@@ -15,7 +14,6 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// Provide alias so prisma.profile and prisma.clientAdmin can be used interchangeably
 if (!prisma.profile && prisma.clientAdmin) {
   prisma.profile = prisma.clientAdmin;
 } else if (!prisma.clientAdmin && prisma.profile) {

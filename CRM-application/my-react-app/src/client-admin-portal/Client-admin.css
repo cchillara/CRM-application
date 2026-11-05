@@ -407,8 +407,13 @@ button {
 }
 
 @keyframes crmFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .crm-sidebar-toggle-btn {
@@ -639,6 +644,7 @@ button {
 .crm-sidebar.collapsed .crm-sidebar-footer {
   display: none !important;
 }
+
 .crm-banner-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -663,6 +669,7 @@ button {
   font-weight: 700;
   color: var(--text-main);
 }
+
 .crm-sidebar-footer {
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
