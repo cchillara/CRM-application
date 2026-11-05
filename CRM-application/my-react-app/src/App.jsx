@@ -18,9 +18,9 @@ import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
 import SalesProfile from "./pages/sales/SalesProfile.jsx";
 import SalesSettings from "./pages/sales/SalesSettings.jsx";
 import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes";
-import { PlatformProvider } from "./SuperAdmin-frontend/src/context/PlatformContext.jsx";
+import { PlatformProvider } from "../SuperAdmin-frontend/src/context/PlatformContext.jsx";
 
-const SuperAdminApp = lazy(() => import("./SuperAdmin-frontend/src/App.jsx"));
+const SuperAdminApp = lazy(() => import("../SuperAdmin-frontend/src/App.jsx"));
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
 
