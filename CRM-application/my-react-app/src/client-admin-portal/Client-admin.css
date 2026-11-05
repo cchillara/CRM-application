@@ -91,6 +91,116 @@
   --shadow-card: 0 4px 14px rgba(8, 20, 38, 0.6);
 }
 
+:is([data-theme="white"], [data-theme="light"], .theme-white) {
+  --sidebar-bg: #ffffff;
+  --sidebar-hover: #f1f5f9;
+  --sidebar-active: #2563eb;
+  --sidebar-text: #64748b;
+  --sidebar-text-active: #ffffff;
+  --sidebar-width: 250px;
+  --sidebar-collapsed-width: 72px;
+
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f1f5f9;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+
+  --border-light: #e2e8f0;
+  --border-subtle: #f1f5f9;
+
+  --blue-primary: #2563eb;
+  --green-accent: #10b981;
+  --orange-accent: #f59e0b;
+  --red-accent: #ef4444;
+
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+/* ── Client Admin Sidebar White Theme Overrides ── */
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-sidebar {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 2px 0 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-brand-header {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-brand-name {
+  color: #0f172a !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-brand-role {
+  color: #64748b !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-sidebar-toggle-btn {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-sidebar-toggle-btn:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-nav-btn {
+  color: #64748b !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-nav-btn:hover:not(.active) {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-nav-btn.active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25) !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-nav-badge {
+  background-color: #e2e8f0 !important;
+  color: #475467 !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-nav-btn.active .crm-nav-badge {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-sidebar-footer {
+  background-color: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-user-name {
+  color: #0f172a !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-user-email {
+  color: #64748b !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-logout-btn {
+  color: #64748b !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-logout-btn:hover {
+  background-color: #fee2e2 !important;
+  color: #ef4444 !important;
+}
+
+:is([data-theme="white"], [data-theme="light"], .theme-white) .crm-sidebar.collapsed .crm-nav-btn:not(.active):hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
 *,
 *::before,
 *::after {
