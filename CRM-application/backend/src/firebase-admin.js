@@ -1,12 +1,9 @@
+import "./config/env.js";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import dotenv from "dotenv";
 import fs from "fs";
 
-dotenv.config();
-
 let authInstance;
-
 const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 
 if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
@@ -20,19 +17,24 @@ if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
   } catch (err) {
     console.warn("Failed to initialize Firebase Admin with service account:", err.message);
   }
-} else {
+}
+
+if (!authInstance) {
   console.warn(
     `[Firebase Admin] Notice: Service account file not found at "${serviceAccountPath}". Dev auth fallback mode is active.`
   );
   authInstance = {
     verifyIdToken: async (token) => {
-      // In dev mode, return dummy token payload or allow passing uid directly
       return {
         uid: token && token !== "undefined" ? token : "dev-client-admin",
         email: "admin@client.com",
         role: "ORGANIZATION_ADMIN",
       };
     },
+    createSessionCookie: async () => "dev-session-cookie",
+    verifySessionCookie: async () => ({ uid: "dev-super-admin", email: "admin@superadmin.com" }),
+    updateUser: async () => {},
+    deleteUser: async () => {},
   };
 }
 

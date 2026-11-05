@@ -1,6 +1,5 @@
 import api from './client';
 
-
 export const getLeads = async () => {
   return await api.get('/leads');
 };
@@ -17,9 +16,4 @@ export const deleteLead = async (id) => {
   return await api.delete(`/leads/${id}`);
 };
 
-export default {
-  getLeads,
-  createLead,
-  updateLead,
-  deleteLead,
-};
+export default { getLeads, createLead, updateLead, deleteLead };

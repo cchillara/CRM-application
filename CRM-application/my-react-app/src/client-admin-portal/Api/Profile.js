@@ -8,8 +8,4 @@ export const updateProfile = async (profileData) => {
   return await api.patch('/profile', profileData);
 };
 
-export default {
-  getProfile,
-  updateProfile,
-};
-
+export default { getProfile, updateProfile };

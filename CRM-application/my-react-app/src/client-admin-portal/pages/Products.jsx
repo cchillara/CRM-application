@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { productsList } from '../data';
 import { getStored, setStored } from '../storage';
 import { Package, 
@@ -22,7 +22,7 @@ import SidePanel from '../components/Side-panel';
 import "../styles/Leads.css"
 
 const STORAGE_KEY = 'products';
-const EMPTY_FORM = { name: '', category: 'Software & SaaS', organizationName : '' , price: '₹50,000 ', billing: 'Annual Billing', inventory: 'Standard Tier · 10 Seats', status: 'Active' };
+const EMPTY_FORM = { name: '', category: 'Software & SaaS', organizationName : '' , price: 'Γé╣50,000 ', billing: 'Annual Billing', inventory: 'Standard Tier ┬╖ 10 Seats', status: 'Active' };
 const CATEGORIES = ['Software & SaaS', 'Cloud Services', 'AI & Intelligence', 'Integration', 'Customer Support', 'Professional Services'];
 
 export default function Products() {
@@ -50,7 +50,7 @@ export default function Products() {
             name: p.name ,
             category: p.category ,
             organizationName : p.organizationName,
-            price: p.price ? (String(p.price).startsWith('₹') ? p.price : `₹${Number(p.price).toLocaleString()} `) : '₹0 ',
+            price: p.price ? (String(p.price).startsWith('Γé╣') ? p.price : `Γé╣${Number(p.price).toLocaleString()} `) : 'Γé╣0 ',
             billing: p.billing ,
             inventory: p.inventory ,
             status: p.status === 'Active' ? 'Active' : 'Inactive',
@@ -257,7 +257,7 @@ export default function Products() {
                   <div className="crm-form-group">
                     <label className="crm-form-label">Base Pricing</label>
                     <input type="text" name="price" value={form.price} onChange={handleChange}
-                      placeholder="e.g. ₹60,000 " className="crm-form-input" />
+                      placeholder="e.g. Γé╣60,000 " className="crm-form-input" />
                   </div>
                 </div>
                 <div className="crm-form-row">

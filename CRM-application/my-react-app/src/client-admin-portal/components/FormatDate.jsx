@@ -1,4 +1,3 @@
-
 export function formatToMonthDateYear(dateInput) {
   if (!dateInput) return '';
   const str = String(dateInput).trim();

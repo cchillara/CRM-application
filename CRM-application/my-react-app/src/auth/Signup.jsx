@@ -34,6 +34,10 @@ function Signup() {
         setLoading(true);
 
         try {
+            if (!auth) {
+                throw new Error("Firebase is not configured. Copy .env.example to .env, add your Firebase web app settings, and restart Vite.");
+            }
+
             // 1. Create Firebase user
             const userCredential =
                 await createUserWithEmailAndPassword(

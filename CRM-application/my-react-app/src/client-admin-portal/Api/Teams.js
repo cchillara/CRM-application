@@ -1,4 +1,4 @@
-import api from './client';
+﻿import api from './client';
 
 export const getTeams = async () => {
   return await api.get('/team');

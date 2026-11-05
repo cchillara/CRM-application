@@ -1,4 +1,4 @@
-import api from './client';
+﻿import api from './client';
 
 export const getProducts = async () => {
   return await api.get('/products');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { totalLeads } from '../data';
 import { getStored, setStored } from '../storage';
 import {
@@ -683,7 +683,7 @@ export default function Leads() {
           <SearchInput
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or contact…"
+            placeholder="Search by name or contactΓÇª"
             ariaLabel="Search leads"
           />
         </div>
@@ -713,7 +713,7 @@ export default function Leads() {
                       <div className="crm-avatar-pill">{lead.avatarInitials}</div>
                       <div>
                         <span className="crm-table-primary-text">{lead.name}</span>
-                        <span className="crm-table-sub-text">{lead.id} · {lead.source || 'Website'}</span>
+                        <span className="crm-table-sub-text">{lead.id} ┬╖ {lead.source || 'Website'}</span>
                       </div>
                     </div>
                   </td>

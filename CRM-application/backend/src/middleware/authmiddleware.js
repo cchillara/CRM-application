@@ -1,6 +1,8 @@
 import { auth } from "../firebase-admin.js";
 import { ApiError } from "../utils/apiError.js";
 import prisma from "../db/index.js";
+import { findSuperAdminForFirebaseUser } from "../utils/superAdminAuth.js";
+import { SUPER_ADMIN_SESSION_COOKIE } from "../utils/superAdminSession.js";
 
 const extractAndVerifyToken = async (req) => {
   if (req.user?.uid) {
@@ -8,12 +10,16 @@ const extractAndVerifyToken = async (req) => {
   }
 
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new ApiError(401, "Authorization token is required");
   }
 
-  const idToken = authHeader.split("Bearer ")[1];
-  return await auth.verifyIdToken(idToken);
+  const token = authHeader.split("Bearer ")[1]?.trim();
+  if (!token) {
+    throw new ApiError(401, "Invalid token format");
+  }
+
+  return auth.verifyIdToken(token);
 };
 
 export const verifyFirebaseToken = async (req, res, next) => {
@@ -30,64 +36,91 @@ export const verifyFirebaseToken = async (req, res, next) => {
 };
 
 export const requireUser = async (req, res, next) => {
+  let decodedToken;
   try {
-    const decodedToken = await extractAndVerifyToken(req);
-    const user = await prisma.user.findUnique({
-      where: { firebaseUid: decodedToken.uid },
-      include: { organization: true },
-    });
-
-    if (!user) throw new ApiError(403, "CRM user is not registered");
-    if (user.status === "SUSPENDED") throw new ApiError(403, "User account is suspended");
-    if (user.status === "DEACTIVATED") throw new ApiError(403, "User account is deactivated");
-
-    if (user.organization) {
-      if (user.organization.status === "SUSPENDED") throw new ApiError(403, "Organization account is suspended");
-      if (user.organization.status === "DEACTIVATED") throw new ApiError(403, "Organization account is deactivated");
-    }
-
-    req.user = user;
-    req.organizationId = user.organizationId;
-    next();
+    decodedToken = await extractAndVerifyToken(req);
   } catch (error) {
-    if (error instanceof ApiError) throw error;
+    if (error instanceof ApiError) {
+      throw error;
+    }
     throw new ApiError(401, "Invalid or expired authentication token");
   }
-};
 
-export const requireOrganization = (req, res, next) => {
-  if (!req.user || !req.user.organizationId) {
-    throw new ApiError(403, "User is not assigned to an organization");
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: {
+        firebaseUid: decodedToken.uid,
+      },
+      include: {
+        organization: true,
+      },
+    });
+  } catch (error) {
+    console.error("Authenticated user lookup failed:", error);
+    throw new ApiError(500, "Unable to load authenticated user");
   }
-  req.organizationId = req.user.organizationId;
+
+  if (!user) {
+    throw new ApiError(403, "CRM user is not registered");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new ApiError(403, "User account is suspended");
+  }
+  if (user.status === "DEACTIVATED") {
+    throw new ApiError(403, "User account is deactivated");
+  }
+
+  if (user.organization) {
+    if (user.organization.status === "SUSPENDED") {
+      throw new ApiError(403, "Organization account is suspended");
+    }
+    if (user.organization.status === "DEACTIVATED") {
+      throw new ApiError(403, "Organization account is deactivated");
+    }
+  }
+
+  req.user = user;
+  req.organizationId = user.organizationId;
   next();
 };
 
-export const requireRoles = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      throw new ApiError(403, "Access denied: insufficient permissions");
-    }
-    next();
-  };
+export const requireOrganization = (req, res, next) => {
+  if (!req.organizationId) {
+    throw new ApiError(400, "Organization context is required");
+  }
+  next();
+};
+
+export const requireRoles = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    throw new ApiError(403, "You do not have permission to access this resource");
+  }
+  next();
 };
 
 export const authorizeRoles = requireRoles;
 
 export const requireSuperAdmin = async (req, res, next) => {
   try {
-    const decodedToken = await extractAndVerifyToken(req);
-    const superAdmin = await prisma.superAdmin.findUnique({
-      where: { firebaseUid: decodedToken.uid },
-    });
+    const sessionCookie = req.cookies?.[SUPER_ADMIN_SESSION_COOKIE];
+    const decodedToken = sessionCookie
+      ? await auth.verifySessionCookie(sessionCookie, true)
+      : await extractAndVerifyToken(req);
+    const superAdmin = await findSuperAdminForFirebaseUser(decodedToken);
 
-    if (!superAdmin) throw new ApiError(403, "Access denied: Super Admin privileges required");
+    if (!superAdmin) {
+      throw new ApiError(403, "Access denied: Super Admin privileges required");
+    }
 
     req.superAdmin = superAdmin;
     req.user = superAdmin;
     next();
   } catch (error) {
-    if (error instanceof ApiError) throw error;
+    if (error instanceof ApiError) {
+      throw error;
+    }
     throw new ApiError(401, "Invalid or expired authentication token");
   }
 };
@@ -96,19 +129,6 @@ export const requireSuperAdmin = async (req, res, next) => {
  * requireClientAdmin
  *
  * Single middleware for ALL /api/v1/client-admin routes.
- *
- * What it does:
- *  1. Verifies the Firebase ID token from the Authorization header.
- *  2. Looks up the CRM User in the DB by firebaseUid.
- *  3. Fallback: looks up by email and links the uid (handles users invited by email).
- *  4. First-login: if no user found at all, auto-provisions a User + Organization.
- *  5. Recovery: if user has no organizationId, assigns the first available org.
- *  6. Blocks SUSPENDED / DEACTIVATED accounts with 403.
- *  7. Sets req.user  (DB row: id, role, organizationId, firstName, lastName, email, uid)
- *     Sets req.organizationId (convenience shortcut used by all controllers).
- *
- * This replaces the getClientAdmin() helper that was called at the top of every
- * controller function — keeping that logic in one place.
  */
 export const requireClientAdmin = async (req, res, next) => {
   try {
@@ -146,24 +166,25 @@ export const requireClientAdmin = async (req, res, next) => {
       }
     }
 
-    // Step 3 — first-login auto-provisioning
+    // Step 3 — auto-provision on first login
     if (!user) {
-      let org = await prisma.organization.findFirst();
+      let org = await prisma.organization.findFirst({ select: { id: true } });
       if (!org) {
         org = await prisma.organization.create({
           data: {
-            name: "SHNOOR CRM Organization",
-            email: email || "admin@crmclient.com",
+            name: "Default Organization",
             status: "ACTIVE",
           },
+          select: { id: true },
         });
       }
+
       user = await prisma.user.create({
         data: {
           firebaseUid: uid,
-          email: email || `user_${uid.slice(0, 8)}@crmclient.com`,
-          firstName: "Client",
-          lastName: "Admin",
+          email: email || `${uid}@crm.local`,
+          firstName: decodedToken.name?.split(" ")[0] || "Client",
+          lastName: decodedToken.name?.split(" ").slice(1).join(" ") || "Admin",
           role: "ORGANIZATION_ADMIN",
           status: "ACTIVE",
           organizationId: org.id,
@@ -172,16 +193,13 @@ export const requireClientAdmin = async (req, res, next) => {
       });
     }
 
-    // Step 4 — recovery: user has no org
+    // Step 4 — recovery: ensure user has an organization
     if (!user.organizationId) {
-      let org = await prisma.organization.findFirst();
+      let org = await prisma.organization.findFirst({ select: { id: true } });
       if (!org) {
         org = await prisma.organization.create({
-          data: {
-            name: "SHNOOR CRM Organization",
-            email: email || "admin@crmclient.com",
-            status: "ACTIVE",
-          },
+          data: { name: "Default Organization", status: "ACTIVE" },
+          select: { id: true },
         });
       }
       user = await prisma.user.update({
@@ -191,22 +209,21 @@ export const requireClientAdmin = async (req, res, next) => {
       });
     }
 
-    // Step 5 — block suspended / deactivated
+    // Step 5 — check account status
     if (user.status === "SUSPENDED") {
-      return res.status(403).json({ message: "User account is suspended" });
+      throw new ApiError(403, "User account is suspended");
     }
     if (user.status === "DEACTIVATED") {
-      return res.status(403).json({ message: "User account is deactivated" });
+      throw new ApiError(403, "User account is deactivated");
     }
 
-    // Attach — merge DB fields with uid from Firebase token
+    // Attach to request
     req.user = { ...user, uid };
     req.organizationId = user.organizationId;
+
     next();
   } catch (error) {
-    if (error instanceof ApiError) {
-      return res.status(error.statusCode).json({ message: error.message });
-    }
-    return res.status(401).json({ message: "Invalid or expired authentication token" });
+    if (error instanceof ApiError) return next(error);
+    return next(new ApiError(401, error.message || "Invalid or expired authentication token"));
   }
 };

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
     getProtectedProfile,
+    getSuperAdminSession,
+    logoutSuperAdmin,
     registerUser
 } from "../controllers/auth.controller.js";
 import { verifyFirebaseToken, requireUser } from "../middleware/authmiddleware.js";
@@ -12,6 +14,14 @@ router.get(
     requireUser,
     getProtectedProfile
 );
+
+router.post(
+    "/super-admin/session",
+    verifyFirebaseToken,
+    getSuperAdminSession
+);
+
+router.post("/super-admin/logout", logoutSuperAdmin);
 
 router.post(
     "/register",

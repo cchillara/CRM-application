@@ -1,4 +1,3 @@
-
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1/client-admin';
 
 export const getAuthToken = async () => {
@@ -9,9 +8,7 @@ export const getAuthToken = async () => {
         localStorage.setItem('token', freshToken);
         return freshToken;
       }
-    } catch (e) {
-
-    }
+    } catch (e) {}
   }
   return localStorage.getItem('token') || localStorage.getItem('firebaseToken') || '';
 };
@@ -26,20 +23,15 @@ export async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const config = {
-    ...options,
-    headers,
-  };
+  const config = { ...options, headers };
 
   try {
     const response = await fetch(url, config);
     const result = await response.json().catch(() => null);
-
     if (!response.ok) {
       const errorMessage = result?.message || result?.errors?.[0]?.message || `HTTP ${response.status}: Request failed`;
       throw new Error(errorMessage);
     }
-
     return result?.data !== undefined ? result.data : result;
   } catch (error) {
     console.error(`[CRM API Error] ${options.method || 'GET'} ${url}:`, error.message);

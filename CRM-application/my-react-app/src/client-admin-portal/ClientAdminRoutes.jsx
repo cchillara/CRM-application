@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+﻿import { Navigate, Route, Routes } from "react-router-dom";
 import ClientLayout from "./ClientLayout";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
@@ -28,7 +28,7 @@ export default function ClientAdminRoutes() {
         <Route path="settings" element={<Settings />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="" replace />} />
+      <Route path="*" element={<Navigate to="/client-admin" replace />} />
     </Routes>
   );
 }

@@ -199,6 +199,8 @@ export default function Profile() {
 
   return (
     <div className="crm-dashboard">
+
+      {/* ── Account cards ── */}
       <section className="panel">
         <div className="panel-title">
           <div>
@@ -211,7 +213,7 @@ export default function Profile() {
         </div>
 
         <div className="settings-option-list">
-         
+          {/* Profile card */}
           <button
             type="button"
             className="settings-option"
@@ -232,7 +234,7 @@ export default function Profile() {
             </div>
           </button>
 
-        
+          {/* Change Password card */}
           <button
             type="button"
             className="settings-option"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { initialTasks } from '../data';
 import { getStored, setStored } from '../storage';
 import { Plus, X, Pencil, Trash2, Building, Timer, History, User, Calendar, Check } from 'lucide-react';
@@ -18,7 +18,7 @@ const OWNERS = ['Sarah Jenkins', 'Arjun Kumar', 'David Miller', 'Elena Rostova',
 export function resolveOwnerName(raw, fallbackSeed = 0) {
   if (typeof raw === 'string') {
     const trimmed = raw.trim();
-    if (trimmed && trimmed !== 'Client Admin' && trimmed !== '—' && trimmed !== 'Unknown') {
+    if (trimmed && trimmed !== 'Client Admin' && trimmed !== 'ΓÇö' && trimmed !== 'Unknown') {
       return trimmed;
     }
   } else if (raw && typeof raw === 'object') {

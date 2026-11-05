@@ -7,6 +7,7 @@ export const getFollowUps = async (entityType, entityId) => {
 export const createFollowUp = async (payload) => {
   return await api.post('/followups', payload);
 };
+
 export const updateFollowUp = async (id, payload) => {
   return await api.put(`/followups/${id}`, payload);
 };

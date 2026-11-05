@@ -1,26 +1,21 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./Auth.css";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+
 function Login() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const [showPassword, setShowPassword] = useState(false);
-    const navigate = useNavigate();
-
-    const handleLogin = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-
-        //     if(email === "clientadmin@xyz.com" && password === "password123"){
-        //     navigate("/client-admin");
-        //     return;
-        // }
-
         setError("");
         setLoading(true);
 
@@ -35,182 +30,110 @@ function Login() {
             const idToken =
                 await userCredential.user.getIdToken();
 
-            console.log("Firebase ID Token:", idToken);
             localStorage.setItem("token", idToken);
             localStorage.setItem("firebaseToken", idToken);
 
-            const response = await fetch(
-                "http://localhost:5000/api/v1/auth/protected",
-                {
-                    method: "GET",
+            const headers = { Authorization: `Bearer ${idToken}` };
+            const superAdminResponse = await fetch(`${API_BASE_URL}/auth/super-admin/session`, {
+                method: "POST",
+                credentials: "include",
+                headers,
+            });
+            const superAdminData = await superAdminResponse.json().catch(() => ({}));
 
-                    headers: {
-                        Authorization: `Bearer ${idToken}`,
-                    },
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message ||
-                    "Backend authentication failed"
-                );
+            if (superAdminResponse.ok) {
+                window.location.replace("/super-admin/");
+                return;
             }
 
-            console.log("Backend response:", data);
+            // A 403 means the verified Firebase UID is not in the SuperAdmin table.
+            // Preserve the existing CRM login for registered non-SuperAdmin users.
+            if (superAdminResponse.status !== 403) {
+                throw new Error(superAdminData.message || "Could not verify Super Admin access");
+            }
 
-            navigate("/client-admin");
+            const response = await fetch(`${API_BASE_URL}/auth/protected`, { headers });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || "Backend authentication failed");
+
+            const destinations = {
+                SALES: "/dashboard",
+                MANAGER: "/client-admin",
+                ORGANIZATION_ADMIN: "/client-admin",
+            };
+            const destination = destinations[data.data?.role] || "/client-admin";
+            navigate(destination, { replace: true });
         } catch (error) {
-            console.error(error);
-
-            setError(error.message);
+            const firebaseMessages = {
+                "auth/invalid-credential": "Email or password is incorrect.",
+                "auth/user-not-found": "No account was found for this email.",
+                "auth/wrong-password": "Email or password is incorrect.",
+                "auth/invalid-email": "Enter a valid email address.",
+                "auth/too-many-requests": "Too many sign-in attempts. Try again shortly.",
+                "auth/network-request-failed": "Could not reach the authentication service. Check your connection.",
+            };
+            setError(firebaseMessages[error.code] || error.message || "Sign in failed. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="auth-page">
-            <div className="auth-container">
+        <div className="auth-container">
+            <div className="auth-card">
+                <h2>Welcome Back</h2>
+                <p className="subtitle">
+                    Please enter your details to sign in
+                </p>
 
+                {error && (
+                    <div className="error-message">
+                        {error}
+                    </div>
+                )}
 
-
-                <div className="auth-info">
-                    <div className="auth-logo">
-                        SHNOOR<span>.</span>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label>Email</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) =>
+                                setEmail(e.target.value)
+                            }
+                            placeholder="Enter your email"
+                            required
+                        />
                     </div>
 
-                    <p className="auth-small-title">
-                        CUSTOMER RELATIONSHIP MANAGEMENT
-                    </p>
-
-                    <h1>
-                        Manage your
-                        <br />
-                        customers.
-                        <br />
-                        <span>Grow your business.</span>
-                    </h1>
-
-                    <p className="auth-description">
-                        Access your SHNOOR CRM account and manage
-                        customers, leads, deals and business activities
-                        from one organized workspace.
-                    </p>
-
-                    <div className="auth-benefits">
-                        <div className="auth-benefit">
-                            <span>✓</span>
-                            Manage customers in one place
-                        </div>
-
-                        <div className="auth-benefit">
-                            <span>✓</span>
-                            Track leads and opportunities
-                        </div>
-
-                        <div className="auth-benefit">
-                            <span>✓</span>
-                            Understand your business activity
-                        </div>
-                    </div>
-                </div>
-
-                {/* ================= RIGHT ================= */}
-
-                <div className="auth-card">
-                    <div className="auth-header">
-                        <h2>Welcome back</h2>
-
-                        <p>
-                            Sign in to continue to your SHNOOR CRM
-                            account.
-                        </p>
+                    <div className="form-group">
+                        <label>Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) =>
+                                setPassword(e.target.value)
+                            }
+                            placeholder="Enter your password"
+                            required
+                        />
                     </div>
 
-                    <form
-                        onSubmit={handleLogin}
-                        className="auth-form"
+                    <button
+                        type="submit"
+                        className="btn-submit"
+                        disabled={loading}
                     >
-                        <div className="form-group">
-                            <label htmlFor="email">
-                                Email address
-                            </label>
+                        {loading
+                            ? "Signing in..."
+                            : "Sign In"}
+                    </button>
+                </form>
 
-                            <input
-                                id="email"
-                                type="email"
-                                placeholder="Enter your email"
-                                value={email}
-                                onChange={(e) =>
-                                    setEmail(e.target.value)
-                                }
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="password">
-                                Password
-                            </label>
-
-                            <div className="input-wrapper">
-                                <input
-                                    id="password"
-                                    className="password-input"
-                                    type={
-                                        showPassword
-                                            ? "text"
-                                            : "password"
-                                    }
-                                    placeholder="Enter your password"
-                                    value={password}
-                                    onChange={(e) =>
-                                        setPassword(e.target.value)
-                                    }
-                                    required
-                                />
-
-                                <button
-                                    type="button"
-                                    className="password-toggle"
-                                    onClick={() =>
-                                        setShowPassword(!showPassword)
-                                    }
-                                >
-                                    {showPassword
-                                        ? "Hide"
-                                        : "Show"}
-                                </button>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <p className="auth-error">
-                                {error}
-                            </p>
-                        )}
-
-                        <button
-                            type="submit"
-                            className="auth-button"
-                            disabled={loading}
-                        >
-                            {loading
-                                ? "Signing in..."
-                                : "Sign in"}
-                        </button>
-                    </form>
-
-                    <p className="auth-switch">
-                        Don't have an account?{" "}
-                        <a href="/signup">
-                            Create an account
-                        </a>
-                    </p>
-                </div>
+                <p className="auth-footer">
+                    Don't have an account?{" "}
+                    <Link to="/signup">Sign up</Link>
+                </p>
             </div>
         </div>
     );

@@ -16,9 +16,4 @@ export const deleteTask = async (id) => {
   return await api.delete(`/tasks/${id}`);
 };
 
-export default {
-  getTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-};
+export default { getTasks, createTask, updateTask, deleteTask };

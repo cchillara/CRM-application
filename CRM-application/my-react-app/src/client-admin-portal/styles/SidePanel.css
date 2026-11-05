@@ -478,3 +478,109 @@
 .crm-clickable-row:hover {
   background-color: #f1f5f9 !important;
 }
+
+/* ── Detail Panel Body ─────────────────────────────────── */
+.crm-slideover-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.crm-detail-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.crm-slideover-detail-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.crm-slideover-detail-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* ── Detail Section ─────────────────────────────────────── */
+.crm-detail-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crm-detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #94a3b8;
+  margin: 0 0 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* ── Detail Row ─────────────────────────────────────────── */
+.crm-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.crm-detail-icon {
+  width: 18px;
+  flex-shrink: 0;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+}
+
+.crm-detail-label {
+  min-width: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.crm-detail-value {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
+  word-break: break-word;
+  flex: 1;
+}
+
+/* ── Contact Card (multiple contacts) ───────────────────── */
+.crm-detail-contact-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.crm-detail-contact-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.crm-detail-contact-info {
+  font-size: 12px;
+  color: #64748b;
+}

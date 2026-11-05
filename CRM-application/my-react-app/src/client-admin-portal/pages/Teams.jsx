@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { teamMembers } from '../data';
 import { getStored, setStored } from '../storage';
 import {
@@ -15,7 +15,7 @@ import '../styles/Leads.css';
 const STORAGE_KEY = 'teams';
 const EMPTY_FORM = {
   name: '', role: 'Account Executive', email: '',
-  dealsClosed: '0', revenueWon: '₹0.0L', status: 'Active'
+  dealsClosed: '0', revenueWon: 'Γé╣0.0L', status: 'Active'
 };
 
 export default function Teams() {
@@ -44,7 +44,7 @@ export default function Teams() {
             role: m.role,
             email: m.email,
             dealsClosed: Number(m.dealsClosed) || 0,
-            revenueWon: m.revenueWon || '₹0.0L',
+            revenueWon: m.revenueWon || 'Γé╣0.0L',
             status: m.status === 'ACTIVE' || m.status === 'Active' ? 'Active' : 'Inactive',
           }));
           persist(mapped);
@@ -175,7 +175,7 @@ export default function Teams() {
       role: form.role.trim() || 'Account Executive',
       email: form.email.trim(),
       dealsClosed: Number(form.dealsClosed) || 0,
-      revenueWon: form.revenueWon.trim() || '₹0.0L',
+      revenueWon: form.revenueWon.trim() || 'Γé╣0.0L',
       status: form.status || 'Active',
     };
     if (editingMember) {
@@ -248,7 +248,7 @@ export default function Teams() {
                   <div className="crm-form-group">
                     <label className="crm-form-label">Revenue Won</label>
                     <input type="text" name="revenueWon" value={form.revenueWon} onChange={handleChange}
-                      placeholder="e.g. ₹15.0L" className="crm-form-input" />
+                      placeholder="e.g. Γé╣15.0L" className="crm-form-input" />
                   </div>
                 </div>
                 <div className="crm-form-row">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { totalDeals } from '../data';
 import { getStored, setStored } from '../storage';
 import { Plus, X, Pencil, Trash2, Building,
@@ -317,7 +317,7 @@ export default function Deals() {
                 </div>
                 <div className="crm-form-row">
                   <div className="crm-form-group">
-                    <label className="crm-form-label">Deal Value (₹)</label>
+                    <label className="crm-form-label">Deal Value (Γé╣)</label>
                     <input type="number" name="value" value={form.value} onChange={handleChange}
                       placeholder="e.g. 1500000" className="crm-form-input" />
                   </div>
@@ -588,7 +588,7 @@ export default function Deals() {
             <div className="crm-kpi-body">
               <span className="crm-kpi-value">{s.count}</span>
               <div className="crm-kpi-footer">
-                <span className="crm-kpi-subtext">₹{(s.totalValue / 100000).toFixed(1)}L value</span>
+                <span className="crm-kpi-subtext">Γé╣{(s.totalValue / 100000).toFixed(1)}L value</span>
               </div>
             </div>
           </div>
@@ -607,7 +607,7 @@ export default function Deals() {
             <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search deals…"
+              placeholder="Search dealsΓÇª"
               ariaLabel="Search deals"
             />
           </div>
@@ -640,7 +640,7 @@ export default function Deals() {
                     <span className="crm-table-primary-text">{deal.company}</span>
                     <span className="crm-table-sub-text">{deal.contact}</span>
                   </td>
-                  <td><strong>₹{(deal.value / 100000).toFixed(2)} Lakhs</strong></td>
+                  <td><strong>Γé╣{(deal.value / 100000).toFixed(2)} Lakhs</strong></td>
                   <td>
                     <span className="crm-status-badge" style={{
                       backgroundColor: deal.stage === 'Won' ? '#ecfdf5' : deal.stage === 'Lost' ? '#fef2f2' : '#eff6ff',
