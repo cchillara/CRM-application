@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { CircleUserRound, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { CircleUserRound, LogOut, Menu } from "lucide-react";
 import { logoutSuperAdmin } from "../api/superAdminApi";
+import ToggleTheme from "./ThemeToggle";
 
-export default function Header({ sidebarCollapsed, onToggleSidebar, theme, onToggleTheme }) {
+export default function Header({ sidebarCollapsed, onToggleSidebar }) {
   const navigate = useNavigate();
 
   async function logout() {
@@ -31,15 +32,7 @@ export default function Header({ sidebarCollapsed, onToggleSidebar, theme, onTog
         </div>
       </div>
       <div className="header-actions">
-        <button
-          type="button"
-          className="header-theme-toggle"
-          onClick={onToggleTheme}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-        >
-          {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
-        </button>
+        <ToggleTheme />
         <div className="header-account">
           <button type="button" className="header-user-button" aria-label="Open account page" onClick={() => navigate("/account")}>
             <CircleUserRound size={20} />
