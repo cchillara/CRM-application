@@ -1,0 +1,117 @@
+﻿import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+
+import authRouter from "./routes/auth.routes.js";
+import superAdminRouter from "./routes/superAdmin.routes.js";
+import clientAdminRouter from "./routes/clientAdmin.routes.js";
+import salesRouter from "./routes/sales.routes.js";
+import managerRouter from "./routes/manager.routes.js";
+import { errorHandler } from "./middleware/errormiddleware.js";
+import { ApiError } from "./utils/apiError.js";
+import { requestId } from "./middleware/requestId.js";
+import { httpLogger } from "./middleware/httpLogger.js";
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Parse lazily so the value is read AFTER dotenv has loaded.
+        // This makes the CORS config work correctly in test environments
+        // where process.env is populated after module initialisation.
+        const allowedOrigins = (process.env.CLIENT_ORIGINS ?? "")
+            .split(",")
+            .map((o) => o.trim())
+            .filter(Boolean);
+        const localFrontendOrigins = new Set([
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+        ]);
+
+        // Allow server-to-server requests that carry no Origin header
+        // (e.g. curl, Postman, backend tests).
+        if (!origin) return callback(null, true);
+
+        if (
+            allowedOrigins.includes(origin) ||
+            localFrontendOrigins.has(origin) ||
+            /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+        ) {
+            return callback(null, true);
+        }
+
+        return callback(
+            new ApiError(403, `CORS: origin '${origin}' is not allowed`)
+        );
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+    exposedHeaders: ["X-Request-ID"],
+    maxAge: 600, // cache preflight for 10 minutes
+};
+
+const app = express();
+
+/* ──────────────────────────────────────────────────────────────
+ * Trust Proxy (for load balancer / reverse proxy)
+ * ──────────────────────────────────────────────────────────────*/
+app.set("trust proxy", 1);
+
+/* ──────────────────────────────────────────────────────────────
+ * Security headers
+ * ──────────────────────────────────────────────────────────────*/
+app.disable("x-powered-by"); // belt-and-suspenders; helmet also does this
+app.use(helmet());
+
+/* ──────────────────────────────────────────────────────────────
+ * Correlation ID  →  HTTP logging  →  CORS  →  body parsing
+ *
+ * requestId must come first so httpLogger and error responses
+ * can all include the same ID.
+ * ──────────────────────────────────────────────────────────────*/
+app.use(requestId);
+app.use(httpLogger);
+app.use(cors(corsOptions));
+app.use(express.json());
+
+/* ──────────────────────────────────────────────────────────────
+ * Health check (no auth required)
+ * ──────────────────────────────────────────────────────────────*/
+app.get("/health", (req, res) => {
+    return res.status(200).json({
+        success: true,
+        message: "CRM backend is running",
+        instanceId: process.env.INSTANCE_ID || `backend-${process.env.PORT || 5001}`,
+        port: Number(process.env.PORT) || 5001,
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        requestId: req.id,
+    });
+});
+
+/* ──────────────────────────────────────────────────────────────
+ * API routes
+ * ──────────────────────────────────────────────────────────────*/
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/super-admin", superAdminRouter);
+app.use("/api/v1/client-admin", clientAdminRouter);
+app.use("/api/v1/sales", salesRouter);
+app.use("/api/v1/manager", managerRouter);
+
+// Handle unknown routes without changing existing routes.
+app.use((req, res, next) => {
+    next(
+        new ApiError(
+            404,
+            `Route not found: ${req.method} ${req.originalUrl}`
+        )
+    );
+});
+
+// Keep error middleware last.
+app.use(errorHandler);
+
+export default app;

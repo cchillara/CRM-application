@@ -1,5 +1,22 @@
-node_modules
-# Keep environment variables out of version control
+node_modules/
 .env
-
+.env.*
+*.env.local
+!.env.example
+.vite/
+dist/
+dist-ssr/
+build/
+coverage/
+logs/
+*.log
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+crmbackend-*.json
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
 /generated/prisma

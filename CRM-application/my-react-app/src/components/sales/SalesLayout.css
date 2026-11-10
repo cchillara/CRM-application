@@ -1,0 +1,372 @@
+.sales-layout {
+  min-height: 100vh;
+  display: flex;
+  background: var(--bg-main, #f8fafc);
+  transition: background-color 0.2s ease;
+}
+
+.sales-layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--bg-main, #f8fafc);
+}
+
+/* ── Top Header Bar (Screenshot 1) ── */
+.crm-top-header-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 60px;
+  background-color: var(--bg-card, #ffffff);
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 40;
+  box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.crm-top-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.crm-top-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.crm-header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #64748b);
+  border: 1px solid var(--border-light, #e2e8f0);
+  background-color: var(--bg-card, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crm-header-icon-btn:hover {
+  color: var(--blue-primary, #2563eb);
+  border-color: var(--blue-primary, #2563eb);
+  background-color: var(--bg-card-subtle, #eff6ff);
+}
+
+.crm-header-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red-accent, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background-color: rgba(239, 68, 68, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crm-header-logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: var(--red-accent, #ef4444);
+  color: #dc2626;
+}
+
+.sales-layout-content {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+padding: 28px;
+/* margin : 28px 28px 28px 28px */
+/* margin-left : 10px; */
+}
+
+/* ── Dark Mode Overrides for Layout ── */
+[data-theme="dark"] .sales-layout,
+[data-theme="dark"] .sales-layout-main {
+  background: var(--bg-main);
+}
+
+[data-theme="dark"] .crm-top-header-bar {
+  background-color: var(--bg-card);
+  border-bottom-color: var(--border-light);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .crm-header-icon-btn {
+  background-color: var(--bg-card-subtle);
+  border-color: var(--border-light);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .crm-header-icon-btn:hover {
+  background-color: var(--bg-card);
+  color: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+[data-theme="dark"] .crm-header-logout-btn {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+[data-theme="dark"] .crm-header-logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+/* ── Multi-Theme Overrides (Black, Blue, White) ── */
+
+/* ── BLACK THEME (AMOLED Deep Dark) ── */
+[data-theme="black"] .sales-layout,
+[data-theme="black"] .sales-layout-main {
+  background: #09090b !important;
+}
+
+[data-theme="black"] .crm-top-header-bar {
+  background-color: #121214 !important;
+  border-bottom: 1px solid #27272a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="black"] .crm-header-icon-btn {
+  background-color: #1c1c20 !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme="black"] .crm-header-icon-btn:hover {
+  background-color: #27272a !important;
+  color: #3b82f6 !important;
+}
+
+[data-theme="black"] .crm-card,
+[data-theme="black"] .crm-kpi-card,
+[data-theme="black"] .panel {
+  background-color: #121214 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .crm-table th {
+  background-color: #1c1c20 !important;
+  color: #a1a1aa !important;
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="black"] .crm-table td {
+  border-bottom-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .crm-clickable-row:hover {
+  background-color: #1c1c22 !important;
+}
+
+[data-theme="black"] .crm-table-primary-text {
+  color: #ffffff !important;
+}
+
+[data-theme="black"] .crm-table-sub-text {
+  color: #a1a1aa !important;
+}
+
+[data-theme="black"] .crm-form-input,
+[data-theme="black"] .crm-form-select,
+[data-theme="black"] .crm-search-wrapper,
+[data-theme="black"] .form-grid input {
+  background-color: #1c1c20 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .crm-slideover-panel {
+  background-color: #121214 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .crm-slideover-header {
+  background: #09090b !important;
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="black"] .crm-slideover-body {
+  background: #09090b !important;
+}
+
+[data-theme="black"] .crm-slideover-section {
+  background: #121214 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="black"] .crm-lead-detail-item {
+  background: #1c1c20 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="black"] .crm-lead-detail-value {
+  color: #ffffff !important;
+}
+
+[data-theme="black"] .crm-fu-timeline-card {
+  background: #121214 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="black"] .crm-fu-form-card {
+  background: #121214 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="black"] .crm-fu-textarea,
+[data-theme="black"] .crm-fu-input-date {
+  background: #09090b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+
+/* ── BLUE THEME (Rich Royal Navy / Ocean Blue) ── */
+[data-theme="blue"] .sales-layout,
+[data-theme="blue"] .sales-layout-main {
+  background: #0a192f !important;
+}
+
+[data-theme="blue"] .crm-top-header-bar {
+  background-color: #112240 !important;
+  border-bottom: 1px solid #1e3a63 !important;
+  box-shadow: 0 2px 8px rgba(10, 25, 47, 0.6) !important;
+}
+
+[data-theme="blue"] .crm-header-icon-btn {
+  background-color: #1d3557 !important;
+  border-color: #1e3a63 !important;
+  color: #93c5fd !important;
+}
+
+[data-theme="blue"] .crm-header-icon-btn:hover {
+  background-color: #234567 !important;
+  color: #38bdf8 !important;
+  border-color: #38bdf8 !important;
+}
+
+[data-theme="blue"] .crm-card,
+[data-theme="blue"] .crm-kpi-card,
+[data-theme="blue"] .panel {
+  background-color: #112240 !important;
+  border-color: #1e3a63 !important;
+  color: #f0f8ff !important;
+}
+
+[data-theme="blue"] .crm-table th {
+  background-color: #1d3557 !important;
+  color: #93c5fd !important;
+  border-bottom-color: #1e3a63 !important;
+}
+
+[data-theme="blue"] .crm-table td {
+  border-bottom-color: #152d4e !important;
+  color: #f0f8ff !important;
+}
+
+[data-theme="blue"] .crm-clickable-row:hover {
+  background-color: #162f55 !important;
+}
+
+[data-theme="blue"] .crm-table-primary-text {
+  color: #ffffff !important;
+}
+
+[data-theme="blue"] .crm-table-sub-text {
+  color: #93c5fd !important;
+}
+
+[data-theme="blue"] .crm-form-input,
+[data-theme="blue"] .crm-form-select,
+[data-theme="blue"] .crm-search-wrapper,
+[data-theme="blue"] .form-grid input {
+  background-color: #0d1e38 !important;
+  border-color: #1e3a63 !important;
+  color: #f0f8ff !important;
+}
+
+[data-theme="blue"] .crm-slideover-panel {
+  background-color: #112240 !important;
+  border-color: #1e3a63 !important;
+  color: #f0f8ff !important;
+}
+
+[data-theme="blue"] .crm-slideover-header {
+  background: #0b1c34 !important;
+  border-bottom-color: #1e3a63 !important;
+}
+
+[data-theme="blue"] .crm-slideover-body {
+  background: #0a192f !important;
+}
+
+[data-theme="blue"] .crm-slideover-section {
+  background: #112240 !important;
+  border-color: #1e3a63 !important;
+}
+
+[data-theme="blue"] .crm-lead-detail-item {
+  background: #1d3557 !important;
+  border-color: #1e3a63 !important;
+}
+
+[data-theme="blue"] .crm-lead-detail-label {
+  color: #93c5fd !important;
+}
+
+[data-theme="blue"] .crm-lead-detail-value {
+  color: #f0f8ff !important;
+}
+
+[data-theme="blue"] .crm-fu-timeline-card {
+  background: #112240 !important;
+  border-color: #1e3a63 !important;
+  color: #f0f8ff !important;
+}
+
+[data-theme="blue"] .crm-fu-timeline-desc {
+  color: #dbeafe !important;
+}
+
+[data-theme="blue"] .crm-fu-timeline-date {
+  color: #93c5fd !important;
+}
+
+[data-theme="blue"] .crm-fu-form-card {
+  background: #112240 !important;
+  border-color: #1e3a63 !important;
+}
+
+[data-theme="blue"] .crm-fu-textarea,
+[data-theme="blue"] .crm-fu-input-date {
+  background: #0a192f !important;
+  border-color: #1e3a63 !important;
+  color: #f0f8ff !important;
+}
