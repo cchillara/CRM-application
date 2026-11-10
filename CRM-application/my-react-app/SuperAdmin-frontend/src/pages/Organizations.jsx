@@ -19,6 +19,7 @@ export default function Organizations() {
 
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [viewingOrg, setViewingOrg] = useState(null);
   const [editOrgId, setEditOrgId] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -217,7 +218,8 @@ export default function Organizations() {
                 return (
                   <tr
                     key={org.id}
-                    onClick={() => navigate(`/organizations/${org.id}`)}
+                    onClick={() => setViewingOrg(org)}
+                    style={{ cursor: "pointer" }}
                   >
                     <td>
                       <strong>{org.name}</strong>
@@ -268,6 +270,149 @@ export default function Organizations() {
           </table>
         </div>
       </section>
+
+      {/* Organization Details Popup Modal */}
+      <Modal
+        open={Boolean(viewingOrg)}
+        title={viewingOrg ? `${viewingOrg.name} — Organization Details` : "Organization Details"}
+        onClose={() => setViewingOrg(null)}
+        size="large"
+      >
+        {viewingOrg && (
+          <div className="org-popup-content">
+            <div className="popup-header-banner">
+              <div className="popup-org-mark">
+                {viewingOrg.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="popup-header-info">
+                <h3>{viewingOrg.name}</h3>
+                <p>Organization ID: {viewingOrg.id} &middot; Joined {viewingOrg.joined || "N/A"}</p>
+              </div>
+              <div className="popup-header-statuses">
+                <Status value={viewingOrg.status} />
+                <Status value={viewingOrg.subscriptionStatus} />
+                <Status value={viewingOrg.paymentStatus} />
+              </div>
+            </div>
+
+            <div className="popup-grid four-cards">
+              <div className="popup-card">
+                <span>Plan</span>
+                <strong>{data.plans.find((p) => p.id === viewingOrg.planId)?.name || "No plan"}</strong>
+                <small>{(() => {
+                  const p = data.plans.find((item) => item.id === viewingOrg.planId);
+                  return p ? `₹${p.price.toLocaleString("en-IN")} / ${p.billing.toLowerCase()}` : "Free tier";
+                })()}</small>
+              </div>
+
+              <div className="popup-card">
+                <span>Users</span>
+                <strong>{viewingOrg.users?.length || 0}</strong>
+                <small>{(() => {
+                  const p = data.plans.find((item) => item.id === viewingOrg.planId);
+                  return p ? `Max ${p.userLimit} user limit` : "Active members";
+                })()}</small>
+              </div>
+
+              <div className="popup-card">
+                <span>Subscription</span>
+                <strong>{viewingOrg.subscriptionStatus || "Active"}</strong>
+                <small>Current status</small>
+              </div>
+
+              <div className="popup-card">
+                <span>Payment</span>
+                <strong>{viewingOrg.paymentStatus || "Paid"}</strong>
+                <small>Payment status</small>
+              </div>
+            </div>
+
+            <div className="popup-section">
+              <h4>Organization Admin</h4>
+              <div className="popup-admin-grid">
+                <div>
+                  <span>Admin Name</span>
+                  <strong>{viewingOrg.admin?.name || "-"}</strong>
+                </div>
+                <div>
+                  <span>Email Address</span>
+                  <strong>{viewingOrg.admin?.email || "-"}</strong>
+                </div>
+                <div>
+                  <span>Phone Number</span>
+                  <strong>{viewingOrg.admin?.phone || "-"}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="popup-section">
+              <div className="popup-section-header">
+                <h4>Organization Users ({viewingOrg.users?.length || 0})</h4>
+              </div>
+              {viewingOrg.users && viewingOrg.users.length > 0 ? (
+                <div className="popup-table-wrap">
+                  <table className="popup-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewingOrg.users.map((user) => (
+                        <tr key={user.id}>
+                          <td><strong>{user.name}</strong></td>
+                          <td>{user.email}</td>
+                          <td><span className="role-badge">{user.role}</span></td>
+                          <td><Status value={user.status} /></td>
+                          <td>{user.joined || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="popup-empty-note">No users have been added to this organization yet.</div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  const orgToEdit = viewingOrg;
+                  setViewingOrg(null);
+                  openEdit(orgToEdit, { stopPropagation: () => {} });
+                }}
+              >
+                <Pencil size={14} /> Edit Organization
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  const id = viewingOrg.id;
+                  setViewingOrg(null);
+                  navigate(`/organizations/${id}`);
+                }}
+              >
+                View Full Page
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setViewingOrg(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={open} title="Add Organization" onClose={() => setOpen(false)}>
         <form className="form-stack" onSubmit={submit}>

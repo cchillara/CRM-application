@@ -1776,3 +1776,551 @@ th { font-size: 13px; }
 @media (prefers-reduced-motion: reduce) {
   .content > *, *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+
+/* ==========================================================================
+   ORGANIZATION & SUBSCRIPTION DETAILS POPUP STYLING (ALL THEMES)
+   ========================================================================== */
+
+.org-popup-content,
+.sub-popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.popup-header-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--border-light, #e2e8f0);
+  background: var(--bg-card-subtle, #f8fafc);
+  transition: all 0.2s ease;
+}
+
+.popup-org-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 16px;
+  background: linear-gradient(135deg, var(--blue-primary, #2563eb), #1d4ed8);
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
+
+.popup-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.popup-header-info h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.popup-header-info p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+}
+
+.popup-header-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.popup-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 680px) {
+  .popup-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.popup-card {
+  padding: 14px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border-light, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.popup-card span {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #64748b);
+}
+
+.popup-card strong {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.popup-card small {
+  font-size: 11.5px;
+  color: var(--text-light, #94a3b8);
+}
+
+.popup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popup-section h4 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #64748b);
+}
+
+.popup-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .popup-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.popup-admin-grid > div {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border-light, #e2e8f0);
+  background: var(--bg-card-subtle, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.popup-admin-grid span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+}
+
+.popup-admin-grid strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  word-break: break-all;
+}
+
+.popup-table-wrap {
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border-light, #e2e8f0);
+}
+
+.popup-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.popup-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card-subtle, #f8fafc);
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  font-size: 11.5px;
+  text-transform: uppercase;
+}
+
+.popup-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  color: var(--text-main, #0f172a);
+}
+
+.popup-table tr:last-child td {
+  border-bottom: none;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--blue-primary, #2563eb);
+}
+
+.popup-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .popup-feature-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.popup-feature-list li {
+  position: relative;
+  padding: 8px 12px 8px 28px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  background: var(--bg-card-subtle, #f8fafc);
+  border: 1px solid var(--border-light, #e2e8f0);
+  color: var(--text-main, #0f172a);
+}
+
+.popup-feature-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 10px;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.popup-empty-note {
+  padding: 14px;
+  border-radius: 6px;
+  background: var(--bg-card-subtle, #f8fafc);
+  border: 1px dashed var(--border-light, #e2e8f0);
+  color: var(--text-muted, #64748b);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* ── Pop up Theme Overrides: White Theme ── */
+.app:is([data-theme="white"], [data-theme="light"]) .modal,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .modal {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .modal-header,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .modal-header {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .modal-header h2,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .modal-header h2 {
+  color: #0f172a !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .modal-header button,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .modal-header button {
+  color: #64748b !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-header-banner,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-header-banner {
+  background: linear-gradient(110deg, #f8fafc, #edf4fe) !important;
+  border-color: #e2e8f0 !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-card,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-admin-grid > div,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-admin-grid > div {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-table-wrap,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-table-wrap {
+  border-color: #e2e8f0 !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-table th,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-table th {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-table td,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-table td {
+  border-bottom-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.app:is([data-theme="white"], [data-theme="light"]) .popup-feature-list li,
+:is([data-theme="white"], [data-theme="light"], .theme-white) .app .popup-feature-list li {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* ── Pop up Theme Overrides: Black Theme ── */
+.app:is([data-theme="black"], [data-theme="dark"]) .modal,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .modal {
+  background: #121214 !important;
+  border-color: #27272a !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7) !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .modal-header,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .modal-header {
+  border-bottom-color: #27272a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .modal-header h2,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .modal-header h2 {
+  color: #f4f4f5 !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .modal-header button,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .modal-header button {
+  color: #a1a1aa !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-header-banner,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-header-banner {
+  background: linear-gradient(110deg, #18181b, #121214) !important;
+  border-color: #27272a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-header-info h3,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-header-info h3 {
+  color: #f4f4f5 !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-header-info p,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-header-info p {
+  color: #a1a1aa !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-card,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-card span,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-card span {
+  color: #a1a1aa !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-card strong,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-card strong {
+  color: #f4f4f5 !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-card small,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-card small {
+  color: #71717a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-section h4,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-section h4 {
+  color: #a1a1aa !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-admin-grid > div,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-admin-grid > div {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-admin-grid span,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-admin-grid span {
+  color: #a1a1aa !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-admin-grid strong,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-admin-grid strong {
+  color: #f4f4f5 !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-table-wrap,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-table-wrap {
+  border-color: #27272a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-table th,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-table th {
+  background: #18181b !important;
+  color: #a1a1aa !important;
+  border-bottom-color: #27272a !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-table td,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-table td {
+  border-bottom-color: #1f1f23 !important;
+  color: #f4f4f5 !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .role-badge,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .role-badge {
+  background: rgba(59, 130, 246, 0.18) !important;
+  color: #60a5fa !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-feature-list li,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-feature-list li {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+.app:is([data-theme="black"], [data-theme="dark"]) .popup-empty-note,
+:is([data-theme="black"], [data-theme="dark"], .theme-black, .theme-dark) .app .popup-empty-note {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+/* ── Pop up Theme Overrides: Blue Theme ── */
+.app[data-theme="blue"] .modal,
+:is([data-theme="blue"], .theme-blue) .app .modal {
+  background: #112240 !important;
+  border-color: #1e3a63 !important;
+  box-shadow: 0 20px 40px rgba(8, 20, 38, 0.8) !important;
+}
+
+.app[data-theme="blue"] .modal-header,
+:is([data-theme="blue"], .theme-blue) .app .modal-header {
+  border-bottom-color: #1e3a63 !important;
+}
+
+.app[data-theme="blue"] .modal-header h2,
+:is([data-theme="blue"], .theme-blue) .app .modal-header h2 {
+  color: #f0f8ff !important;
+}
+
+.app[data-theme="blue"] .modal-header button,
+:is([data-theme="blue"], .theme-blue) .app .modal-header button {
+  color: #93c5fd !important;
+}
+
+.app[data-theme="blue"] .popup-header-banner,
+:is([data-theme="blue"], .theme-blue) .app .popup-header-banner {
+  background: linear-gradient(110deg, #162a4d, #0d1f3b) !important;
+  border-color: #1e3a63 !important;
+}
+
+.app[data-theme="blue"] .popup-header-info h3,
+:is([data-theme="blue"], .theme-blue) .app .popup-header-info h3 {
+  color: #f0f8ff !important;
+}
+
+.app[data-theme="blue"] .popup-header-info p,
+:is([data-theme="blue"], .theme-blue) .app .popup-header-info p {
+  color: #93c5fd !important;
+}
+
+.app[data-theme="blue"] .popup-card,
+:is([data-theme="blue"], .theme-blue) .app .popup-card {
+  background: #0d1f3b !important;
+  border-color: #1e3a63 !important;
+}
+
+.app[data-theme="blue"] .popup-card span,
+:is([data-theme="blue"], .theme-blue) .app .popup-card span {
+  color: #93c5fd !important;
+}
+
+.app[data-theme="blue"] .popup-card strong,
+:is([data-theme="blue"], .theme-blue) .app .popup-card strong {
+  color: #f0f8ff !important;
+}
+
+.app[data-theme="blue"] .popup-card small,
+:is([data-theme="blue"], .theme-blue) .app .popup-card small {
+  color: #60a5fa !important;
+}
+
+.app[data-theme="blue"] .popup-section h4,
+:is([data-theme="blue"], .theme-blue) .app .popup-section h4 {
+  color: #93c5fd !important;
+}
+
+.app[data-theme="blue"] .popup-admin-grid > div,
+:is([data-theme="blue"], .theme-blue) .app .popup-admin-grid > div {
+  background: #0d1f3b !important;
+  border-color: #1e3a63 !important;
+}
+
+.app[data-theme="blue"] .popup-admin-grid span,
+:is([data-theme="blue"], .theme-blue) .app .popup-admin-grid span {
+  color: #93c5fd !important;
+}
+
+.app[data-theme="blue"] .popup-admin-grid strong,
+:is([data-theme="blue"], .theme-blue) .app .popup-admin-grid strong {
+  color: #f0f8ff !important;
+}
+
+.app[data-theme="blue"] .popup-table-wrap,
+:is([data-theme="blue"], .theme-blue) .app .popup-table-wrap {
+  border-color: #1e3a63 !important;
+}
+
+.app[data-theme="blue"] .popup-table th,
+:is([data-theme="blue"], .theme-blue) .app .popup-table th {
+  background: #162a4d !important;
+  color: #93c5fd !important;
+  border-bottom-color: #1e3a63 !important;
+}
+
+.app[data-theme="blue"] .popup-table td,
+:is([data-theme="blue"], .theme-blue) .app .popup-table td {
+  border-bottom-color: #162a4d !important;
+  color: #f0f8ff !important;
+}
+
+.app[data-theme="blue"] .role-badge,
+:is([data-theme="blue"], .theme-blue) .app .role-badge {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #38bdf8 !important;
+}
+
+.app[data-theme="blue"] .popup-feature-list li,
+:is([data-theme="blue"], .theme-blue) .app .popup-feature-list li {
+  background: #0d1f3b !important;
+  border-color: #1e3a63 !important;
+  color: #f0f8ff !important;
+}
+
+.app[data-theme="blue"] .popup-empty-note,
+:is([data-theme="blue"], .theme-blue) .app .popup-empty-note {
+  background: #0d1f3b !important;
+  border-color: #1e3a63 !important;
+  color: #93c5fd !important;
+}

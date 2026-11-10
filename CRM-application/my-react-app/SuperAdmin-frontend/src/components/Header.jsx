@@ -27,9 +27,9 @@ export default function Header({ sidebarCollapsed, onToggleSidebar }) {
         >
           <Menu size={20} />
         </button>
-        <div>
+        {/* <div>
           <h1>SHNOOR CRM</h1>
-        </div>
+        </div> */}
       </div>
       <div className="header-actions">
         <ToggleTheme />

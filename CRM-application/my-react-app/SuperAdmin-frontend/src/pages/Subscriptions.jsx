@@ -20,6 +20,7 @@ export default function Subscriptions() {
   } = usePlatform();
 
   const [selected, setSelected] = useState(null);
+  const [viewingSubOrg, setViewingSubOrg] = useState(null);
   const [editPlanId, setEditPlanId] = useState(null);
   const [form, setForm] = useState(null);
 
@@ -111,7 +112,12 @@ export default function Subscriptions() {
           const active = organizations.filter((org) => org.subscriptionStatus === "Active").length;
 
           return (
-            <article className="plan-card editable-plan-card" key={plan.id}>
+            <article
+              className="plan-card editable-plan-card"
+              key={plan.id}
+              onClick={() => setSelected({ plan, organizations })}
+              style={{ cursor: "pointer" }}
+            >
               <span>{plan.name}</span>
               <strong>{formatCurrency(plan.price)}
                 <small>/{plan.billing.toLowerCase()}</small>
@@ -123,14 +129,20 @@ export default function Subscriptions() {
               <div className="plan-card-actions">
                 <button
                   className="secondary-button"
-                  onClick={() => setSelected({ plan, organizations })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected({ plan, organizations });
+                  }}
                 >
                   View Details
                 </button>
 
                 <button
                   className="primary-button"
-                  onClick={() => openEdit(plan)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(plan);
+                  }}
                 >
                   <Pencil size={14} />
                   Edit Plan
@@ -167,7 +179,11 @@ export default function Subscriptions() {
                 const plan = data.plans.find((item) => item.id === org.planId);
 
                 return (
-                  <tr key={org.id}>
+                  <tr
+                    key={org.id}
+                    onClick={() => setViewingSubOrg(org)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <td>
                       <strong>{org.name}</strong>
                     </td>
@@ -178,7 +194,10 @@ export default function Subscriptions() {
                     <td>
                       <button
                         className="table-action"
-                        onClick={() => openOrganizationEdit(org)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openOrganizationEdit(org);
+                        }}
                       >
                         <Pencil size={14} />
                         Edit
@@ -194,6 +213,113 @@ export default function Subscriptions() {
           </table>
         </div>
       </section>
+
+      {/* Organization Subscription Details Popup Modal */}
+      <Modal
+        open={Boolean(viewingSubOrg)}
+        title={viewingSubOrg ? `${viewingSubOrg.name} — Subscription Details` : "Subscription Details"}
+        onClose={() => setViewingSubOrg(null)}
+        size="large"
+      >
+        {viewingSubOrg && (() => {
+          const plan = data.plans.find((p) => p.id === viewingSubOrg.planId);
+          return (
+            <div className="sub-popup-content">
+              <div className="popup-header-banner">
+                <div className="popup-org-mark">
+                  {viewingSubOrg.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="popup-header-info">
+                  <h3>{viewingSubOrg.name}</h3>
+                  <p>Plan: <strong>{plan?.name || "No Plan"}</strong> &middot; Joined {viewingSubOrg.joined || "N/A"}</p>
+                </div>
+                <div className="popup-header-statuses">
+                  <Status value={viewingSubOrg.subscriptionStatus} />
+                  <Status value={viewingSubOrg.paymentStatus || "Unpaid"} />
+                </div>
+              </div>
+
+              <div className="popup-grid four-cards">
+                <div className="popup-card">
+                  <span>Current Plan</span>
+                  <strong>{plan?.name || "-"}</strong>
+                  <small>{plan?.billing || "Monthly"} billing</small>
+                </div>
+
+                <div className="popup-card">
+                  <span>Price / Fee</span>
+                  <strong>{plan ? formatCurrency(plan.price) : "₹0"}</strong>
+                  <small>per {plan ? plan.billing.toLowerCase() : "month"}</small>
+                </div>
+
+                <div className="popup-card">
+                  <span>User Limit</span>
+                  <strong>{viewingSubOrg.users?.length || 0} / {plan?.userLimit || 0}</strong>
+                  <small>{Math.max(0, (plan?.userLimit || 0) - (viewingSubOrg.users?.length || 0))} seats available</small>
+                </div>
+
+                <div className="popup-card">
+                  <span>Payment Status</span>
+                  <strong>{viewingSubOrg.paymentStatus || "Paid"}</strong>
+                  <small>Billing status</small>
+                </div>
+              </div>
+
+              <div className="popup-section">
+                <h4>Plan Inclusions & Features</h4>
+                {plan && plan.features?.length > 0 ? (
+                  <ul className="popup-feature-list">
+                    {plan.features.map((feature, i) => (
+                      <li key={i}>{feature}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="popup-empty-note">No specific features listed for this plan.</div>
+                )}
+              </div>
+
+              <div className="popup-section">
+                <h4>Billing & Admin Contact</h4>
+                <div className="popup-admin-grid">
+                  <div>
+                    <span>Admin Name</span>
+                    <strong>{viewingSubOrg.admin?.name || "-"}</strong>
+                  </div>
+                  <div>
+                    <span>Billing Email</span>
+                    <strong>{viewingSubOrg.admin?.email || "-"}</strong>
+                  </div>
+                  <div>
+                    <span>Contact Phone</span>
+                    <strong>{viewingSubOrg.admin?.phone || "-"}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => {
+                    const orgToEdit = viewingSubOrg;
+                    setViewingSubOrg(null);
+                    openOrganizationEdit(orgToEdit);
+                  }}
+                >
+                  <Pencil size={14} /> Edit Subscription
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setViewingSubOrg(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       <Modal
         open={Boolean(selected)}
