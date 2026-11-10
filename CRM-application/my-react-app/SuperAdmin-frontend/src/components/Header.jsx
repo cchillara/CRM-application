@@ -34,7 +34,7 @@ export default function Header({ sidebarCollapsed, onToggleSidebar }) {
       <div className="header-actions">
         <ToggleTheme />
         <div className="header-account">
-          <button type="button" className="header-user-button" aria-label="Open account page" onClick={() => navigate("/account")}>
+          <button type="button" className="header-user-button" aria-label="Open account page" onClick={() => navigate("/super-admin/account")}>
             <CircleUserRound size={20} />
           </button>
         </div>
