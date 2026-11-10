@@ -1,7 +1,8 @@
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Building, Calendar, DollarSign, Pencil, Phone, Plus, Search, Trash2, User, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
+import DetailPopup from "../components/DetailPopup";
 import Status from "../components/Status";
 import { usePlatform } from "../context/PlatformContext";
 import { superAdminRequest } from "../api/superAdminApi";
@@ -20,6 +21,7 @@ export default function Organizations() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [viewingOrg, setViewingOrg] = useState(null);
+  const [popupTab, setPopupTab] = useState("details");
   const [editOrgId, setEditOrgId] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -271,148 +273,212 @@ export default function Organizations() {
         </div>
       </section>
 
-      {/* Organization Details Popup Modal */}
-      <Modal
-        open={Boolean(viewingOrg)}
-        title={viewingOrg ? `${viewingOrg.name} — Organization Details` : "Organization Details"}
+      {/* Organization Details Popup Dialog in exact screenshot format */}
+      <DetailPopup
+        isOpen={Boolean(viewingOrg)}
         onClose={() => setViewingOrg(null)}
-        size="large"
+        title={viewingOrg?.name}
+        tier={(() => {
+          const p = data.plans.find((item) => item.id === viewingOrg?.planId);
+          return p ? p.name.replace(/ plan$/i, "") : "Enterprise";
+        })()}
+        phone={viewingOrg?.admin?.phone || "+91 98111 22233"}
+        tabs={[
+          { id: "details", label: "Organization Details", icon: Building },
+          { id: "users", label: "Team Members", icon: Users, badge: viewingOrg?.users?.length || 0 },
+          { id: "admin", label: "Admin Contact", icon: User },
+        ]}
+        activeTab={popupTab}
+        onTabChange={setPopupTab}
+        footerActions={
+          <>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                const orgToEdit = viewingOrg;
+                setViewingOrg(null);
+                openEdit(orgToEdit, { stopPropagation: () => {} });
+              }}
+            >
+              <Pencil size={14} /> Edit Organization
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                const id = viewingOrg.id;
+                setViewingOrg(null);
+                navigate(`/organizations/${id}`);
+              }}
+            >
+              View Full Details Page
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setViewingOrg(null)}
+            >
+              Close
+            </button>
+          </>
+        }
       >
-        {viewingOrg && (
-          <div className="org-popup-content">
-            <div className="popup-header-banner">
-              <div className="popup-org-mark">
-                {viewingOrg.name.slice(0, 2).toUpperCase()}
-              </div>
-              <div className="popup-header-info">
-                <h3>{viewingOrg.name}</h3>
-                <p>Organization ID: {viewingOrg.id} &middot; Joined {viewingOrg.joined || "N/A"}</p>
-              </div>
-              <div className="popup-header-statuses">
-                <Status value={viewingOrg.status} />
-                <Status value={viewingOrg.subscriptionStatus} />
-                <Status value={viewingOrg.paymentStatus} />
-              </div>
-            </div>
-
-            <div className="popup-grid four-cards">
-              <div className="popup-card">
-                <span>Plan</span>
-                <strong>{data.plans.find((p) => p.id === viewingOrg.planId)?.name || "No plan"}</strong>
-                <small>{(() => {
-                  const p = data.plans.find((item) => item.id === viewingOrg.planId);
-                  return p ? `₹${p.price.toLocaleString("en-IN")} / ${p.billing.toLowerCase()}` : "Free tier";
-                })()}</small>
-              </div>
-
-              <div className="popup-card">
-                <span>Users</span>
-                <strong>{viewingOrg.users?.length || 0}</strong>
-                <small>{(() => {
-                  const p = data.plans.find((item) => item.id === viewingOrg.planId);
-                  return p ? `Max ${p.userLimit} user limit` : "Active members";
-                })()}</small>
-              </div>
-
-              <div className="popup-card">
-                <span>Subscription</span>
-                <strong>{viewingOrg.subscriptionStatus || "Active"}</strong>
-                <small>Current status</small>
-              </div>
-
-              <div className="popup-card">
-                <span>Payment</span>
-                <strong>{viewingOrg.paymentStatus || "Paid"}</strong>
-                <small>Payment status</small>
-              </div>
-            </div>
-
-            <div className="popup-section">
-              <h4>Organization Admin</h4>
-              <div className="popup-admin-grid">
-                <div>
-                  <span>Admin Name</span>
-                  <strong>{viewingOrg.admin?.name || "-"}</strong>
-                </div>
-                <div>
-                  <span>Email Address</span>
-                  <strong>{viewingOrg.admin?.email || "-"}</strong>
-                </div>
-                <div>
-                  <span>Phone Number</span>
-                  <strong>{viewingOrg.admin?.phone || "-"}</strong>
+        {viewingOrg && popupTab === "details" && (() => {
+          const plan = data.plans.find((item) => item.id === viewingOrg.planId);
+          return (
+            <section className="crm-slideover-section" aria-label="Organization details">
+              <div className="crm-slideover-section-header">
+                <div className="crm-slideover-section-title">
+                  <Building size={16} />
+                  <span>Organization details</span>
                 </div>
               </div>
-            </div>
 
-            <div className="popup-section">
-              <div className="popup-section-header">
-                <h4>Organization Users ({viewingOrg.users?.length || 0})</h4>
+              <div className="crm-lead-details-grid">
+                <div className="crm-lead-detail-item crm-lead-detail-full">
+                  <span className="crm-lead-detail-label">ORGANIZATION DESCRIPTION</span>
+                  <p className="crm-lead-detail-desc">
+                    {viewingOrg.name} is registered under the {plan?.name || "Enterprise"} tier with {viewingOrg.users?.length || 0} active team members and primary administrator {viewingOrg.admin?.name || "assigned contact"}.
+                  </p>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">ID</span>
+                  <span className="crm-lead-detail-value">{viewingOrg.id}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <User size={12} /> CONTACT PERSON
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingOrg.admin?.name || "Rahul Sharma"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Phone size={12} /> CONTACT NUMBER
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingOrg.admin?.phone || "+91 98111 22233"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Calendar size={12} /> CREATED DATE
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingOrg.joined || "10-01-2026"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">STATUS</span>
+                  <span className="crm-lead-detail-value">
+                    <span className={`crm-status-badge ${viewingOrg.status === "Active" ? "badge-active" : "badge-danger"}`}>
+                      {viewingOrg.status || "Active"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">PRIORITY</span>
+                  <span className="crm-lead-detail-value">
+                    <span className="crm-status-badge badge-pending">
+                      {plan?.name?.includes("Enterprise") ? "High" : plan?.name?.includes("Pro") ? "Medium" : "Standard"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <DollarSign size={12} /> EXPECTED VALUE
+                  </span>
+                  <span className="crm-lead-detail-value" style={{ color: "#059669", fontWeight: 700 }}>
+                    ₹{plan ? plan.price.toLocaleString("en-IN") : "120,000"}
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Users size={12} /> ACTIVE USERS
+                  </span>
+                  <span className="crm-lead-detail-value">
+                    {viewingOrg.users?.length || 0} / {plan?.userLimit || 25} Users
+                  </span>
+                </div>
               </div>
-              {viewingOrg.users && viewingOrg.users.length > 0 ? (
-                <div className="popup-table-wrap">
-                  <table className="popup-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Joined</th>
+            </section>
+          );
+        })()}
+
+        {viewingOrg && popupTab === "users" && (
+          <section className="crm-slideover-section" aria-label="Team members">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <Users size={16} />
+                <span>Team Members ({viewingOrg.users?.length || 0})</span>
+              </div>
+            </div>
+            {viewingOrg.users && viewingOrg.users.length > 0 ? (
+              <div className="crm-popup-table-wrap">
+                <table className="crm-popup-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewingOrg.users.map((user) => (
+                      <tr key={user.id}>
+                        <td><strong>{user.name}</strong></td>
+                        <td>{user.email}</td>
+                        <td><span className="crm-status-badge badge-progress">{user.role}</span></td>
+                        <td><span className={`crm-status-badge ${user.status === "Active" ? "badge-active" : "badge-pending"}`}>{user.status}</span></td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {viewingOrg.users.map((user) => (
-                        <tr key={user.id}>
-                          <td><strong>{user.name}</strong></td>
-                          <td>{user.email}</td>
-                          <td><span className="role-badge">{user.role}</span></td>
-                          <td><Status value={user.status} /></td>
-                          <td>{user.joined || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="popup-empty-note">No users have been added to this organization yet.</div>
-              )}
-            </div>
-
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => {
-                  const orgToEdit = viewingOrg;
-                  setViewingOrg(null);
-                  openEdit(orgToEdit, { stopPropagation: () => {} });
-                }}
-              >
-                <Pencil size={14} /> Edit Organization
-              </button>
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  const id = viewingOrg.id;
-                  setViewingOrg(null);
-                  navigate(`/organizations/${id}`);
-                }}
-              >
-                View Full Page
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setViewingOrg(null)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "13px" }}>No users registered for this organization yet.</p>
+            )}
+          </section>
         )}
-      </Modal>
+
+        {viewingOrg && popupTab === "admin" && (
+          <section className="crm-slideover-section" aria-label="Admin contact">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <User size={16} />
+                <span>Primary Organization Admin</span>
+              </div>
+            </div>
+            <div className="crm-lead-details-grid">
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><User size={12}/> Admin Name</span>
+                <span className="crm-lead-detail-value">{viewingOrg.admin?.name || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Email Address</span>
+                <span className="crm-lead-detail-value">{viewingOrg.admin?.email || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><Phone size={12}/> Phone Number</span>
+                <span className="crm-lead-detail-value">{viewingOrg.admin?.phone || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Payment Status</span>
+                <span className="crm-lead-detail-value">
+                  <span className={`crm-status-badge ${viewingOrg.paymentStatus === "Paid" ? "badge-active" : "badge-pending"}`}>
+                    {viewingOrg.paymentStatus || "Paid"}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+      </DetailPopup>
 
       <Modal open={open} title="Add Organization" onClose={() => setOpen(false)}>
         <form className="form-stack" onSubmit={submit}>

@@ -1,6 +1,7 @@
-import { Pencil } from "lucide-react";
+import { Building, Calendar, Check, CreditCard, DollarSign, Pencil, Phone, Sparkles, User, Users } from "lucide-react";
 import { useState } from "react";
 import Modal from "../components/Modal";
+import DetailPopup from "../components/DetailPopup";
 import Status from "../components/Status";
 import { usePlatform } from "../context/PlatformContext";
 
@@ -21,6 +22,8 @@ export default function Subscriptions() {
 
   const [selected, setSelected] = useState(null);
   const [viewingSubOrg, setViewingSubOrg] = useState(null);
+  const [subPopupTab, setSubPopupTab] = useState("details");
+  const [planPopupTab, setPlanPopupTab] = useState("details");
   const [editPlanId, setEditPlanId] = useState(null);
   const [form, setForm] = useState(null);
 
@@ -214,184 +217,358 @@ export default function Subscriptions() {
         </div>
       </section>
 
-      {/* Organization Subscription Details Popup Modal */}
-      <Modal
-        open={Boolean(viewingSubOrg)}
-        title={viewingSubOrg ? `${viewingSubOrg.name} — Subscription Details` : "Subscription Details"}
+      {/* Organization Subscription Details Popup Dialog (matching screenshot format) */}
+      <DetailPopup
+        isOpen={Boolean(viewingSubOrg)}
         onClose={() => setViewingSubOrg(null)}
-        size="large"
+        title={viewingSubOrg?.name}
+        tier={(() => {
+          const plan = data.plans.find((p) => p.id === viewingSubOrg?.planId);
+          return plan ? plan.name.replace(/ plan$/i, "") : "Enterprise";
+        })()}
+        phone={viewingSubOrg?.admin?.phone || "+91 98111 22233"}
+        tabs={[
+          { id: "details", label: "Subscription Details", icon: CreditCard },
+          { id: "features", label: "Plan Features", icon: Check },
+          { id: "admin", label: "Billing Admin", icon: User },
+        ]}
+        activeTab={subPopupTab}
+        onTabChange={setSubPopupTab}
+        footerActions={
+          <>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                const orgToEdit = viewingSubOrg;
+                setViewingSubOrg(null);
+                openOrganizationEdit(orgToEdit);
+              }}
+            >
+              <Pencil size={14} /> Edit Subscription
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setViewingSubOrg(null)}
+            >
+              Close
+            </button>
+          </>
+        }
       >
-        {viewingSubOrg && (() => {
+        {viewingSubOrg && subPopupTab === "details" && (() => {
           const plan = data.plans.find((p) => p.id === viewingSubOrg.planId);
           return (
-            <div className="sub-popup-content">
-              <div className="popup-header-banner">
-                <div className="popup-org-mark">
-                  {viewingSubOrg.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="popup-header-info">
-                  <h3>{viewingSubOrg.name}</h3>
-                  <p>Plan: <strong>{plan?.name || "No Plan"}</strong> &middot; Joined {viewingSubOrg.joined || "N/A"}</p>
-                </div>
-                <div className="popup-header-statuses">
-                  <Status value={viewingSubOrg.subscriptionStatus} />
-                  <Status value={viewingSubOrg.paymentStatus || "Unpaid"} />
+            <section className="crm-slideover-section" aria-label="Subscription details">
+              <div className="crm-slideover-section-header">
+                <div className="crm-slideover-section-title">
+                  <CreditCard size={16} />
+                  <span>Subscription details</span>
                 </div>
               </div>
 
-              <div className="popup-grid four-cards">
-                <div className="popup-card">
-                  <span>Current Plan</span>
-                  <strong>{plan?.name || "-"}</strong>
-                  <small>{plan?.billing || "Monthly"} billing</small>
+              <div className="crm-lead-details-grid">
+                <div className="crm-lead-detail-item crm-lead-detail-full">
+                  <span className="crm-lead-detail-label">SUBSCRIPTION DESCRIPTION</span>
+                  <p className="crm-lead-detail-desc">
+                    Active subscription for {viewingSubOrg.name} on the {plan?.name || "Enterprise"} tier billed {plan?.billing?.toLowerCase() || "monthly"} with {viewingSubOrg.users?.length || 0} enrolled users.
+                  </p>
                 </div>
 
-                <div className="popup-card">
-                  <span>Price / Fee</span>
-                  <strong>{plan ? formatCurrency(plan.price) : "₹0"}</strong>
-                  <small>per {plan ? plan.billing.toLowerCase() : "month"}</small>
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">ID</span>
+                  <span className="crm-lead-detail-value">SUB-{viewingSubOrg.id.slice(0, 8)}</span>
                 </div>
 
-                <div className="popup-card">
-                  <span>User Limit</span>
-                  <strong>{viewingSubOrg.users?.length || 0} / {plan?.userLimit || 0}</strong>
-                  <small>{Math.max(0, (plan?.userLimit || 0) - (viewingSubOrg.users?.length || 0))} seats available</small>
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <User size={12} /> CONTACT PERSON
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingSubOrg.admin?.name || "Rahul Sharma"}</span>
                 </div>
 
-                <div className="popup-card">
-                  <span>Payment Status</span>
-                  <strong>{viewingSubOrg.paymentStatus || "Paid"}</strong>
-                  <small>Billing status</small>
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Phone size={12} /> CONTACT NUMBER
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingSubOrg.admin?.phone || "+91 98111 22233"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Calendar size={12} /> CREATED DATE
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingSubOrg.joined || "10-01-2026"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">STATUS</span>
+                  <span className="crm-lead-detail-value">
+                    <span className={`crm-status-badge ${viewingSubOrg.subscriptionStatus === "Active" ? "badge-active" : "badge-pending"}`}>
+                      {viewingSubOrg.subscriptionStatus || "Active"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">PRIORITY</span>
+                  <span className="crm-lead-detail-value">
+                    <span className="crm-status-badge badge-pending">
+                      {plan?.name?.includes("Enterprise") ? "High" : plan?.name?.includes("Pro") ? "Medium" : "Standard"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <DollarSign size={12} /> EXPECTED VALUE
+                  </span>
+                  <span className="crm-lead-detail-value" style={{ color: "#059669", fontWeight: 700 }}>
+                    ₹{plan ? plan.price.toLocaleString("en-IN") : "120,000"}
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Users size={12} /> ACTIVE USERS
+                  </span>
+                  <span className="crm-lead-detail-value">
+                    {viewingSubOrg.users?.length || 0} / {plan?.userLimit || 25} Users
+                  </span>
                 </div>
               </div>
-
-              <div className="popup-section">
-                <h4>Plan Inclusions & Features</h4>
-                {plan && plan.features?.length > 0 ? (
-                  <ul className="popup-feature-list">
-                    {plan.features.map((feature, i) => (
-                      <li key={i}>{feature}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="popup-empty-note">No specific features listed for this plan.</div>
-                )}
-              </div>
-
-              <div className="popup-section">
-                <h4>Billing & Admin Contact</h4>
-                <div className="popup-admin-grid">
-                  <div>
-                    <span>Admin Name</span>
-                    <strong>{viewingSubOrg.admin?.name || "-"}</strong>
-                  </div>
-                  <div>
-                    <span>Billing Email</span>
-                    <strong>{viewingSubOrg.admin?.email || "-"}</strong>
-                  </div>
-                  <div>
-                    <span>Contact Phone</span>
-                    <strong>{viewingSubOrg.admin?.phone || "-"}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => {
-                    const orgToEdit = viewingSubOrg;
-                    setViewingSubOrg(null);
-                    openOrganizationEdit(orgToEdit);
-                  }}
-                >
-                  <Pencil size={14} /> Edit Subscription
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setViewingSubOrg(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+            </section>
           );
         })()}
-      </Modal>
 
-      <Modal
-        open={Boolean(selected)}
-        title={selected ? `${selected.plan.name} Plan` : "Plan Details"}
+        {viewingSubOrg && subPopupTab === "features" && (() => {
+          const plan = data.plans.find((p) => p.id === viewingSubOrg.planId);
+          return (
+            <section className="crm-slideover-section" aria-label="Plan features">
+              <div className="crm-slideover-section-header">
+                <div className="crm-slideover-section-title">
+                  <Check size={16} />
+                  <span>{plan?.name || "Enterprise"} Plan Features & Inclusions</span>
+                </div>
+              </div>
+              {plan && plan.features?.length > 0 ? (
+                <ul className="popup-feature-list">
+                  {plan.features.map((feat, i) => (
+                    <li key={i}>{feat}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "13px" }}>No specific features listed for this plan.</p>
+              )}
+            </section>
+          );
+        })()}
+
+        {viewingSubOrg && subPopupTab === "admin" && (
+          <section className="crm-slideover-section" aria-label="Billing contact">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <User size={16} />
+                <span>Billing Admin Contact</span>
+              </div>
+            </div>
+            <div className="crm-lead-details-grid">
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><User size={12}/> Admin Name</span>
+                <span className="crm-lead-detail-value">{viewingSubOrg.admin?.name || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Billing Email</span>
+                <span className="crm-lead-detail-value">{viewingSubOrg.admin?.email || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><Phone size={12}/> Contact Number</span>
+                <span className="crm-lead-detail-value">{viewingSubOrg.admin?.phone || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Payment Status</span>
+                <span className="crm-lead-detail-value">
+                  <span className={`crm-status-badge ${viewingSubOrg.paymentStatus === "Paid" ? "badge-active" : "badge-pending"}`}>
+                    {viewingSubOrg.paymentStatus || "Paid"}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+      </DetailPopup>
+
+      {/* Plan Details Popup Dialog (matching screenshot format) */}
+      <DetailPopup
+        isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
-        size="large"
+        title={selected?.plan?.name ? `${selected.plan.name} Plan` : "Plan Details"}
+        tier={selected?.plan?.name?.replace(/ plan$/i, "") || "Enterprise"}
+        subtitle={`Billed ${selected?.plan?.billing || "Monthly"}`}
+        tabs={[
+          { id: "details", label: "Plan Details", icon: CreditCard },
+          { id: "orgs", label: "Subscribed Organizations", icon: Building, badge: selected?.organizations?.length || 0 },
+          { id: "features", label: "Included Features", icon: Check },
+        ]}
+        activeTab={planPopupTab}
+        onTabChange={setPlanPopupTab}
+        footerActions={
+          <>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                const planToEdit = selected.plan;
+                setSelected(null);
+                openEdit(planToEdit);
+              }}
+            >
+              <Pencil size={14} /> Edit Plan
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setSelected(null)}
+            >
+              Close
+            </button>
+          </>
+        }
       >
-        {selected && (
-          <div className="plan-details">
-            <div className="detail-cards compact">
-              <div className="detail-card plan-detail-price">
-                <span>Price</span>
-                <strong>{formatCurrency(selected.plan.price)}</strong>
-                <small>per {selected.plan.billing.toLowerCase()}</small>
-              </div>
-
-              <div className="detail-card plan-detail-users">
-                <span>User Limit</span>
-                <strong>{selected.plan.userLimit}</strong>
-                <small>users per organization</small>
-              </div>
-
-              <div className="detail-card plan-detail-organizations">
-                <span>Organizations</span>
-                <strong>{selected.organizations.length}</strong>
-                <small>using this plan</small>
+        {selected && planPopupTab === "details" && (
+          <section className="crm-slideover-section" aria-label="Plan details">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <CreditCard size={16} />
+                <span>Plan details</span>
               </div>
             </div>
 
-            <div className="plan-description">
-              <span className="plan-description-label">PLAN SUMMARY</span>
-              <p>
-                The {selected.plan.name} plan is billed {selected.plan.billing.toLowerCase()} at {formatCurrency(selected.plan.price)} per billing cycle and supports up to {selected.plan.userLimit} users per organization. It includes {selected.plan.features.length} listed {selected.plan.features.length === 1 ? "feature" : "features"} and is currently used by {selected.organizations.length} {selected.organizations.length === 1 ? "organization" : "organizations"}.
-              </p>
+            <div className="crm-lead-details-grid">
+              <div className="crm-lead-detail-item crm-lead-detail-full">
+                <span className="crm-lead-detail-label">PLAN DESCRIPTION</span>
+                <p className="crm-lead-detail-desc">
+                  The {selected.plan.name} plan is billed {selected.plan.billing.toLowerCase()} at {formatCurrency(selected.plan.price)} per billing cycle and supports up to {selected.plan.userLimit} users per organization.
+                </p>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">ID</span>
+                <span className="crm-lead-detail-value">{selected.plan.id}</span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">
+                  <CreditCard size={12} /> TIER NAME
+                </span>
+                <span className="crm-lead-detail-value">{selected.plan.name}</span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">
+                  <Calendar size={12} /> BILLING CYCLE
+                </span>
+                <span className="crm-lead-detail-value">{selected.plan.billing}</span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">
+                  <Users size={12} /> USER LIMIT
+                </span>
+                <span className="crm-lead-detail-value">Up to {selected.plan.userLimit} users</span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">STATUS</span>
+                <span className="crm-lead-detail-value">
+                  <span className="crm-status-badge badge-active">Available</span>
+                </span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">PRIORITY</span>
+                <span className="crm-lead-detail-value">
+                  <span className="crm-status-badge badge-pending">
+                    {selected.plan.name.includes("Enterprise") ? "High" : selected.plan.name.includes("Pro") ? "Medium" : "Standard"}
+                  </span>
+                </span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">
+                  <DollarSign size={12} /> EXPECTED VALUE
+                </span>
+                <span className="crm-lead-detail-value" style={{ color: "#059669", fontWeight: 700 }}>
+                  {formatCurrency(selected.plan.price)}
+                </span>
+              </div>
+
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">
+                  <Building size={12} /> SUBSCRIBED ORGS
+                </span>
+                <span className="crm-lead-detail-value">
+                  {selected.organizations.length} Organizations
+                </span>
+              </div>
             </div>
+          </section>
+        )}
 
-            <h3>What this plan offers</h3>
+        {selected && planPopupTab === "orgs" && (
+          <section className="crm-slideover-section" aria-label="Subscribed organizations">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <Building size={16} />
+                <span>Subscribed Organizations ({selected.organizations.length})</span>
+              </div>
+            </div>
+            {selected.organizations.length > 0 ? (
+              <div className="crm-popup-table-wrap">
+                <table className="crm-popup-table">
+                  <thead>
+                    <tr>
+                      <th>Organization</th>
+                      <th>Users</th>
+                      <th>Subscription</th>
+                      <th>Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.organizations.map((org) => (
+                      <tr key={org.id}>
+                        <td><strong>{org.name}</strong></td>
+                        <td>{org.users?.length || 0}</td>
+                        <td><span className="crm-status-badge badge-active">{org.subscriptionStatus}</span></td>
+                        <td><span className={`crm-status-badge ${org.paymentStatus === "Paid" ? "badge-active" : "badge-pending"}`}>{org.paymentStatus || "Paid"}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "13px" }}>No organizations currently subscribed to this plan.</p>
+            )}
+          </section>
+        )}
 
-            <ul className="feature-list">
-              {selected.plan.features.map((feature) => (
-                <li key={feature}>{feature}</li>
+        {selected && planPopupTab === "features" && (
+          <section className="crm-slideover-section" aria-label="Plan features">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <Check size={16} />
+                <span>What this plan offers</span>
+              </div>
+            </div>
+            <ul className="popup-feature-list">
+              {selected.plan.features.map((feature, i) => (
+                <li key={i}>{feature}</li>
               ))}
             </ul>
-
-            <div className="modal-actions">
-              <button
-                className="primary-button"
-                onClick={() => openEdit(selected.plan)}
-              >
-                <Pencil size={14} />
-                Edit Plan
-              </button>
-            </div>
-
-            {selected.organizations.length > 0 && (
-              <>
-                <h3>Organizations on this plan</h3>
-                <div className="simple-list">
-                  {selected.organizations.map((org) => (
-                    <div key={org.id}>
-                      <strong>{org.name}</strong>
-                      <span>
-                        {org.users.length} {org.users.length === 1 ? "user" : "users"} &middot; {org.subscriptionStatus} &middot; {org.paymentStatus}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          </section>
         )}
-      </Modal>
+      </DetailPopup>
 
       <Modal
         open={Boolean(editingPlan && form)}
