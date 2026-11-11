@@ -11,9 +11,6 @@ import { validateBody } from "../middleware/validateRequest.js";
 
 const router = Router();
 
-// Apply tight rate limiting to every auth endpoint.
-router.use(authLimiter);
-
 router.get(
     "/protected",
     requireUser,
@@ -30,6 +27,7 @@ router.post("/super-admin/logout", logoutSuperAdmin);
 
 router.post(
     "/register",
+    authLimiter,
     verifyFirebaseToken,
     validateBody({
         required: ["firstName"],

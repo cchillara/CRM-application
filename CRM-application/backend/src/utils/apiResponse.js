@@ -11,7 +11,12 @@
         // Support both calling conventions:
         // 1. Standard: new ApiResponse(statusCode, data, message) -> 3 args
         // 2. Legacy:   new ApiResponse(statusCode, errors, data, message) -> 4 args
-        if (Array.isArray(arg2)) {
+        if (arguments.length === 3 && typeof arg3 === "string") {
+            // Check the compact form first: array data is common for list APIs.
+            this.errors = [];
+            this.data = arg2;
+            this.message = arg3;
+        } else if (Array.isArray(arg2)) {
             // (statusCode, errors, data, message)
             this.errors = arg2;
             this.data = arg3;

@@ -380,8 +380,14 @@ export function PlatformProvider({ children }) {
             body: JSON.stringify({ firstName, lastName: lastName.join(" "), email: form.adminEmail.trim(), password: form.adminPassword, role: "ORGANIZATION_ADMIN" })
           });
         } catch (error) {
-          await refreshOrganizations().catch(() => {});
-          error.createdOrganizationId = organization.id;
+          if (error.status !== 409) throw error;
+          try {
+            await superAdminRequest(`/organizations/${organization.id}`, { method: "DELETE" });
+            await refreshOrganizations().catch(() => {});
+            error.message = `${error.message} The incomplete organization was removed.`;
+          } catch (cleanupError) {
+            error.message = `${error.message} The organization was created but could not be removed; its ID is ${organization.id}.`;
+          }
           throw error;
         }
       }

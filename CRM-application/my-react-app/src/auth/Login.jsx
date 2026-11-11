@@ -4,7 +4,7 @@ import "./Auth.css";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
 
 function Login() {
     const navigate = useNavigate();
@@ -43,9 +43,8 @@ function Login() {
                 headers,
             });
             const superAdminData = await superAdminResponse.json().catch(() => ({}));
-
             if (superAdminResponse.ok) {
-                window.location.replace("/super-admin/");
+                navigate("/super-admin/", { replace: true });
                 return;
             }
 
@@ -69,7 +68,7 @@ function Login() {
                 throw new Error("Your account does not have a supported CRM role.");
             }
 
-            navigate(destination, { replace: true });
+            window.location.replace(destination);
         } catch (error) {
             const firebaseMessages = {
                 "auth/invalid-credential": "Email or password is incorrect.",

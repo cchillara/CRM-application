@@ -644,6 +644,19 @@ function App() {
   });
 
   useEffect(() => {
+    // Public pages and Super Admin use separate auth flows. Only CRM routes
+    // need the CRM profile lookup.
+    const currentPath = window.location.pathname;
+    if (
+      currentPath === "/" ||
+      currentPath === "/login" ||
+      currentPath === "/signup" ||
+      currentPath.startsWith("/super-admin")
+    ) {
+      setAuthState({ loading: false, firebaseUser: null, crmUser: null });
+      return undefined;
+    }
+
     let active = true;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

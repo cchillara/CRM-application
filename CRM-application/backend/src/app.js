@@ -1,5 +1,6 @@
 ﻿import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 
 import authRouter from "./routes/auth.routes.js";
@@ -75,6 +76,7 @@ app.use(helmet());
 app.use(requestId);
 app.use(httpLogger);
 app.use(cors(corsOptions));
+app.use(cookieParser());
 app.use(express.json());
 
 /* ──────────────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 // In local development Vite proxies /api to the Node API. Set
 // VITE_API_BASE_URL only when the dashboard is deployed outside that proxy.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
-const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
 
 export async function superAdminRequest(path, options = {}) {
   let response;
@@ -32,9 +31,6 @@ export async function superAdminRequest(path, options = {}) {
     const endpoint = `${API_BASE_URL}/super-admin${path}`;
     const error = new Error(`${method} ${endpoint}: ${result.message || `Request failed (${response.status})`}`);
     error.status = response.status;
-    if (response.status === 401 || response.status === 403) {
-      window.location.replace(LOGIN_URL);
-    }
     throw error;
   }
   return result.data;
@@ -55,9 +51,6 @@ export async function superAdminDownload(path, fallbackFilename) {
     const result = await response.json().catch(() => ({}));
     const error = new Error(`GET ${API_BASE_URL}/super-admin${path}: ${result.message || `Request failed (${response.status})`}`);
     error.status = response.status;
-    if (response.status === 401 || response.status === 403) {
-      window.location.replace(LOGIN_URL);
-    }
     throw error;
   }
 
