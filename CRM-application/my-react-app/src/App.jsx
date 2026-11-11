@@ -1,25 +1,85 @@
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import "./App.css";
 import Login from "./auth/Login";
 import Signup from "./auth/Signup";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
+import SalesLayout from "./components/sales/SalesLayout.jsx";
+import SalesDashboard from "./pages/sales/SalesDashboard.jsx";
+import SalesLeads from "./pages/sales/SalesLeads.jsx";
+import SalesLeadDetails from "./pages/sales/SalesLeadDetails.jsx";
+import SalesCustomers from "./pages/sales/SalesCustomers.jsx";
+import SalesTasks from "./pages/sales/SalesTasks.jsx";
+import SalesCalendar from "./pages/sales/SalesCalendar.jsx";
+import SalesNotes from "./pages/sales/SalesNotes.jsx";
+import SalesProducts from "./pages/sales/SalesProducts.jsx";
+import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
+import SalesProfile from "./pages/sales/SalesProfile.jsx";
+import SalesSettings from "./pages/sales/SalesSettings.jsx";
+import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes";
+import { PlatformProvider } from "../SuperAdmin-frontend/src/context/PlatformContext.jsx";
 
-function App() {
-  const path = window.location.pathname;
+const SuperAdminApp = lazy(() => import("../SuperAdmin-frontend/src/App.jsx"));
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+
+function RequireAuthentication({ authState }) {
+  if (authState.loading) return <div>Loading...</div>;
+  if (!authState.firebaseUser || !authState.crmUser) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Outlet />;
+}
+
+function RequireRole({ authState, role }) {
+  if (authState.crmUser?.role !== role) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
+function RequireAnyRole({ authState, roles }) {
+  if (!roles.includes(authState.crmUser?.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
+function SuperAdminPortal() {
+  return (
+    <div className="super-admin-app">
+      <PlatformProvider>
+        <Suspense fallback={<div>Loading Super Admin dashboard...</div>}>
+          <SuperAdminApp />
+        </Suspense>
+      </PlatformProvider>
+    </div>
+  );
+}
+
+function RoleDashboard({ authState }) {
+  const role = authState.crmUser?.role;
+
+  if (role === "SALES") {
+    return <SalesLayout><SalesDashboard /></SalesLayout>;
+  }
+
+  if (role === "MANAGER" || role === "ORGANIZATION_ADMIN") {
+    return <Navigate to="/client-admin" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
+}
+
+function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  if (path === "/login") {
-    return <Login />;
-  }
-
-  if (path === "/signup") {
-    return <Signup />;
-  }
 
   const closeMenu = () => setMenuOpen(false);
 
+
   return (
     <div className="site">
-      {/* ================= HEADER ================= */}
       <header className="navbar">
         <a href="#home" className="logo" onClick={closeMenu}>
           SHNOOR<span>.</span>
@@ -67,8 +127,6 @@ function App() {
           <span></span>
         </button>
       </header>
-
-      {/* ================= HERO ================= */}
       <main>
         <section className="hero" id="home">
           <div className="hero-content">
@@ -575,6 +633,86 @@ function App() {
         </div>
       </footer>
     </div>
+  );
+}
+/* Edited by subham sharma on 06-10-2026*/
+function App() {
+  const [authState, setAuthState] = useState({
+    loading: true,
+    firebaseUser: null,
+    crmUser: null,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!active) return;
+
+      if (!firebaseUser) {
+        setAuthState({ loading: false, firebaseUser: null, crmUser: null });
+        return;
+      }
+
+      setAuthState({ loading: true, firebaseUser, crmUser: null });
+
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const response = await fetch(`${API_BASE_URL}/auth/protected`, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || "Unable to load authenticated user");
+        }
+
+        if (active) {
+          setAuthState({ loading: false, firebaseUser, crmUser: result.data });
+        }
+      } catch (error) {
+        console.error(error);
+        if (active) {
+          setAuthState({ loading: false, firebaseUser, crmUser: null });
+        }
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/super-admin/*" element={<SuperAdminPortal />} />
+      <Route element={<RequireAuthentication authState={authState} />}>
+        <Route element={<RequireAnyRole authState={authState} roles={["MANAGER", "ORGANIZATION_ADMIN"]} />}>
+          <Route path="/client-admin/*" element={<ClientAdminRoutes />} />
+        </Route>
+        <Route path="/dashboard" element={<RoleDashboard authState={authState} />} />
+        <Route element={<RequireRole authState={authState} role="SALES" />}>
+          <Route element={<SalesLayout />}>
+            <Route path="/leads/:leadId" element={<SalesLeadDetails />} />
+            <Route path="/leads" element={<SalesLeads />} />
+            <Route path="/customers" element={<SalesCustomers />} />
+            <Route path="/tasks" element={<SalesTasks />} />
+            <Route path="/calendar" element={<SalesCalendar />} />
+            <Route path="/notes" element={<SalesNotes />} />
+            <Route path="/products" element={<SalesProducts />} />
+            <Route path="/analytics" element={<SalesAnalytics />} />
+            <Route path="/profile" element={<SalesProfile />} />
+            <Route path="/settings" element={<SalesSettings />} />
+          </Route>
+        </Route>
+      </Route>
+      <Route path="/sales/*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 

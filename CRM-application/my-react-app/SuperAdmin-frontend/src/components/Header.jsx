@@ -1,13 +1,19 @@
 import { useNavigate } from "react-router-dom";
-import { CircleUserRound, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { CircleUserRound, LogOut, Menu } from "lucide-react";
+import { logoutSuperAdmin } from "../api/superAdminApi";
+import ToggleTheme from "./ThemeToggle";
 
-export default function Header({ sidebarCollapsed, onToggleSidebar, theme, onToggleTheme }) {
+export default function Header({ sidebarCollapsed, onToggleSidebar }) {
   const navigate = useNavigate();
 
-  function logout() {
-    ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
+  async function logout() {
+    try {
+      await logoutSuperAdmin();
+    } catch (error) {
+      console.warn("Super Admin logout could not clear the server session:", error.message);
+    }
     sessionStorage.clear();
-    window.location.href = import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login";
+    window.location.replace(import.meta.env.VITE_LOGIN_URL || "/login");
   }
 
   return (
@@ -21,22 +27,14 @@ export default function Header({ sidebarCollapsed, onToggleSidebar, theme, onTog
         >
           <Menu size={20} />
         </button>
-        <div>
+        {/* <div>
           <h1>SHNOOR CRM</h1>
-        </div>
+        </div> */}
       </div>
       <div className="header-actions">
-        <button
-          type="button"
-          className="header-theme-toggle"
-          onClick={onToggleTheme}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-        >
-          {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
-        </button>
+        <ToggleTheme />
         <div className="header-account">
-          <button type="button" className="header-user-button" aria-label="Open account page" onClick={() => navigate("/account")}>
+          <button type="button" className="header-user-button" aria-label="Open account page" onClick={() => navigate("/super-admin/account")}>
             <CircleUserRound size={20} />
           </button>
         </div>

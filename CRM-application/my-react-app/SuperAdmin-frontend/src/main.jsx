@@ -2,14 +2,12 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { PlatformProvider } from "./context/PlatformContext";
+import { BrowserRouter } from "react-router-dom";
 import "./styles.css";
 
-const handoffToken = new URLSearchParams(window.location.hash.slice(1)).get("token");
-if (handoffToken) {
-  localStorage.setItem("shnoorSuperAdminToken", handoffToken);
+if (new URLSearchParams(window.location.hash.slice(1)).has("token")) {
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
 }
-
 class DashboardErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -31,7 +29,7 @@ class DashboardErrorBoundary extends React.Component {
           <h1>Dashboard could not be displayed</h1>
           <p>{this.state.error.message || "An unexpected dashboard error occurred."}</p>
           <button type="button" onClick={() => window.location.reload()}>Reload dashboard</button>
-          <a href={import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login"} style={{ marginLeft: 16 }}>Return to login</a>
+          <a href={import.meta.env.VITE_LOGIN_URL || "/login"} style={{ marginLeft: 16 }}>Return to login</a>
         </main>
       );
     }
@@ -42,9 +40,11 @@ class DashboardErrorBoundary extends React.Component {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <DashboardErrorBoundary>
-      <PlatformProvider>
-        <App />
-      </PlatformProvider>
+      <BrowserRouter>
+        <PlatformProvider>
+          <App />
+        </PlatformProvider>
+      </BrowserRouter>
     </DashboardErrorBoundary>
   </React.StrictMode>
 );

@@ -43,7 +43,7 @@ export default function OrganizationDetails() {
     return (
       <section className="panel">
         <h3>Organization not found</h3>
-        <button className="text-button" onClick={() => navigate("/organizations")}>
+        <button className="text-button" onClick={() => navigate("/super-admin/organizations")}>
           Back to organizations
         </button>
       </section>
@@ -105,7 +105,7 @@ export default function OrganizationDetails() {
     setActionError("");
     try {
       await deleteOrganization(organization.id);
-      navigate("/organizations");
+      navigate("/super-admin/organizations");
     } catch (error) {
       setActionError(error.message || "Could not delete the organization.");
     }
@@ -156,7 +156,7 @@ export default function OrganizationDetails() {
     <>
       {actionError && <div className="inline-error" role="alert">{actionError}</div>}
       <div className="details-heading">
-        <button className="back-button" onClick={() => navigate("/organizations")}>
+        <button className="back-button" onClick={() => navigate("/super-admin/organizations")}>
           <ArrowLeft size={16} />
           Back
         </button>

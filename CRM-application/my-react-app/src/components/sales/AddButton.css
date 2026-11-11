@@ -1,0 +1,25 @@
+.sales-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--blue-primary, var(--blue));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--blue-primary, var(--blue));
+  color: var(--white, #fff);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sales-add-button:hover {
+  filter: brightness(.95);
+}
+
+.sales-add-button:focus-visible {
+  outline: 2px solid var(--blue-primary, var(--blue));
+  outline-offset: 2px;
+}
