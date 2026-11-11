@@ -9,14 +9,15 @@ import {
   Calendar,
   AlertTriangle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Download
 } from 'lucide-react';
 import {
   leadsByStatus as fallbackStatusBars,
   recentLeads, deals, initialTasks,
 } from '../data';
 import { getStored } from '../storage';
-import { getDashboard } from './../Api/Dashboard';
+import { getDashboard, exportReport } from './../Api/Dashboard';
 import { getTasks } from './../Api/Tasks';
 import { useNavigate } from 'react-router-dom';
 import ToggleTheme from '../components/ThemeToggle';
@@ -140,6 +141,7 @@ export default function Dashboard() {
   const [leadList, setLeadList] = useState(() => (storedLeads.length > 0 ? storedLeads.slice(0, 6) : recentLeads));
   const [statusBars, setStatusBars] = useState(() => fallbackStatusBars);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [overdueTasks, setOverdueTasks] = useState(() => processOverdueTasks(storedTasks));
   const [isOverdueOpen, setIsOverdueOpen] = useState(false);
 
@@ -188,6 +190,25 @@ export default function Dashboard() {
       });
   }, []);
 
+  const handleExportReport = async () => {
+    setExporting(true);
+    try {
+      const report = await exportReport();
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `crm-report-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(`Export report failed: ${error.message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('firebaseToken');
@@ -199,6 +220,18 @@ export default function Dashboard() {
 
   return (
     <div className="crm-dashboard">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+        <button
+          type="button"
+          className="crm-banner-btn"
+          onClick={handleExportReport}
+          title="Download full organization report"
+          disabled={exporting}
+        >
+          <Download size={14} className={exporting ? 'crm-spin' : ''} />
+          <span>{exporting ? 'Exporting...' : 'Export Report'}</span>
+        </button>
+      </div>
 
       <section className="crm-overdue-widget">
         <div

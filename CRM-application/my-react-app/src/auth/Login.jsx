@@ -15,6 +15,7 @@ function Login() {
     const [loading, setLoading] = useState(false);
 
     const [showPassword, setShowPassword] = useState(false);
+    const [credentialsEnabled, setCredentialsEnabled] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -146,6 +147,7 @@ function Login() {
                     <form
                         onSubmit={handleLogin}
                         className="auth-form"
+                        autoComplete="off"
                     >
                         <div className="form-group">
                             <label htmlFor="email">
@@ -154,7 +156,13 @@ function Login() {
 
                             <input
                                 id="email"
+                                name="crm-login-email"
                                 type="email"
+                                autoComplete="off"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                readOnly={!credentialsEnabled}
+                                onFocus={() => setCredentialsEnabled(true)}
                                 placeholder="Enter your email"
                                 value={email}
                                 onChange={(e) =>
@@ -172,12 +180,16 @@ function Login() {
                             <div className="input-wrapper">
                                 <input
                                     id="password"
+                                    name="crm-login-password"
                                     className="password-input"
                                     type={
                                         showPassword
                                             ? "text"
                                             : "password"
                                     }
+                                    autoComplete="new-password"
+                                    readOnly={!credentialsEnabled}
+                                    onFocus={() => setCredentialsEnabled(true)}
                                     placeholder="Enter your password"
                                     value={password}
                                     onChange={(e) =>

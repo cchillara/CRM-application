@@ -1,6 +1,9 @@
 import crypto from "crypto";
 import prisma from "../db/index.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { ApiError } from "../utils/apiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { auth } from "../firebase-admin.js";
 
 const mapLeadSource = (src) => {
     const s = String(src || '').toUpperCase().trim();
@@ -13,13 +16,11 @@ const mapLeadSource = (src) => {
     return 'OTHER';
 };
 
-const validateUserRole = (r) => ['ORGANIZATION_ADMIN', 'MANAGER', 'SALES'].includes(r);
-const validateUserStatus = (s) => ['INVITED', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'].includes(s);
-
 const mapLeadStatus = (st) => {
     const s = String(st || '').toUpperCase().trim();
-    if (['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'PENDING', 'CONVERTED'].includes(s)) return s;
+    if (['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED'].includes(s)) return s;
     if (s === 'ACTIVE') return 'NEW';
+    if (s === 'PENDING') return 'CONTACTED';
     return 'NEW';
 };
 
@@ -104,63 +105,101 @@ const getClientAdmin = async (firebaseUid, email) => {
         user,
     };
 };
-const formatLead = (l) => {
-    let extraMeta = {};
-    if (l.description) {
-        try {
-            if (l.description.startsWith('{')) {
-                extraMeta = JSON.parse(l.description);
-            }
-        } catch (e) { }
-    }
 
-    const contactName = l.contact?.name || extraMeta.contact || extraMeta.contactPerson || 'Direct Contact';
-    const email = l.contact?.email || extraMeta.email || 'contact@lead.com';
-    const phone = l.contact?.phone || extraMeta.phone || '-';
-    const tier = extraMeta.tier || 'Growth';
-    const numVal = Number(extraMeta.value ?? extraMeta.numericValue) || 0;
+/* ──────────────────────────────────────────────────────────────
+ * Shared role/status validators (reused by Employees and Users)
+ * These were previously called but never defined, causing ReferenceError.
+ * ──────────────────────────────────────────────────────────────*/
+const VALID_USER_ROLES = new Set(["ORGANIZATION_ADMIN", "MANAGER", "SALES"]);
+const VALID_USER_STATUSES = new Set(["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"]);
+
+const validateUserRole = (role) => VALID_USER_ROLES.has(role);
+const validateUserStatus = (status) => VALID_USER_STATUSES.has(status);
+
+/* ──────────────────────────────────────────────────────────────
+ * LEAD_INCLUDE – shared Prisma include shape for lead relations.
+ * ──────────────────────────────────────────────────────────────*/
+const LEAD_INCLUDE = {
+    company: true,
+    contact: true,
+    assignedTo: {
+        select: { id: true, firstName: true, lastName: true },
+    },
+};
+
+/* ──────────────────────────────────────────────────────────────
+ * formatLead
+ *
+ * Maps a Prisma Lead record (with LEAD_INCLUDE relations) to a
+ * frontend-compatible shape.  The existing field names are kept
+ * for backward compatibility; JSON-in-description parsing is
+ * removed in favour of real DB relations.
+ * ──────────────────────────────────────────────────────────────*/
+const formatLead = (l) => {
+    const contactName = l.contact
+        ? `${l.contact.firstName || ''} ${l.contact.lastName || ''}`.trim() || null
+        : null;
     const assignedName = l.assignedTo
         ? `${l.assignedTo.firstName || ''} ${l.assignedTo.lastName || ''}`.trim()
-        : (extraMeta.assignedTo || 'Unassigned');
-
-    const formattedStatus = l.status === 'NEW'
-        ? 'Active'
-        : (l.status === 'PENDING'
-            ? 'Pending'
-            : (l.status === 'CONTACTED'
-                ? 'Contacted'
-                : (l.status === 'QUALIFIED'
-                    ? 'Qualified'
-                    : (l.status === 'UNQUALIFIED'
-                        ? 'Unqualified'
-                        : (l.status === 'CONVERTED'
-                            ? 'Converted'
-                            : 'Active')))));
-    const formattedSource = l.source ? (l.source.charAt(0) + l.source.slice(1).toLowerCase().replace('_', ' ')) : 'Website';
+        : 'Unassigned';
 
     const nameStr = l.title || 'Untitled Lead';
-    const initials = nameStr.split(' ').filter(Boolean).map(p => p[0]).join('').slice(0, 2).toUpperCase() || 'LE';
-    const stLower = formattedStatus.toLowerCase();
-    const stType = ['active', 'qualified', 'contacted', 'pending', 'unqualified', 'converted'].includes(stLower) ? stLower : 'pending';
+    const initials = nameStr
+        .split(' ')
+        .filter(Boolean)
+        .map((p) => p[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'LE';
+
+    const stEnum = l.status || 'NEW';
+    const formattedStatus =
+        stEnum === 'NEW' ? 'Active'
+        : stEnum.charAt(0) + stEnum.slice(1).toLowerCase().replace(/_/g, ' ');
+    const stType =
+        stEnum === 'NEW' ? 'active'
+        : stEnum === 'QUALIFIED' ? 'qualified'
+        : 'pending';
+
+    const formattedSource = l.source
+        ? l.source.charAt(0) + l.source.slice(1).toLowerCase().replace(/_/g, ' ')
+        : 'Other';
 
     return {
         id: l.id,
         name: l.title,
         title: l.title,
+        description: l.description,
         contact: contactName,
-        email,
-        phone,
-        tier,
+        email: l.contact?.email ?? null,
+        phone: l.contact?.phone ?? null,
         avatarInitials: initials,
-        value: numVal ? `$${numVal.toLocaleString()}` : '$0',
-        numericValue: numVal,
+        // value/numericValue/tier kept for frontend backward-compatibility.
+        // The Lead schema has no numeric value column; these are safe defaults.
+        value: '$0',
+        numericValue: 0,
+        tier: 'Growth',
         status: formattedStatus,
         statusType: stType,
         source: formattedSource,
         assignedTo: assignedName,
+        assignedToId: l.assignedToId,
+        companyId: l.companyId,
+        contactId: l.contactId,
+        convertedAt: l.convertedAt,
         createdAt: l.createdAt,
-        updatedAt: l.updatedAt
+        updatedAt: l.updatedAt,
     };
+};
+
+/* ──────────────────────────────────────────────────────────────
+ * DEAL_INCLUDE – shared Prisma include shape for deal relations.
+ * ──────────────────────────────────────────────────────────────*/
+const DEAL_INCLUDE = {
+    customer: { include: { company: true } },
+    assignedTo: {
+        select: { id: true, firstName: true, lastName: true },
+    },
 };
 
 const mapDealStage = (st) => {
@@ -175,7 +214,7 @@ const formatDeal = (d) => {
     if (d.description) {
         try {
             if (d.description.startsWith('{')) extraMeta = JSON.parse(d.description);
-        } catch (e) { }
+        } catch (e) {}
     }
 
     const companyName = d.customer?.company?.name || extraMeta.company || 'Enterprise Client';
@@ -200,31 +239,30 @@ const formatDeal = (d) => {
 
 export const getDashboard = async (req, res) => {
     try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
+        const orgId = req.organizationId || req.user?.organizationId;
+        const whereClause = orgId ? { organizationId: orgId } : {};
 
         const [
             allLeads,
             allDeals
         ] = await Promise.all([
             prisma.lead.findMany({
+                where: whereClause,
                 include: { company: true, contact: true, assignedTo: true },
                 orderBy: { createdAt: "desc" }
             }),
             prisma.deal.findMany({
+                where: whereClause,
                 include: { customer: { include: { company: true } }, assignedTo: true },
                 orderBy: { createdAt: "desc" }
             })
         ]);
 
         const totalLeads = allLeads.length;
-        const newLeadsCount = allLeads.filter(l => l.status === "NEW").length;
-        const contactedLeadsCount = allLeads.filter(l => l.status === "CONTACTED").length;
         const qualifiedLeadsCount = allLeads.filter(l => l.status === "QUALIFIED").length;
-        const unqualifiedLeadsCount = allLeads.filter(l => l.status === "UNQUALIFIED").length;
-        const pendingLeadsCount = allLeads.filter(l => l.status === "PENDING").length;
+        const activeLeadsCount = allLeads.filter(l => l.status === "NEW").length;
+        const pendingLeadsCount = allLeads.filter(l => l.status === "CONTACTED").length;
+        const convertedLeadsCount = allLeads.filter(l => l.status === "CONVERTED").length;
 
         const totalDeals = allDeals.length;
         const openDealsCount = allDeals.filter(d => !["WON", "LOST"].includes(d.stage)).length;
@@ -236,20 +274,32 @@ export const getDashboard = async (req, res) => {
 
         const recentLeadsFormatted = allLeads.slice(0, 6).map(formatLead);
 
-        // All 5 LeadStatus enum values from schema.prisma
         const leadsByStatus = [
-            { label: "New", count: newLeadsCount, percentage: totalLeads > 0 ? Math.round((newLeadsCount / totalLeads) * 100) : 0, color: "#2563eb" },
-            { label: "Contacted", count: contactedLeadsCount, percentage: totalLeads > 0 ? Math.round((contactedLeadsCount / totalLeads) * 100) : 0, color: "#f59e0b" },
-            { label: "Qualified", count: qualifiedLeadsCount, percentage: totalLeads > 0 ? Math.round((qualifiedLeadsCount / totalLeads) * 100) : 0, color: "#10b981" },
-            { label: "Unqualified", count: unqualifiedLeadsCount, percentage: totalLeads > 0 ? Math.round((unqualifiedLeadsCount / totalLeads) * 100) : 0, color: "#ef4444" },
-            { label: "Pending", count: pendingLeadsCount, percentage: totalLeads > 0 ? Math.round((pendingLeadsCount / totalLeads) * 100) : 0, color: "#8b5cf6" }
+            {
+                label: "Active",
+                count: activeLeadsCount,
+                percentage: totalLeads > 0 ? Math.round((activeLeadsCount / totalLeads) * 100) : 0,
+                color: "#2563eb"
+            },
+            {
+                label: "Pending",
+                count: pendingLeadsCount,
+                percentage: totalLeads > 0 ? Math.round((pendingLeadsCount / totalLeads) * 100) : 0,
+                color: "#f59e0b"
+            },
+            {
+                label: "Qualified",
+                count: qualifiedLeadsCount,
+                percentage: totalLeads > 0 ? Math.round((qualifiedLeadsCount / totalLeads) * 100) : 0,
+                color: "#10b981"
+            }
         ];
 
         return res.status(200).json(
             new ApiResponse(200, [], {
                 totalLeads,
                 qualifiedLeads: qualifiedLeadsCount,
-                activeLeads: newLeadsCount,
+                activeLeads: activeLeadsCount,
                 openDeals: openDealsCount,
                 totalDeals,
                 wonDeals: wonDealsCount,
@@ -266,335 +316,631 @@ export const getDashboard = async (req, res) => {
     }
 };
 
-export const listLeads = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
+/**
+ * GET /export-report
+ * Exports comprehensive CRM report data for the authenticated organisation.
+ */
+export const exportReport = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId || req.user?.organizationId;
+    if (!orgId) {
+        throw new ApiError(400, "Organization ID is required to export reports");
+    }
 
-        if (result.error) {
-            return res.status(403).json(
-                new ApiResponse(
-                    403,
-                    [{ message: result.error }],
-                    null,
-                    result.error
-                )
-            );
-        }
-
-        const leads = await prisma.lead.findMany({
+    const [leads, deals, tasks, org] = await Promise.all([
+        prisma.lead.findMany({
+            where: { organizationId: orgId },
+            include: LEAD_INCLUDE,
+            orderBy: { createdAt: "desc" },
+        }),
+        prisma.deal.findMany({
+            where: { organizationId: orgId },
+            include: DEAL_INCLUDE,
+            orderBy: { createdAt: "desc" },
+        }),
+        prisma.task.findMany({
+            where: { organizationId: orgId },
             include: {
-                company: true,
-                contact: true,
-                assignedTo: true,
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
-        });
-
-        return res.status(200).json(
-            new ApiResponse(
-                200,
-                [],
-                leads.map(formatLead),
-                "Leads retrieved successfully"
-            )
-        );
-    } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(
-                500,
-                [{ message: error.message }],
-                null,
-                "Failed to retrieve leads"
-            )
-        );
-    }
-};
-
-export const createLead = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const { title, name, description, status, source, contact, email, phone, tier, value, numericValue, assignedTo, companyId, contactId, assignedToId } = req.body;
-        const leadTitle = title || name;
-        if (!leadTitle) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "Title is required" }], null, "Missing title"));
-        }
-
-        let orgId = result.user.organizationId;
-        if (!orgId) {
-            const org = await prisma.organization.findFirst();
-            orgId = org ? org.id : (await prisma.organization.create({ data: { name: "SHNOOR CRM Organization", status: "ACTIVE" } })).id;
-        }
-
-        const metaPayload = {
-            contact: contact || null,
-            email: email || null,
-            phone: phone || null,
-            tier: tier || 'Growth',
-            value: Number(value || numericValue) || 0,
-            assignedTo: assignedTo || null,
-        };
-        const descPayload = description && !description.startsWith('{') ? description : JSON.stringify(metaPayload);
-
-        let resolvedContactId = contactId || null;
-        if (!resolvedContactId && (contact || email)) {
-            try {
-                let comp = await prisma.company.findFirst({ where: { name: leadTitle, organizationId: orgId } });
-                if (!comp) {
-                    comp = await prisma.company.create({
-                        data: {
-                            name: leadTitle,
-                            email: email || null,
-                            phone: phone || null,
-                            organizationId: orgId,
-                        }
-                    });
-                }
-                const newContact = await prisma.contact.create({
-                    data: {
-                        name: contact || 'Direct Contact',
-                        email: email || null,
-                        phone: phone || null,
-                        companyId: comp.id,
-                    }
-                });
-                resolvedContactId = newContact.id;
-            } catch (err) {
-                // non-blocking
-            }
-        }
-
-        const lead = await prisma.lead.create({
-            data: {
-                title: leadTitle,
-                description: descPayload,
-                status: mapLeadStatus(status),
-                source: mapLeadSource(source),
-                organizationId: orgId,
-                ...(companyId && { companyId }),
-                ...(resolvedContactId && { contactId: resolvedContactId }),
-                ...(assignedToId && { assignedToId }),
-            },
-            include: { company: true, contact: true, assignedTo: true }
-        });
-
-        return res.status(201).json(new ApiResponse(201, [], formatLead(lead), "Lead created successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create lead"));
-    }
-};
-
-export const updateLead = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const existing = await prisma.lead.findUnique({ where: { id: req.params.id } });
-        if (!existing) {
-            return res.status(404).json(new ApiResponse(404, [{ message: "Lead not found" }], null, "Lead not found"));
-        }
-
-        let existingMeta = {};
-        if (existing.description) {
-            try {
-                if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
-            } catch (e) { }
-        }
-
-        const { title, name, description, status, source, contact, email, phone, tier, value, numericValue, assignedTo } = req.body;
-        const updatedMeta = {
-            ...existingMeta,
-            ...(contact !== undefined && { contact }),
-            ...(email !== undefined && { email }),
-            ...(phone !== undefined && { phone }),
-            ...(tier !== undefined && { tier }),
-            ...(value !== undefined && { value: Number(value) }),
-            ...(numericValue !== undefined && { value: Number(numericValue) }),
-            ...(assignedTo !== undefined && { assignedTo }),
-        };
-
-        const lead = await prisma.lead.update({
-            where: { id: req.params.id },
-            data: {
-                ...(title && { title }),
-                ...(name && { title: name }),
-                description: JSON.stringify(updatedMeta),
-                ...(status && { status: mapLeadStatus(status) }),
-                ...(source && { source: mapLeadSource(source) }),
-            },
-            include: { company: true, contact: true, assignedTo: true }
-        });
-
-        return res.status(200).json(new ApiResponse(200, [], formatLead(lead), "Lead updated successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update lead"));
-    }
-};
-
-export const deleteLead = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        await prisma.lead.delete({ where: { id: req.params.id } });
-        return res.status(200).json(new ApiResponse(200, [], null, "Lead deleted successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete lead"));
-    }
-};
-
-
-
-export const listDeals = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const deals = await prisma.deal.findMany({
-            include: {
-                customer: { include: { company: true } },
-                assignedTo: true,
+                assignedTo: {
+                    select: { id: true, firstName: true, lastName: true, email: true },
+                },
             },
             orderBy: { createdAt: "desc" },
+        }),
+        prisma.organization.findUnique({
+            where: { id: orgId },
+            select: { name: true, email: true, website: true, status: true },
+        }),
+    ]);
+
+    const wonDeals = deals.filter((d) => d.stage === "WON");
+    const totalRevenue = wonDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+    const pipelineValue = deals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+
+    const reportData = {
+        organization: org?.name || "CRM Organization",
+        organizationDetails: org,
+        generatedAt: new Date().toISOString(),
+        summary: {
+            totalLeads: leads.length,
+            qualifiedLeads: leads.filter((l) => l.status === "QUALIFIED").length,
+            totalDeals: deals.length,
+            wonDeals: wonDeals.length,
+            totalRevenue,
+            pipelineValue,
+            totalTasks: tasks.length,
+            completedTasks: tasks.filter((t) => t.status === "COMPLETED").length,
+        },
+        leads: leads.map(formatLead),
+        deals: deals.map(formatDeal),
+        tasks,
+    };
+
+    return res.status(200).json(
+        new ApiResponse(200, reportData, "Client Admin report generated successfully")
+    );
+});
+
+/* ──────────────────────────────────────────────────────────────
+ * Leads CRUD
+ *
+ * All handlers:
+ *  - Use asyncHandler so errors reach the central errorHandler.
+ *  - Source organizationId from req.organizationId (set by
+ *    requireClientAdmin middleware) – never from the request body.
+ *  - Apply organisation-scoped WHERE clauses on every DB query.
+ *  - Perform explicit ownership checks before update/delete.
+ *  - Accept only permitted fields (no mass assignment).
+ * ──────────────────────────────────────────────────────────────*/
+
+/**
+ * GET /leads
+ * List leads scoped to the authenticated organisation.
+ * Supports pagination (req.pagination), sorting (req.sorting),
+ * and optional query filters: status, source, assignedToId.
+ */
+export const listLeads = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const { page, limit, skip } = req.pagination;
+    const { sortBy, sortOrder } = req.sorting;
+    const { status, source, assignedToId } = req.query;
+
+    const where = { organizationId: orgId };
+
+    if (status) {
+        where.status = mapLeadStatus(status);
+    }
+    if (source) {
+        where.source = mapLeadSource(source);
+    }
+    if (assignedToId) {
+        where.assignedToId = assignedToId;
+    }
+
+    const [leads, total] = await Promise.all([
+        prisma.lead.findMany({
+            where,
+            include: LEAD_INCLUDE,
+            orderBy: { [sortBy]: sortOrder },
+            skip,
+            take: limit,
+        }),
+        prisma.lead.count({ where }),
+    ]);
+
+    // Spread ApiResponse to add pagination metadata without changing
+    // the existing data shape (data remains the leads array).
+    const response = new ApiResponse(200, [], leads.map(formatLead), "Leads retrieved successfully");
+    return res.status(200).json({
+        ...response,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    });
+});
+
+/**
+ * GET /leads/:id
+ * Retrieve a single lead by ID, scoped to the authenticated organisation.
+ */
+export const getLead = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const orgId = req.organizationId;
+
+    const lead = await prisma.lead.findFirst({
+        where: { id, organizationId: orgId },
+        include: LEAD_INCLUDE,
+    });
+
+    if (!lead) {
+        throw new ApiError(404, "Lead not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, [], formatLead(lead), "Lead retrieved successfully")
+    );
+});
+
+/**
+ * POST /leads
+ * Create a new lead for the authenticated organisation.
+ * Only permitted fields are accepted (prevents mass assignment).
+ * organisationId is always sourced from the authenticated context.
+ */
+export const createLead = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    // Permitted fields only – prevents mass assignment.
+    const {
+        title,
+        name,
+        description,
+        status,
+        source,
+        companyId,
+        contactId,
+        assignedToId,
+    } = req.body;
+
+    const leadTitle = (title || name)?.trim();
+
+    if (!leadTitle) {
+        throw new ApiError(400, "Lead title is required");
+    }
+
+    // Map through existing helpers to normalise enum strings.
+    const mappedStatus = status !== undefined ? mapLeadStatus(status) : "NEW";
+    const mappedSource = source !== undefined ? mapLeadSource(source) : "OTHER";
+
+    // Cross-reference checks: related records must belong to this organisation.
+    if (companyId) {
+        const company = await prisma.company.findFirst({
+            where: { id: companyId, organizationId: orgId },
         });
-
-        return res.status(200).json(new ApiResponse(200, [], deals.map(formatDeal), "Deals retrieved successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve deals"));
+        if (!company) {
+            throw new ApiError(400, "Company not found in your organisation");
+        }
     }
-};
 
-export const createDeal = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const { title, description, value, stage, probability, company, contact, owner, expectedCloseDate, customerId, assignedToId } = req.body;
-        if (!title) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "Deal title is required" }], null, "Missing title"));
-        }
-
-        let orgId = result.user.organizationId;
-        if (!orgId) {
-            const org = await prisma.organization.findFirst();
-            orgId = org ? org.id : (await prisma.organization.create({ data: { name: "SHNOOR CRM Organization", status: "ACTIVE" } })).id;
-        }
-
-        // Auto-resolve customerId if not provided
-        let resolvedCustomerId = customerId;
-        const compName = company || 'Client Corporation';
-        if (!resolvedCustomerId) {
-            let comp = await prisma.company.findFirst({ where: { name: compName, organizationId: orgId } });
-            if (!comp) {
-                comp = await prisma.company.create({ data: { name: compName, organizationId: orgId } });
-            }
-            let cust = await prisma.customer.findFirst({ where: { companyId: comp.id, organizationId: orgId } });
-            if (!cust) {
-                cust = await prisma.customer.create({ data: { companyId: comp.id, organizationId: orgId } });
-            }
-            resolvedCustomerId = cust.id;
-        }
-
-        const metaPayload = {
-            company: compName,
-            contact: contact || 'Primary Contact',
-            owner: owner || 'Ravi Kiran',
-            probability: Number(probability) || 60,
-            expectedCloseDate: expectedCloseDate || new Date().toISOString().split('T')[0]
-        };
-        const descPayload = description && !description.startsWith('{') ? description : JSON.stringify(metaPayload);
-
-        const deal = await prisma.deal.create({
-            data: {
-                title,
-                description: descPayload,
-                value: Number(value) || 0,
-                stage: mapDealStage(stage),
-                customerId: resolvedCustomerId,
-                organizationId: orgId,
-                ...(assignedToId && { assignedToId }),
-            },
-            include: { customer: { include: { company: true } }, assignedTo: true }
+    if (contactId) {
+        const contact = await prisma.contact.findFirst({
+            where: { id: contactId, company: { organizationId: orgId } },
         });
-
-        return res.status(201).json(new ApiResponse(201, [], formatDeal(deal), "Deal created successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create deal"));
+        if (!contact) {
+            throw new ApiError(400, "Contact not found in your organisation");
+        }
     }
-};
 
-export const updateDeal = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const existing = await prisma.deal.findUnique({ where: { id: req.params.id } });
-        if (!existing) {
-            return res.status(404).json(new ApiResponse(404, [{ message: "Deal not found" }], null, "Deal not found"));
-        }
-
-        let existingMeta = {};
-        if (existing.description) {
-            try {
-                if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
-            } catch (e) { }
-        }
-
-        const { title, description, value, stage, probability, company, contact, owner, expectedCloseDate } = req.body;
-        const updatedMeta = {
-            ...existingMeta,
-            ...(company !== undefined && { company }),
-            ...(contact !== undefined && { contact }),
-            ...(owner !== undefined && { owner }),
-            ...(probability !== undefined && { probability: Number(probability) }),
-            ...(expectedCloseDate !== undefined && { expectedCloseDate })
-        };
-
-        const deal = await prisma.deal.update({
-            where: { id: req.params.id },
-            data: {
-                ...(title && { title }),
-                description: JSON.stringify(updatedMeta),
-                ...(value !== undefined && { value: Number(value) }),
-                ...(stage && { stage: mapDealStage(stage) })
-            },
-            include: { customer: { include: { company: true } }, assignedTo: true }
+    if (assignedToId) {
+        const assignee = await prisma.user.findFirst({
+            where: { id: assignedToId, organizationId: orgId },
         });
-
-        return res.status(200).json(new ApiResponse(200, [], formatDeal(deal), "Deal updated successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update deal"));
-    }
-};
-
-export const deleteDeal = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
+        if (!assignee) {
+            throw new ApiError(400, "Assigned user not found in your organisation");
         }
-
-        await prisma.deal.delete({ where: { id: req.params.id } });
-        return res.status(200).json(new ApiResponse(200, [], null, "Deal deleted successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete deal"));
     }
-};
+
+    const lead = await prisma.lead.create({
+        data: {
+            title: leadTitle,
+            description: description?.trim() || null,
+            status: mappedStatus,
+            source: mappedSource,
+            organizationId: orgId,
+            ...(companyId && { companyId }),
+            ...(contactId && { contactId }),
+            ...(assignedToId && { assignedToId }),
+        },
+        include: LEAD_INCLUDE,
+    });
+
+    return res.status(201).json(
+        new ApiResponse(201, [], formatLead(lead), "Lead created successfully")
+    );
+});
+
+/**
+ * PATCH /leads/:id
+ * Update an existing lead, verifying organisation ownership first.
+ * title takes precedence over name (fixes original ordering bug).
+ */
+export const updateLead = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const orgId = req.organizationId;
+
+    // findFirst with org scope returns null for cross-org or nonexistent IDs.
+    const existing = await prisma.lead.findFirst({
+        where: { id, organizationId: orgId },
+    });
+
+    if (!existing) {
+        throw new ApiError(404, "Lead not found");
+    }
+
+    // Permitted fields only – prevents mass assignment.
+    const {
+        title,
+        name,
+        description,
+        status,
+        source,
+        companyId,
+        contactId,
+        assignedToId,
+    } = req.body;
+
+    // title takes explicit precedence over name.
+    const newTitle = title?.trim() || name?.trim();
+
+    // Validate cross-org references when explicitly provided.
+    if (companyId !== undefined && companyId !== null) {
+        const company = await prisma.company.findFirst({
+            where: { id: companyId, organizationId: orgId },
+        });
+        if (!company) {
+            throw new ApiError(400, "Company not found in your organisation");
+        }
+    }
+
+    if (contactId !== undefined && contactId !== null) {
+        const contact = await prisma.contact.findFirst({
+            where: { id: contactId, company: { organizationId: orgId } },
+        });
+        if (!contact) {
+            throw new ApiError(400, "Contact not found in your organisation");
+        }
+    }
+
+    if (assignedToId !== undefined && assignedToId !== null) {
+        const assignee = await prisma.user.findFirst({
+            where: { id: assignedToId, organizationId: orgId },
+        });
+        if (!assignee) {
+            throw new ApiError(400, "Assigned user not found in your organisation");
+        }
+    }
+
+    const updateData = {
+        ...(newTitle && { title: newTitle }),
+        ...(description !== undefined && { description: description?.trim() || null }),
+        ...(status !== undefined && { status: mapLeadStatus(status) }),
+        ...(source !== undefined && { source: mapLeadSource(source) }),
+        ...(companyId !== undefined && { companyId: companyId || null }),
+        ...(contactId !== undefined && { contactId: contactId || null }),
+        ...(assignedToId !== undefined && { assignedToId: assignedToId || null }),
+    };
+
+    const lead = await prisma.lead.update({
+        where: { id },
+        data: updateData,
+        include: LEAD_INCLUDE,
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, [], formatLead(lead), "Lead updated successfully")
+    );
+});
+
+/**
+ * DELETE /leads/:id
+ * Delete a lead after verifying organisation ownership.
+ */
+export const deleteLead = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const orgId = req.organizationId;
+
+    // findFirst with org scope returns null for cross-org or nonexistent IDs.
+    const existing = await prisma.lead.findFirst({
+        where: { id, organizationId: orgId },
+    });
+
+    if (!existing) {
+        throw new ApiError(404, "Lead not found");
+    }
+
+    await prisma.lead.delete({ where: { id } });
+
+    return res.status(200).json(
+        new ApiResponse(200, [], null, "Lead deleted successfully")
+    );
+});
+
+/* ──────────────────────────────────────────────────────────────
+ * Deals CRUD
+ *
+ * All handlers:
+ *  - Use asyncHandler so errors reach the central errorHandler.
+ *  - Source organizationId from req.organizationId (set by
+ *    requireClientAdmin middleware) – never from the request body.
+ *  - Apply organisation-scoped WHERE clauses on every DB query.
+ *  - Perform explicit ownership checks before update/delete.
+ *  - Accept only permitted fields (no mass assignment).
+ * ──────────────────────────────────────────────────────────────*/
+
+/**
+ * GET /deals
+ * List deals scoped to the authenticated organisation.
+ * Supports pagination (req.pagination), sorting (req.sorting),
+ * and optional query filters: stage, assignedToId, customerId.
+ */
+export const listDeals = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const { page = 1, limit = 10, skip = 0 } = req.pagination || {};
+    const { sortBy = "createdAt", sortOrder = "desc" } = req.sorting || {};
+    const { stage, assignedToId, customerId } = req.query;
+
+    const where = { organizationId: orgId };
+
+    if (stage) {
+        where.stage = mapDealStage(stage);
+    }
+    if (assignedToId) {
+        where.assignedToId = assignedToId;
+    }
+    if (customerId) {
+        where.customerId = customerId;
+    }
+
+    const [deals, total] = await Promise.all([
+        prisma.deal.findMany({
+            where,
+            include: DEAL_INCLUDE,
+            orderBy: { [sortBy]: sortOrder },
+            skip,
+            take: limit,
+        }),
+        prisma.deal.count({ where }),
+    ]);
+
+    const response = new ApiResponse(200, [], deals.map(formatDeal), "Deals retrieved successfully");
+    return res.status(200).json({
+        ...response,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    });
+});
+
+/**
+ * GET /deals/:id
+ * Retrieve a single deal by ID, scoped to the authenticated organisation.
+ */
+export const getDeal = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const orgId = req.organizationId;
+
+    const deal = await prisma.deal.findFirst({
+        where: { id, organizationId: orgId },
+        include: DEAL_INCLUDE,
+    });
+
+    if (!deal) {
+        throw new ApiError(404, "Deal not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, [], formatDeal(deal), "Deal retrieved successfully")
+    );
+});
+
+/**
+ * POST /deals
+ * Create a new deal for the authenticated organisation.
+ * Only permitted fields are accepted (prevents mass assignment).
+ * organizationId is always sourced from the authenticated context.
+ */
+export const createDeal = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    const {
+        title,
+        description,
+        value,
+        stage,
+        probability,
+        company,
+        companyId,
+        contact,
+        owner,
+        expectedCloseDate,
+        customerId,
+        assignedToId,
+    } = req.body;
+
+    const dealTitle = title?.trim();
+    if (!dealTitle) {
+        throw new ApiError(400, "Deal title is required");
+    }
+
+    let resolvedCustomerId = customerId;
+    if (resolvedCustomerId) {
+        const customer = await prisma.customer.findFirst({
+            where: { id: resolvedCustomerId, organizationId: orgId },
+        });
+        if (!customer) {
+            throw new ApiError(400, "Customer not found in your organisation");
+        }
+    } else if (companyId) {
+        const comp = await prisma.company.findFirst({
+            where: { id: companyId, organizationId: orgId },
+        });
+        if (!comp) {
+            throw new ApiError(400, "Company not found in your organisation");
+        }
+        let cust = await prisma.customer.findFirst({
+            where: { companyId, organizationId: orgId },
+        });
+        if (!cust) {
+            cust = await prisma.customer.create({
+                data: { companyId, organizationId: orgId },
+            });
+        }
+        resolvedCustomerId = cust.id;
+    } else {
+        const compName = (typeof company === "string" && company.trim()) || "Client Corporation";
+        let comp = await prisma.company.findFirst({
+            where: { name: compName, organizationId: orgId },
+        });
+        if (!comp) {
+            comp = await prisma.company.create({
+                data: { name: compName, organizationId: orgId },
+            });
+        }
+        let cust = await prisma.customer.findFirst({
+            where: { companyId: comp.id, organizationId: orgId },
+        });
+        if (!cust) {
+            cust = await prisma.customer.create({
+                data: { companyId: comp.id, organizationId: orgId },
+            });
+        }
+        resolvedCustomerId = cust.id;
+    }
+
+    if (assignedToId) {
+        const assignee = await prisma.user.findFirst({
+            where: { id: assignedToId, organizationId: orgId },
+        });
+        if (!assignee) {
+            throw new ApiError(400, "Assigned user not found in your organisation");
+        }
+    }
+
+    const compName = typeof company === "string" && company.trim() ? company.trim() : "Client Corporation";
+    const metaPayload = {
+        company: compName,
+        contact: typeof contact === "string" ? contact.trim() : "Primary Contact",
+        owner: typeof owner === "string" ? owner.trim() : "Ravi Kiran",
+        probability: probability !== undefined ? Number(probability) : 60,
+        expectedCloseDate: expectedCloseDate || new Date().toISOString().split("T")[0],
+    };
+    const descPayload = description && !description.startsWith("{") ? description : JSON.stringify(metaPayload);
+
+    const deal = await prisma.deal.create({
+        data: {
+            title: dealTitle,
+            description: descPayload,
+            value: value !== undefined ? Number(value) : 0,
+            stage: stage ? mapDealStage(stage) : "PROSPECTING",
+            customerId: resolvedCustomerId,
+            organizationId: orgId,
+            ...(assignedToId && { assignedToId }),
+        },
+        include: DEAL_INCLUDE,
+    });
+
+    return res.status(201).json(
+        new ApiResponse(201, [], formatDeal(deal), "Deal created successfully")
+    );
+});
+
+/**
+ * PATCH /deals/:id
+ * Update an existing deal after verifying organisation ownership.
+ */
+export const updateDeal = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const orgId = req.organizationId;
+
+    const existing = await prisma.deal.findFirst({
+        where: { id, organizationId: orgId },
+    });
+
+    if (!existing) {
+        throw new ApiError(404, "Deal not found");
+    }
+
+    const {
+        title,
+        description,
+        value,
+        stage,
+        probability,
+        company,
+        contact,
+        owner,
+        expectedCloseDate,
+        customerId,
+        assignedToId,
+    } = req.body;
+
+    if (customerId !== undefined && customerId !== null) {
+        const cust = await prisma.customer.findFirst({
+            where: { id: customerId, organizationId: orgId },
+        });
+        if (!cust) {
+            throw new ApiError(400, "Customer not found in your organisation");
+        }
+    }
+
+    if (assignedToId !== undefined && assignedToId !== null) {
+        const assignee = await prisma.user.findFirst({
+            where: { id: assignedToId, organizationId: orgId },
+        });
+        if (!assignee) {
+            throw new ApiError(400, "Assigned user not found in your organisation");
+        }
+    }
+
+    let existingMeta = {};
+    if (existing.description) {
+        try {
+            if (existing.description.startsWith("{")) existingMeta = JSON.parse(existing.description);
+        } catch (e) {}
+    }
+
+    const updatedMeta = {
+        ...existingMeta,
+        ...(company !== undefined && { company: typeof company === "string" ? company.trim() : company }),
+        ...(contact !== undefined && { contact: typeof contact === "string" ? contact.trim() : contact }),
+        ...(owner !== undefined && { owner: typeof owner === "string" ? owner.trim() : owner }),
+        ...(probability !== undefined && { probability: Number(probability) }),
+        ...(expectedCloseDate !== undefined && { expectedCloseDate }),
+    };
+
+    const updateData = {
+        ...(title && { title: title.trim() }),
+        description: description && !description.startsWith("{") ? description : JSON.stringify(updatedMeta),
+        ...(value !== undefined && { value: Number(value) }),
+        ...(stage && { stage: mapDealStage(stage) }),
+        ...(customerId !== undefined && { customerId }),
+        ...(assignedToId !== undefined && { assignedToId }),
+    };
+
+    const deal = await prisma.deal.update({
+        where: { id },
+        data: updateData,
+        include: DEAL_INCLUDE,
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, [], formatDeal(deal), "Deal updated successfully")
+    );
+});
+
+/**
+ * DELETE /deals/:id
+ * Delete a deal after verifying organisation ownership.
+ */
+export const deleteDeal = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const orgId = req.organizationId;
+
+    const existing = await prisma.deal.findFirst({
+        where: { id, organizationId: orgId },
+    });
+
+    if (!existing) {
+        throw new ApiError(404, "Deal not found");
+    }
+
+    await prisma.deal.delete({ where: { id } });
+
+    return res.status(200).json(
+        new ApiResponse(200, [], null, "Deal deleted successfully")
+    );
+});
 
 
 const mapTaskStatus = (st) => {
@@ -611,31 +957,19 @@ const formatTask = (t) => {
         try {
             if (t.description.startsWith('{')) extraMeta = JSON.parse(t.description);
             else extraMeta = { notes: t.description };
-        } catch (e) { }
+        } catch (e) {}
     }
 
     const clientName = extraMeta.client || t.lead?.title || t.customer?.company?.name || 'General';
-    let assignedName = extraMeta.assignedTo;
-    if (!assignedName || assignedName === 'Client Admin') {
-        const uName = t.assignedTo ? `${t.assignedTo.firstName || ''} ${t.assignedTo.lastName || ''}`.trim() : '';
-        if (uName && uName !== 'Client Admin') {
-            assignedName = uName;
-        } else {
-            const fallbackOwners = ['Sarah Jenkins', 'David Miller', 'Arjun Kumar', 'Elena Rostova', 'Marcus Vance', 'Meena Patel', 'Vikram Singh'];
-            const sum = (t.title || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-            assignedName = fallbackOwners[sum % fallbackOwners.length];
-        }
-    }
+    const assignedName = t.assignedTo
+        ? `${t.assignedTo.firstName || ''} ${t.assignedTo.lastName || ''}`.trim()
+        : (extraMeta.assignedTo || 'Sarah Jenkins');
     const priorityVal = extraMeta.priority || 'Medium';
     let dueStr = extraMeta.due;
     if (!dueStr && t.dueDate) {
         try {
-            const d = new Date(t.dueDate);
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            const y = d.getFullYear();
-            dueStr = `${m}-${day}-${y}`;
-        } catch (e) { }
+            dueStr = new Date(t.dueDate).toLocaleDateString();
+        } catch (e) {}
     }
     if (!dueStr) dueStr = 'Upcoming';
 
@@ -645,7 +979,6 @@ const formatTask = (t) => {
         client: clientName,
         assignedTo: assignedName,
         due: dueStr,
-        dueDate: t.dueDate ? t.dueDate.toISOString() : (extraMeta.dueDate || null),
         priority: priorityVal.charAt(0).toUpperCase() + priorityVal.slice(1).toLowerCase(),
         completed: t.status === 'COMPLETED',
         status: t.status,
@@ -654,209 +987,398 @@ const formatTask = (t) => {
     };
 };
 
-export const getTasks = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
+/* ──────────────────────────────────────────────────────────────
+ * Tasks CRUD
+ *
+ * All handlers:
+ *  - Use asyncHandler so errors reach the central errorHandler.
+ *  - Source organizationId from req.organizationId (set by
+ *    requireClientAdmin middleware) – never from the request body.
+ *  - Apply organisation-scoped WHERE clauses on every DB query.
+ *  - Perform explicit ownership checks before update/delete.
+ *  - Accept only permitted fields (no mass assignment).
+ * ──────────────────────────────────────────────────────────────*/
 
-        const tasks = await prisma.task.findMany({
+/**
+ * GET /tasks
+ * List tasks scoped to the authenticated organisation.
+ * Supports pagination (req.pagination), sorting (req.sorting),
+ * and optional query filters: status, assignedToId.
+ */
+export const getTasks = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const { page = 1, limit = 20, skip = 0 } = req.pagination || {};
+    const { sortBy = "createdAt", sortOrder = "desc" } = req.sorting || {};
+    const { status, assignedToId } = req.query;
+
+    const where = { organizationId: orgId };
+
+    if (status) {
+        where.status = mapTaskStatus(status);
+    }
+    if (assignedToId) {
+        where.assignedToId = assignedToId;
+    }
+
+    const [tasks, total] = await Promise.all([
+        prisma.task.findMany({
+            where,
             include: {
                 assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
                 lead: true,
-                customer: { include: { company: true } }
+                customer: { include: { company: true } },
             },
-            orderBy: { createdAt: "desc" }
-        });
+            orderBy: { [sortBy]: sortOrder },
+            skip,
+            take: limit,
+        }),
+        prisma.task.count({ where }),
+    ]);
 
-        return res.status(200).json(new ApiResponse(200, [], tasks.map(formatTask), "Tasks retrieved successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve tasks"));
+    const response = new ApiResponse(200, [], tasks.map(formatTask), "Tasks retrieved successfully");
+    return res.status(200).json({
+        ...response,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+    });
+});
+
+/**
+ * POST /tasks
+ * Create a new task for the authenticated organisation.
+ * Permitted fields only – prevents mass assignment.
+ * organizationId is always sourced from the authenticated context.
+ */
+export const createTask = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const userId = req.crmUser?.id;
+
+    // Permitted fields only.
+    const {
+        title,
+        description,
+        status = "TODO",
+        dueDate,
+        assignedToId,
+        leadId,
+        customerId,
+        dealId,
+        // Display-only metadata fields (stored in JSON description)
+        client,
+        assignedTo: assignedToName,
+        due,
+        priority = "Medium",
+    } = req.body;
+
+    if (!title || !String(title).trim()) {
+        throw new ApiError(400, "Task title is required");
     }
-};
 
-export const createTask = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
+    const targetAssignedToId = assignedToId || userId;
+
+    // Validate cross-org references.
+    if (assignedToId) {
+        const assignee = await prisma.user.findFirst({
+            where: { id: assignedToId, organizationId: orgId },
+        });
+        if (!assignee) {
+            throw new ApiError(400, "Assigned user not found in your organisation");
         }
+    }
 
-        const { title, client, assignedTo, due, dueDate, priority = "Medium", status = "TODO", description, assignedToId, leadId, dealId } = req.body;
-        if (!title) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "Task title is required" }], null, "Missing title"));
+    if (leadId) {
+        const lead = await prisma.lead.findFirst({
+            where: { id: leadId, organizationId: orgId },
+        });
+        if (!lead) {
+            throw new ApiError(400, "Lead not found in your organisation");
         }
+    }
 
-        let orgId = result.user.organizationId;
-        if (!orgId) {
-            const org = await prisma.organization.findFirst();
-            orgId = org ? org.id : (await prisma.organization.create({ data: { name: "SHNOOR CRM Organization", status: "ACTIVE" } })).id;
+    if (customerId) {
+        const customer = await prisma.customer.findFirst({
+            where: { id: customerId, organizationId: orgId },
+        });
+        if (!customer) {
+            throw new ApiError(400, "Customer not found in your organisation");
         }
+    }
 
-        const targetAssignedToId = assignedToId || result.user.id;
-
-        const metaPayload = {
-            client: client || 'General',
-            assignedTo: (assignedTo && assignedTo !== 'Client Admin')
-                ? assignedTo
-                : 'Sarah Jenkins',
-            due: due || (dueDate ? new Date(dueDate).toLocaleDateString() : 'Upcoming'),
-            priority: priority || 'Medium',
-        };
-        const descPayload = description && !description.startsWith('{') ? description : JSON.stringify(metaPayload);
-
-        let parsedDueDate = null;
-        if (dueDate) {
-            const d = new Date(dueDate);
-            if (!isNaN(d.getTime())) parsedDueDate = d;
-        } else if (due) {
-            const d = new Date(due);
-            if (!isNaN(d.getTime())) parsedDueDate = d;
+    if (dealId) {
+        const deal = await prisma.deal.findFirst({
+            where: { id: dealId, organizationId: orgId },
+        });
+        if (!deal) {
+            throw new ApiError(400, "Deal not found in your organisation");
         }
+    }
 
-        const task = await prisma.task.create({
-            data: {
-                title,
-                description: descPayload,
-                status: mapTaskStatus(status),
-                dueDate: parsedDueDate,
-                organizationId: orgId,
-                assignedToId: targetAssignedToId,
-                ...(leadId && { leadId }),
-                ...(dealId && { dealId }),
+    // Build description with display metadata.
+    const metaPayload = {
+        client: client || 'General',
+        assignedTo: assignedToName || 'Unassigned',
+        due: due || (dueDate ? new Date(dueDate).toLocaleDateString() : 'Upcoming'),
+        priority: priority || 'Medium',
+    };
+    const descPayload = description && !String(description).startsWith('{') ? description : JSON.stringify(metaPayload);
+
+    let parsedDueDate = null;
+    if (dueDate) {
+        const d = new Date(dueDate);
+        if (!isNaN(d.getTime())) parsedDueDate = d;
+    }
+
+    const task = await prisma.task.create({
+        data: {
+            title: String(title).trim(),
+            description: descPayload,
+            status: mapTaskStatus(status),
+            dueDate: parsedDueDate,
+            organizationId: orgId,
+            assignedToId: targetAssignedToId,
+            ...(leadId && { leadId }),
+            ...(customerId && { customerId }),
+            ...(dealId && { dealId }),
+        },
+        include: {
+            assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+            lead: true,
+        },
+    });
+
+    return res.status(201).json(new ApiResponse(201, [], formatTask(task), "Task created successfully"));
+});
+
+
+export const updateTask = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    const existing = await prisma.task.findFirst({
+        where: { id: req.params.id, organizationId: orgId },
+    });
+    if (!existing) {
+        throw new ApiError(404, "Task not found");
+    }
+
+    let existingMeta = {};
+    if (existing.description) {
+        try {
+            if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
+        } catch (e) {}
+    }
+
+    // Permitted fields only.
+    const {
+        title,
+        description,
+        status,
+        dueDate,
+        assignedToId,
+        leadId,
+        customerId,
+        dealId,
+        client,
+        assignedTo: assignedToName,
+        due,
+        priority,
+    } = req.body;
+
+    // Validate cross-org references when provided.
+    if (assignedToId !== undefined && assignedToId !== null) {
+        const assignee = await prisma.user.findFirst({
+            where: { id: assignedToId, organizationId: orgId },
+        });
+        if (!assignee) {
+            throw new ApiError(400, "Assigned user not found in your organisation");
+        }
+    }
+
+    const updatedMeta = {
+        ...existingMeta,
+        ...(client !== undefined && { client }),
+        ...(assignedToName !== undefined && { assignedTo: assignedToName }),
+        ...(due !== undefined && { due }),
+        ...(priority !== undefined && { priority }),
+    };
+
+    // Use explicit description if provided (not JSON), otherwise use merged meta.
+    const descPayload = description && !String(description).startsWith('{') ? description : JSON.stringify(updatedMeta);
+
+    const updateData = {
+        ...(title && { title: String(title).trim() }),
+        description: descPayload,
+        ...(status !== undefined && { status: mapTaskStatus(status) }),
+        ...(assignedToId !== undefined && { assignedToId }),
+        ...(leadId !== undefined && { leadId }),
+        ...(customerId !== undefined && { customerId }),
+        ...(dealId !== undefined && { dealId }),
+    };
+
+    if (dueDate !== undefined) {
+        const parsed = new Date(dueDate);
+        if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
+        else if (dueDate === null) updateData.dueDate = null;
+    } else if (due !== undefined) {
+        const parsed = new Date(due);
+        if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
+    }
+
+    const updated = await prisma.task.update({
+        where: { id: req.params.id },
+        data: updateData,
+        include: {
+            assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+            lead: true,
+        },
+    });
+
+    return res.status(200).json(new ApiResponse(200, [], formatTask(updated), "Task updated successfully"));
+});
+
+
+export const deleteTask = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    const existing = await prisma.task.findFirst({
+        where: { id: req.params.id, organizationId: orgId },
+    });
+    if (!existing) {
+        throw new ApiError(404, "Task not found");
+    }
+
+    await prisma.task.delete({ where: { id: req.params.id } });
+    return res.status(200).json(new ApiResponse(200, [], null, "Task deleted successfully"));
+});
+
+
+
+const TEAM_INCLUDE = {
+    members: {
+        include: {
+            user: {
+                select: { id: true, firstName: true, lastName: true, email: true, role: true },
             },
-            include: { assignedTo: true, lead: true }
+        },
+    },
+    _count: { select: { members: true } },
+};
+
+/**
+ * GET /team
+ * List all teams for the authenticated organisation.
+ */
+export const getTeams = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const { page = 1, limit = 20, skip = 0 } = req.pagination || {};
+
+    const [teams, total] = await Promise.all([
+        prisma.team.findMany({
+            where: { organizationId: orgId },
+            include: TEAM_INCLUDE,
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.team.count({ where: { organizationId: orgId } }),
+    ]);
+
+    const response = new ApiResponse(200, [], teams, "Teams retrieved successfully");
+    return res.status(200).json({ ...response, total, page, limit });
+});
+
+
+export const createTeam = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    // Permitted fields only.
+    const { name, memberIds } = req.body;
+
+    const teamName = (name || '').trim();
+    if (!teamName) {
+        throw new ApiError(400, "Team name is required");
+    }
+
+    // Validate member IDs belong to this org when provided.
+    if (Array.isArray(memberIds) && memberIds.length > 0) {
+        const validMembers = await prisma.user.findMany({
+            where: { id: { in: memberIds }, organizationId: orgId },
+            select: { id: true },
         });
-
-        return res.status(201).json(new ApiResponse(201, [], formatTask(task), "Task created successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create task"));
+        if (validMembers.length !== memberIds.length) {
+            throw new ApiError(400, "One or more member IDs are not valid users in your organisation");
+        }
     }
-};
 
-export const updateTask = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
+    const team = await prisma.team.create({
+        data: {
+            name: teamName,
+            organizationId: orgId,
+            ...(Array.isArray(memberIds) && memberIds.length > 0 && {
+                members: {
+                    create: memberIds.map((userId) => ({ userId })),
+                },
+            }),
+        },
+        include: TEAM_INCLUDE,
+    });
 
-        const existing = await prisma.task.findUnique({ where: { id: req.params.id } });
-        if (!existing) {
-            return res.status(404).json(new ApiResponse(404, [{ message: "Task not found" }], null, "Task not found"));
-        }
+    return res.status(201).json(new ApiResponse(201, [], team, "Team created successfully"));
+});
 
-        let existingMeta = {};
-        if (existing.description) {
-            try {
-                if (existing.description.startsWith('{')) existingMeta = JSON.parse(existing.description);
-            } catch (e) { }
-        }
 
-        const { title, client, assignedTo, due, dueDate, priority, status } = req.body;
-        const resolvedAssignedTo = (assignedTo && assignedTo !== 'Client Admin')
-            ? assignedTo
-            : (existingMeta.assignedTo && existingMeta.assignedTo !== 'Client Admin' ? existingMeta.assignedTo : 'Sarah Jenkins');
-        const updatedMeta = {
-            ...existingMeta,
-            ...(client !== undefined && { client }),
-            assignedTo: resolvedAssignedTo,
-            ...(due !== undefined && { due }),
-            ...(priority !== undefined && { priority })
-        };
+export const updateTeam = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
 
-        const updateData = {
-            ...(title && { title }),
-            description: JSON.stringify(updatedMeta),
-            ...(status !== undefined && { status: mapTaskStatus(status) })
-        };
-
-        if (dueDate !== undefined || due !== undefined) {
-            const candidate = dueDate || due;
-            const parsed = new Date(candidate);
-            if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
-        }
-
-        const updated = await prisma.task.update({
-            where: { id: req.params.id },
-            data: updateData,
-            include: { assignedTo: true, lead: true }
-        });
-
-        return res.status(200).json(new ApiResponse(200, [], formatTask(updated), "Task updated successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update task"));
+    const existing = await prisma.team.findFirst({
+        where: { id: req.params.id, organizationId: orgId },
+    });
+    if (!existing) {
+        throw new ApiError(404, "Team not found");
     }
-};
 
-export const deleteTask = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        await prisma.task.delete({ where: { id: req.params.id } });
-        return res.status(200).json(new ApiResponse(200, [], null, "Task deleted successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete task"));
+    // Permitted fields only – no mass assignment.
+    const { name } = req.body;
+    const newName = (name || '').trim();
+    if (!newName) {
+        throw new ApiError(400, "Team name is required");
     }
-};
 
-let inMemoryTeamMembers = [
-    { id: 'TM-01', name: 'Sarah Jenkins', role: 'Sales Lead', email: 'sarah.j@crmclient.com', territory: 'APAC / Regional', dealsClosed: 5, revenueWon: '₹42.5L', status: 'Active' },
-    { id: 'TM-02', name: 'David Miller', role: 'Account Executive', email: 'david.m@crmclient.com', territory: 'North America', dealsClosed: 9, revenueWon: '₹28.0L', status: 'Active' },
-    { id: 'TM-03', name: 'Elena Rostova', role: 'Customer Success', email: 'elena.r@crmclient.com', territory: 'EMEA Enterprise', dealsClosed: 2, revenueWon: '₹34.2L', status: 'Active' },
-    { id: 'TM-04', name: 'Marcus Vance', role: 'Senior Sales Rep', email: 'marcus.v@crmclient.com', territory: 'ANZ Commercial', dealsClosed: 7, revenueWon: '₹61.0L', status: 'Active' },
-    { id: 'TM-05', name: 'Ravi Kiran', role: 'Regional Sales VP', email: 'ravi.k@crmclient.com', territory: 'India Strategic', dealsClosed: 4, revenueWon: '₹75.4L', status: 'Active' },
-    { id: 'TM-06', name: 'Meena Patel', role: 'Enterprise Strategist', email: 'meena.p@crmclient.com', territory: 'Global Accounts', dealsClosed: 6, revenueWon: '₹53.8L', status: 'Active' },
-];
+    const updated = await prisma.team.update({
+        where: { id: req.params.id },
+        data: { name: newName },
+        include: TEAM_INCLUDE,
+    });
 
-export const getTeams = async (req, res) => {
-    return res.status(200).json(new ApiResponse(200, [], inMemoryTeamMembers, "Team members retrieved successfully"));
-};
+    return res.status(200).json(new ApiResponse(200, [], updated, "Team updated successfully"));
+});
 
-export const createTeam = async (req, res) => {
-    try {
-        const { name, firstName, lastName, email, role = 'Account Executive', territory = 'APAC / Regional', dealsClosed = 0, revenueWon = '₹0.0L', status = 'Active' } = req.body;
-        const memberName = name || `${firstName || ''} ${lastName || ''}`.trim();
-        if (!memberName && !email) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "Name or email is required" }], null, "Missing fields"));
-        }
+/**
+ * DELETE /team/:id
+ * Delete a team after verifying organisation ownership.
+ */
+export const deleteTeam = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
 
-        const newMember = {
-            id: `TM-${String(inMemoryTeamMembers.length + 1).padStart(2, '0')}`,
-            name: memberName || email.split('@')[0],
-            role,
-            email: email || '',
-            territory: territory || 'APAC / Regional',
-            dealsClosed: Number(dealsClosed) || 0,
-            revenueWon: String(revenueWon || '₹0.0L'),
-            status: status === 'ACTIVE' || status === 'Active' ? 'Active' : 'Inactive',
-            createdAt: new Date().toISOString()
-        };
-
-        inMemoryTeamMembers.push(newMember);
-        return res.status(201).json(new ApiResponse(201, [], newMember, "Team member added successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create team member"));
+    const existing = await prisma.team.findFirst({
+        where: { id: req.params.id, organizationId: orgId },
+    });
+    if (!existing) {
+        throw new ApiError(404, "Team not found");
     }
-};
 
-export const updateTeam = async (req, res) => {
-    const index = inMemoryTeamMembers.findIndex(m => m.id === req.params.id);
-    if (index !== -1) {
-        inMemoryTeamMembers[index] = { ...inMemoryTeamMembers[index], ...req.body };
-        return res.status(200).json(new ApiResponse(200, [], inMemoryTeamMembers[index], "Team member updated successfully"));
+    // Clean up team memberships before deleting team to avoid foreign key RESTRICT constraint violation.
+    if (prisma.teamMembership?.deleteMany) {
+        await prisma.teamMembership.deleteMany({ where: { teamId: req.params.id } });
     }
-    return res.status(404).json(new ApiResponse(404, [{ message: "Team member not found" }], null, "Team member not found"));
-};
 
-export const deleteTeam = async (req, res) => {
-    inMemoryTeamMembers = inMemoryTeamMembers.filter(m => m.id !== req.params.id);
-    return res.status(200).json(new ApiResponse(200, [], null, "Team member deleted successfully"));
-};
+    await prisma.team.delete({ where: { id: req.params.id } });
+    return res.status(200).json(new ApiResponse(200, [], null, "Team deleted successfully"));
+});
+
+
+const PRODUCT_PERMITTED_FIELDS = new Set(["name", "category", "price", "billing", "inventory", "status"]);
 
 let inMemoryProducts = [
     { id: "PRD-001", name: "CRM Enterprise Suite", category: "Software & SaaS", price: "₹85,000 / mo", billing: "Annual Billing", inventory: "Enterprise Edition · Unlimited Seats", status: "Active" },
@@ -867,460 +1389,439 @@ let inMemoryProducts = [
     { id: "PRD-006", name: "Custom Workflow Consulting", category: "Professional Services", price: "₹1,20,000", billing: "One-Time", inventory: "Implementation Package · 40 hrs", status: "Active" },
 ];
 
-export const listProducts = async (req, res) => {
+/**
+ * GET /products
+ * List products (in-memory). Route-level requirePermission("products:read") enforced.
+ */
+export const listProducts = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, [], inMemoryProducts, "Products retrieved successfully"));
-};
+});
 
-export const createProduct = async (req, res) => {
+/**
+ * POST /products
+ * Create a product. Permitted fields: name, category, price, billing, inventory, status.
+ * Route-level validateBody({ required: ["name"], allowedFields: [...] }) enforced.
+ */
+export const createProduct = asyncHandler(async (req, res) => {
+    // Extract only permitted fields – no mass assignment.
     const { name, category, price, billing, inventory, status } = req.body;
+
+    if (!name || !String(name).trim()) {
+        throw new ApiError(400, "Product name is required");
+    }
+
     const newProduct = {
         id: `PRD-${String(inMemoryProducts.length + 1).padStart(3, '0')}`,
-        name: name || 'Unnamed Product',
+        name: String(name).trim(),
         category: category || 'Software & SaaS',
         price: price || '₹50,000 / mo',
         billing: billing || 'Annual Billing',
         inventory: inventory || 'Standard Tier',
-        status: status === 'INACTIVE' || status === 'Inactive' ? 'Inactive' : 'Active'
+        status: status === 'INACTIVE' || status === 'Inactive' ? 'Inactive' : 'Active',
     };
     inMemoryProducts.push(newProduct);
     return res.status(201).json(new ApiResponse(201, [], newProduct, "Product created successfully"));
-};
+});
 
-export const updateProduct = async (req, res) => {
+/**
+ * PATCH /products/:id
+ * Update a product. Only permitted fields are applied – no mass assignment.
+ * Route-level validateBody({ allowedFields: [...] }) enforced.
+ */
+export const updateProduct = asyncHandler(async (req, res) => {
     const index = inMemoryProducts.findIndex(p => p.id === req.params.id);
-    if (index !== -1) {
-        inMemoryProducts[index] = { ...inMemoryProducts[index], ...req.body };
-        return res.status(200).json(new ApiResponse(200, [], inMemoryProducts[index], "Product updated successfully"));
+    if (index === -1) {
+        throw new ApiError(404, "Product not found");
     }
-    return res.status(404).json(new ApiResponse(404, [{ message: "Product not found" }], null, "Product not found"));
-};
 
-export const deleteProduct = async (req, res) => {
+    // Extract only permitted fields.
+    const updateFields = {};
+    for (const key of PRODUCT_PERMITTED_FIELDS) {
+        if (req.body[key] !== undefined) {
+            updateFields[key] = req.body[key];
+        }
+    }
+
+    inMemoryProducts[index] = { ...inMemoryProducts[index], ...updateFields };
+    return res.status(200).json(new ApiResponse(200, [], inMemoryProducts[index], "Product updated successfully"));
+});
+
+/**
+ * DELETE /products/:id
+ * Delete a product. Route-level requirePermission("products:delete") enforced.
+ */
+export const deleteProduct = asyncHandler(async (req, res) => {
+    const index = inMemoryProducts.findIndex(p => p.id === req.params.id);
+    if (index === -1) {
+        throw new ApiError(404, "Product not found");
+    }
     inMemoryProducts = inMemoryProducts.filter(p => p.id !== req.params.id);
     return res.status(200).json(new ApiResponse(200, [], null, "Product deleted successfully"));
-};
+});
 
+/* ==========================================================================
+   Employees Directory Handlers (Employee.jsx)
+   ========================================================================== */
+const employeeMetaStore = new Map();
 
+/* ──────────────────────────────────────────────────────────────
+ * Employees Directory Handlers (Employee.jsx)
+ *
+ * All handlers:
+ *  - Use asyncHandler so errors reach the central errorHandler.
+ *  - Source organizationId from req.organizationId.
+ *  - Enforce org isolation on reads, updates, and deletes.
+ *  - Use explicit permitted-field destructuring (no mass assignment).
+ *
+ * Firebase UID strategy:
+ *  - createEmployee stores a placeholder UID (`invite-<uuid>`) to
+ *    satisfy the unique constraint.  A real Firebase user should
+ *    be created via an invitation flow and the UID updated at
+ *    acceptance.  No passwords or credentials are stored here.
+ * ──────────────────────────────────────────────────────────────*/
 
-export const listEmployee = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
+/**
+ * GET /employee
+ * List employees (users) scoped to the authenticated organisation.
+ */
+export const listEmployee = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const { page = 1, limit = 20, skip = 0 } = req.pagination || {};
 
-        const employees = await prisma.user.findMany({
-            where: {
-                ...(result.user.organizationId ? { organizationId: result.user.organizationId } : {}),
-            },
+    const [employees, total] = await Promise.all([
+        prisma.user.findMany({
+            where: { organizationId: orgId },
             select: {
                 id: true,
-                firebaseUid: true,
                 email: true,
                 firstName: true,
                 lastName: true,
                 role: true,
-                jobTitle: true,
                 status: true,
-                phone: true,
-                department: true,
                 createdAt: true,
                 updatedAt: true,
             },
-            orderBy: { createdAt: "desc" }
-        });
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.user.count({ where: { organizationId: orgId } }),
+    ]);
 
-        const formatted = employees.map(emp => ({
+    const formatted = employees.map(emp => {
+        const meta = employeeMetaStore.get(emp.id) || {};
+        return {
             id: emp.id,
             name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email,
             email: emp.email,
-            role: emp.jobTitle || (emp.role === 'ORGANIZATION_ADMIN' ? 'Regional Manager' : emp.role === 'MANAGER' ? 'Senior Account Manager' : 'Business Development'),
-            department: emp.department || (emp.role === 'ORGANIZATION_ADMIN' ? 'Executive' : emp.role === 'MANAGER' ? 'Sales & Accounts' : 'Enterprise Sales'),
-            phone: emp.phone || '+91 98000 00000',
-            status: emp.status === 'ACTIVE' ? 'Full-time' : emp.status === 'INVITED' ? 'Contract' : 'Part-time',
-            createdAt: emp.createdAt
-        }));
-
-        return res.status(200).json(new ApiResponse(200, [], formatted, "Employees retrieved successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve employees"));
-    }
-};
-
-export const createEmployee = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const { name, firstName, lastName, email, role = "Account Executive", status = "Full-time", department = "Sales & Accounts", phone = "+91 98000 00000" } = req.body;
-
-        if (!email) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "Email is required" }], null, "Missing email"));
-        }
-
-        let fName = firstName || "";
-        let lName = lastName || "";
-        if (name && !firstName) {
-            const parts = name.trim().split(" ");
-            fName = parts[0] || "";
-            lName = parts.slice(1).join(" ") || "";
-        }
-
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) {
-            return res.status(409).json(new ApiResponse(409, [{ message: "User with this email already exists" }], null, "Email in use"));
-        }
-
-        const validPrismaRole = validateUserRole(role) ? role : "SALES";
-        const validPrismaStatus = validateUserStatus(status) ? status : "ACTIVE";
-
-        const newEmployee = await prisma.user.create({
-            data: {
-                firebaseUid: `emp-${crypto.randomUUID()}`,
-                email,
-                firstName: fName || "New",
-                lastName: lName || "Employee",
-                role: validPrismaRole,
-                jobTitle: role || "Account Executive",
-                status: validPrismaStatus,
-                phone: phone || null,
-                department: department || null,
-                ...(result.user.organizationId && { organizationId: result.user.organizationId })
-            },
-            select: {
-                id: true,
-                firebaseUid: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                jobTitle: true,
-                status: true,
-                phone: true,
-                department: true,
-                createdAt: true,
-                updatedAt: true,
-            }
-        });
-
-        const formatted = {
-            id: newEmployee.id,
-            name: `${newEmployee.firstName} ${newEmployee.lastName}`.trim(),
-            email: newEmployee.email,
-            role: newEmployee.jobTitle || role,
-            department: newEmployee.department || department,
-            phone: newEmployee.phone || phone,
-            status,
-            createdAt: newEmployee.createdAt
+            role: meta.displayRole || (emp.role === 'ORGANIZATION_ADMIN' ? 'Regional Manager' : emp.role === 'MANAGER' ? 'Senior Account Manager' : 'Business Development'),
+            department: meta.department || (emp.role === 'ORGANIZATION_ADMIN' ? 'Executive' : emp.role === 'MANAGER' ? 'Sales & Accounts' : 'Enterprise Sales'),
+            phone: meta.phone || '+91 98000 00000',
+            status: meta.displayStatus || (emp.status === 'ACTIVE' ? 'Full-time' : emp.status === 'INVITED' ? 'Contract' : 'Part-time'),
+            dbRole: emp.role,
+            dbStatus: emp.status,
+            createdAt: emp.createdAt,
         };
+    });
 
-        return res.status(201).json(new ApiResponse(201, [], formatted, "Employee created successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to create employee"));
+    const response = new ApiResponse(200, [], formatted, "Employees retrieved successfully");
+    return res.status(200).json({ ...response, total, page, limit });
+});
+
+/**
+ * POST /employee
+ * Create a new employee (User) in the authenticated organisation.
+ *
+ * A placeholder Firebase UID is stored.  The actual Firebase user
+ * should be created separately via an invitation flow.
+ */
+export const createEmployee = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    // Permitted fields only.
+    const {
+        name,
+        firstName,
+        lastName,
+        email,
+        role: displayRole = "Account Executive",
+        status: displayStatus = "Full-time",
+        department = "Sales & Accounts",
+        phone = "+91 98000 00000",
+    } = req.body;
+
+    if (!email || typeof email !== "string" || !email.trim()) {
+        throw new ApiError(400, "Email is required");
     }
-};
 
-export const updateEmployee = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
+    const normalizedEmail = email.trim().toLowerCase();
 
-        const { id } = req.params;
-        const target = await prisma.user.findUnique({ where: { id } });
-        if (!target) {
-            return res.status(404).json(new ApiResponse(404, [{ message: "Employee not found" }], null, "Employee not found"));
-        }
-
-        if (target.role === "ADMIN" || target.id === result.user.id) {
-            return res.status(403).json(new ApiResponse(403, [{ message: "Admin accounts cannot be modified via employee directory" }], null, "Modification disallowed"));
-        }
-
-        const { name, firstName, lastName, email, role, status, department, phone } = req.body;
-
-        let fName = firstName;
-        let lName = lastName;
-        if (name !== undefined && !firstName) {
-            const parts = name.trim().split(" ");
-            fName = parts[0] || "";
-            lName = parts.slice(1).join(" ") || "";
-        }
-
-        const updated = await prisma.user.update({
-            where: { id },
-            data: {
-                ...(fName !== undefined && { firstName: fName }),
-                ...(lName !== undefined && { lastName: lName }),
-                ...(email !== undefined && { email }),
-                ...(role !== undefined && { jobTitle: role, ...(validateUserRole(role) && role !== "ADMIN" ? { role } : {}) }),
-                ...(status !== undefined && validateUserStatus(status) && { status }),
-                ...(phone !== undefined && { phone }),
-                ...(department !== undefined && { department }),
-            },
-            select: {
-                id: true,
-                firebaseUid: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                jobTitle: true,
-                status: true,
-                phone: true,
-                department: true,
-                createdAt: true,
-                updatedAt: true,
-            }
-        });
-
-        const formatted = {
-            id: updated.id,
-            name: `${updated.firstName} ${updated.lastName}`.trim(),
-            email: updated.email,
-            role: updated.jobTitle || updated.role,
-            department: updated.department || 'Sales & Accounts',
-            phone: updated.phone || '+91 98000 00000',
-            status: updated.status === 'ACTIVE' ? 'Full-time' : 'Contract',
-            updatedAt: updated.updatedAt
-        };
-
-        return res.status(200).json(new ApiResponse(200, [], formatted, "Employee updated successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update employee"));
+    let fName = firstName || "";
+    let lName = lastName || "";
+    if (name && !firstName) {
+        const parts = String(name).trim().split(/\s+/);
+        fName = parts[0] || "";
+        lName = parts.slice(1).join(" ") || "";
     }
-};
 
-export const deleteEmployee = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid, req.user.email);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
-        }
-
-        const { id } = req.params;
-        const target = await prisma.user.findUnique({ where: { id } });
-        if (!target) {
-            return res.status(404).json(new ApiResponse(404, [{ message: "Employee not found" }], null, "Employee not found"));
-        }
-
-        if (target.role === "ADMIN" || target.id === result.user.id) {
-            return res.status(403).json(new ApiResponse(403, [{ message: "Admin accounts cannot be deleted" }], null, "Deletion disallowed"));
-        }
-
-        await prisma.user.delete({ where: { id } });
-        return res.status(200).json(new ApiResponse(200, [], null, "Employee deleted successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to delete employee"));
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+        throw new ApiError(409, "A user with this email already exists");
     }
-};
+
+    // Map display role to valid Prisma UserRole enum.
+    // Only MANAGER and SALES are valid non-admin roles for employee creation.
+    const prismaRole = validateUserRole(displayRole) ? displayRole : "SALES";
+
+    // Store a placeholder Firebase UID.  Must be replaced when the real
+    // Firebase user is created via invitation acceptance.
+    const placeholderUid = `invite-${crypto.randomUUID()}`;
+
+    const newEmployee = await prisma.user.create({
+        data: {
+            firebaseUid: placeholderUid,
+            email: normalizedEmail,
+            firstName: fName || "New",
+            lastName: lName || "Employee",
+            role: prismaRole,
+            status: "INVITED",
+            organizationId: orgId,
+        },
+        select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            status: true,
+            createdAt: true,
+        },
+    });
+
+    // Save display-only metadata (not persisted to User table).
+    employeeMetaStore.set(newEmployee.id, {
+        displayRole,
+        displayStatus,
+        department,
+        phone,
+    });
+
+    const formatted = {
+        id: newEmployee.id,
+        name: `${newEmployee.firstName} ${newEmployee.lastName}`.trim(),
+        email: newEmployee.email,
+        role: displayRole,
+        department,
+        phone,
+        status: displayStatus,
+        dbRole: newEmployee.role,
+        dbStatus: newEmployee.status,
+        createdAt: newEmployee.createdAt,
+    };
+
+    return res.status(201).json(new ApiResponse(201, [], formatted, "Employee created successfully"));
+});
+
+/**
+ * PATCH /employee/:id
+ * Update an employee in the authenticated organisation.
+ * Org isolation is enforced before update.
+ */
+export const updateEmployee = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const currentUserId = req.crmUser?.id;
+    const { id } = req.params;
+
+    // Ownership check: must belong to this org.
+    const target = await prisma.user.findFirst({
+        where: { id, organizationId: orgId },
+    });
+    if (!target) {
+        throw new ApiError(404, "Employee not found");
+    }
+
+    // Cannot modify yourself or another ORGANIZATION_ADMIN via this endpoint.
+    if (target.id === currentUserId || target.role === "ORGANIZATION_ADMIN") {
+        throw new ApiError(403, "This account cannot be modified via the employee directory");
+    }
+
+    // Permitted fields only.
+    const {
+        name,
+        firstName,
+        lastName,
+        email,
+        role: dbRole,
+        status: dbStatus,
+        displayRole,
+        displayStatus,
+        department,
+        phone,
+    } = req.body;
+
+    let fName = firstName;
+    let lName = lastName;
+    if (name !== undefined && firstName === undefined) {
+        const parts = String(name).trim().split(/\s+/);
+        fName = parts[0] || "";
+        lName = parts.slice(1).join(" ") || "";
+    }
+
+    // Only apply valid Prisma enum values for role/status.
+    const normalizedRole = dbRole !== undefined ? (validateUserRole(dbRole) ? dbRole : undefined) : undefined;
+    const normalizedStatus = dbStatus !== undefined ? (validateUserStatus(dbStatus) ? dbStatus : undefined) : undefined;
+
+    const updated = await prisma.user.update({
+        where: { id },
+        data: {
+            ...(fName !== undefined && { firstName: fName }),
+            ...(lName !== undefined && { lastName: lName }),
+            ...(email !== undefined && { email: email.trim().toLowerCase() }),
+            ...(normalizedRole !== undefined && { role: normalizedRole }),
+            ...(normalizedStatus !== undefined && { status: normalizedStatus }),
+        },
+        select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            status: true,
+            updatedAt: true,
+        },
+    });
+
+    const currentMeta = employeeMetaStore.get(id) || {};
+    const newMeta = {
+        ...currentMeta,
+        ...(displayRole !== undefined && { displayRole }),
+        ...(displayStatus !== undefined && { displayStatus }),
+        ...(department !== undefined && { department }),
+        ...(phone !== undefined && { phone }),
+    };
+    employeeMetaStore.set(id, newMeta);
+
+    const formatted = {
+        id: updated.id,
+        name: `${updated.firstName} ${updated.lastName}`.trim(),
+        email: updated.email,
+        role: newMeta.displayRole || updated.role,
+        department: newMeta.department || 'Sales & Accounts',
+        phone: newMeta.phone || '+91 98000 00000',
+        status: newMeta.displayStatus || (updated.status === 'ACTIVE' ? 'Full-time' : 'Contract'),
+        dbRole: updated.role,
+        dbStatus: updated.status,
+        updatedAt: updated.updatedAt,
+    };
+
+    return res.status(200).json(new ApiResponse(200, [], formatted, "Employee updated successfully"));
+});
+
+/**
+ * DELETE /employee/:id
+ * Delete an employee in the authenticated organisation.
+ * Org isolation is enforced before delete.
+ */
+export const deleteEmployee = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const currentUserId = req.crmUser?.id;
+    const { id } = req.params;
+
+    const target = await prisma.user.findFirst({
+        where: { id, organizationId: orgId },
+    });
+    if (!target) {
+        throw new ApiError(404, "Employee not found");
+    }
+
+    // Cannot delete yourself or another ORGANIZATION_ADMIN.
+    if (target.id === currentUserId || target.role === "ORGANIZATION_ADMIN") {
+        throw new ApiError(403, "This account cannot be deleted via the employee directory");
+    }
+
+    await prisma.user.delete({ where: { id } });
+    return res.status(200).json(new ApiResponse(200, [], null, "Employee deleted successfully"));
+});
 
 // Aliases matching plural naming conventions
 export const updateEmployees = updateEmployee;
 export const deleteEmployees = deleteEmployee;
 
+/* ==========================================================================
+   Profile, Password & Settings Handlers (Settings.jsx)
+   ========================================================================== */
 
-export const getProfile = async (req, res) => {
-    try {
-        const uid = req.user?.uid || req.user?.firebaseUid;
-        const email = req.user?.email;
-        const orgId = req.organizationId;
+/**
+ * PATCH /profile
+ * Update the authenticated user's profile.
+ *
+ * Supported fields: firstName, lastName, name (split to first/last), email, orgName.
+ *
+ * NOTE: The User model has no `phone` column. The `phone` field supplied
+ * in the request body is NOT persisted to the database. It is echoed
+ * back in the response for frontend display compatibility only.
+ * To persist phone data, a schema migration adding `phone String?` to
+ * the User model is required.
+ */
+export const updateProfile = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+    const userId = req.crmUser?.id || req.user?.id;
 
-        const profileModel = prisma.profile || prisma.clientAdmin;
-        if (!profileModel) {
-            return res.status(500).json(new ApiResponse(500, [{ message: "Profile model not found" }], null, "Database configuration error"));
-        }
+    // Permitted fields only – no mass assignment.
+    const { name, firstName, lastName, email, phone, orgName } = req.body;
 
-        // 1. Look for existing profile in database table
-        let profile = await profileModel.findFirst({
-            where: {
-                OR: [
-                    ...(uid ? [{ firebaseUid: uid }] : []),
-                    ...(email ? [{ email }] : [])
-                ]
-            }
+    let fName = firstName;
+    let lName = lastName;
+    if (name !== undefined && firstName === undefined) {
+        const parts = String(name).trim().split(/\s+/);
+        fName = parts[0] || "";
+        lName = parts.slice(1).join(" ") || "";
+    }
+
+    const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+            ...(fName !== undefined && { firstName: fName }),
+            ...(lName !== undefined && { lastName: lName }),
+            ...(email !== undefined && { email: email.trim().toLowerCase() }),
+            // phone is NOT in the User schema – not passed to Prisma.
+        },
+        select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            organizationId: true,
+        },
+    });
+
+    if (orgName && orgId) {
+        await prisma.organization.update({
+            where: { id: orgId },
+            data: { name: String(orgName).trim() },
         });
-
-        // 2. If table is empty or record doesn't exist yet, auto-provision from user / defaults
-        if (!profile) {
-            let orgName = "SHNOOR CRM";
-            if (orgId) {
-                const org = await prisma.organization.findUnique({
-                    where: { id: orgId },
-                    select: { name: true }
-                });
-                if (org?.name) orgName = org.name;
-            }
-
-            let phone = "+91 98000 00000";
-            let designation = req.user?.role === "ORGANIZATION_ADMIN" ? "Client Administrator" : "Sales Lead";
-            if (req.user?.id) {
-                const fullUser = await prisma.user.findUnique({
-                    where: { id: req.user.id },
-                    select: { phone: true, jobTitle: true }
-                });
-                if (fullUser?.phone) phone = fullUser.phone;
-                if (fullUser?.jobTitle) designation = fullUser.jobTitle;
-            }
-
-            const name = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || "Client Admin";
-            const userEmail = email || "admin@crmclient.com";
-            const role = req.user?.role || "ORGANIZATION_ADMIN";
-
-            try {
-                profile = await profileModel.create({
-                    data: {
-                        firebaseUid: uid || `user_${Date.now()}`,
-                        email: userEmail,
-                        name,
-                        phone,
-                        designation,
-                        organizationName: orgName,
-                        role,
-                        passwordLastChangedAt: new Date()
-                    }
-                });
-            } catch (createErr) {
-                console.warn("[getProfile] Auto-create fallback:", createErr.message);
-                profile = {
-                    id: req.user?.id || "temp-profile-id",
-                    firebaseUid: uid,
-                    email: userEmail,
-                    name,
-                    phone,
-                    designation,
-                    organizationName: orgName,
-                    role,
-                    passwordLastChangedAt: new Date()
-                };
-            }
-        }
-
-        return res.status(200).json(
-            new ApiResponse(200, [], {
-                id: profile.id,
-                name: profile.name,
-                email: profile.email,
-                phone: profile.phone,
-                designation: profile.designation,
-                organizationName: profile.organizationName,
-                orgName: profile.organizationName,
-                role: profile.role,
-                passwordLastChangedAt: profile.passwordLastChangedAt
-            }, "Profile retrieved successfully")
-        );
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve profile"));
     }
-};
 
-export const updateProfile = async (req, res) => {
-    try {
-        const uid = req.user?.uid || req.user?.firebaseUid;
-        const email = req.body?.email || req.user?.email;
-        const { name, phone, designation, role, orgName, organizationName } = req.body;
-        const resolvedOrgName = orgName || organizationName;
-
-        const profileModel = prisma.profile || prisma.clientAdmin;
-
-        let existing = null;
-        if (profileModel) {
-            existing = await profileModel.findFirst({
-                where: {
-                    OR: [
-                        ...(uid ? [{ firebaseUid: uid }] : []),
-                        ...(email ? [{ email }] : [])
-                    ]
-                }
-            });
-        }
-
-        let updatedProfile = null;
-        if (existing) {
-            updatedProfile = await profileModel.update({
-                where: { id: existing.id },
-                data: {
-                    ...(name !== undefined && { name: name.trim() }),
-                    ...(phone !== undefined && { phone: phone.trim() }),
-                    ...(designation !== undefined && { designation: designation.trim() }),
-                    ...(resolvedOrgName !== undefined && { organizationName: resolvedOrgName.trim() }),
-                    ...(role !== undefined && { role }),
-                    ...(uid && !existing.firebaseUid && { firebaseUid: uid })
-                }
-            });
-        } else if (profileModel) {
-            updatedProfile = await profileModel.create({
-                data: {
-                    firebaseUid: uid || `user_${Date.now()}`,
-                    email: email || "admin@crmclient.com",
-                    name: name?.trim() || "Client Admin",
-                    phone: phone?.trim() || "+91 98000 00000",
-                    designation: designation?.trim() || "Client Administrator",
-                    organizationName: resolvedOrgName?.trim() || "SHNOOR CRM",
-                    role: role || "ORGANIZATION_ADMIN",
-                    passwordLastChangedAt: new Date()
-                }
-            });
-        }
-
-        // Also sync User & Organization records if present
-        try {
-            let fName = undefined;
-            let lName = undefined;
-            if (name !== undefined) {
-                const parts = name.trim().split(" ");
-                fName = parts[0] || "";
-                lName = parts.slice(1).join(" ") || "";
-            }
-
-            if (req.user?.id) {
-                await prisma.user.update({
-                    where: { id: req.user.id },
-                    data: {
-                        ...(fName !== undefined && { firstName: fName }),
-                        ...(lName !== undefined && { lastName: lName }),
-                        ...(phone !== undefined && { phone: phone.trim() }),
-                        ...(designation !== undefined && { jobTitle: designation.trim() }),
-                    }
-                }).catch(() => {});
-            }
-
-            if (resolvedOrgName && req.organizationId) {
-                await prisma.organization.update({
-                    where: { id: req.organizationId },
-                    data: { name: resolvedOrgName.trim() }
-                }).catch(() => {});
-            }
-        } catch (syncErr) {
-            console.warn("[updateProfile] Secondary sync warning:", syncErr.message);
-        }
-
-        const responseData = {
-            id: updatedProfile?.id || req.user?.id,
-            name: updatedProfile?.name || name,
-            email: updatedProfile?.email || email,
-            phone: updatedProfile?.phone || phone,
-            designation: updatedProfile?.designation || designation,
-            organizationName: updatedProfile?.organizationName || resolvedOrgName,
-            orgName: updatedProfile?.organizationName || resolvedOrgName,
-            role: updatedProfile?.role || role,
-            passwordLastChangedAt: updatedProfile?.passwordLastChangedAt
-        };
-
-        return res.status(200).json(
-            new ApiResponse(200, [], responseData, "Profile updated successfully")
-        );
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update profile"));
-    }
-};
+    return res.status(200).json(
+        new ApiResponse(200, [], {
+            name: `${updatedUser.firstName} ${updatedUser.lastName}`.trim(),
+            email: updatedUser.email,
+            // phone is echoed from request (not stored); frontend compatibility.
+            phone: phone || null,
+            role: updatedUser.role,
+            orgName: orgName || null,
+        }, "Profile updated successfully")
+    );
+});
 
 export const updatePassword = async (req, res) => {
     try {
-        const uid = req.user?.uid || req.user?.firebaseUid;
-        const email = req.user?.email;
+        const result = await getClientAdmin(req.user.uid);
+        if (result.error) {
+            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
+        }
+
         const { currentPassword, newPassword } = req.body;
 
         if (!newPassword || newPassword.length < 8) {
@@ -1328,27 +1829,11 @@ export const updatePassword = async (req, res) => {
         }
 
         // If firebase auth is active, update password in firebase auth service
-        if (auth && typeof auth.updateUser === "function" && uid && !uid.startsWith("dev-")) {
-            await auth.updateUser(uid, { password: newPassword });
+        if (auth && typeof auth.updateUser === "function" && req.user.uid && !req.user.uid.startsWith("dev-")) {
+            await auth.updateUser(req.user.uid, { password: newPassword });
         }
 
-        const now = new Date();
-        const profileModel = prisma.profile || prisma.clientAdmin;
-        if (profileModel) {
-            await profileModel.updateMany({
-                where: {
-                    OR: [
-                        ...(uid ? [{ firebaseUid: uid }] : []),
-                        ...(email ? [{ email }] : [])
-                    ]
-                },
-                data: {
-                    passwordLastChangedAt: now
-                }
-            }).catch(() => {});
-        }
-
-        return res.status(200).json(new ApiResponse(200, [], { passwordLastChangedAt: now }, "Password updated successfully"));
+        return res.status(200).json(new ApiResponse(200, [], null, "Password updated successfully"));
     } catch (error) {
         return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update password"));
     }
@@ -1374,21 +1859,6 @@ export const getSettings = async (req, res) => {
         if (result.error) {
             return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
         }
-        const user = result.user;
-        const uid = user?.uid || user?.firebaseUid;
-
-        const profileModel = prisma.profile || prisma.clientAdmin;
-        let profile = null;
-        if (profileModel) {
-            profile = await profileModel.findFirst({
-                where: {
-                    OR: [
-                        ...(uid ? [{ firebaseUid: uid }] : []),
-                        ...(user?.email ? [{ email: user.email }] : [])
-                    ]
-                }
-            });
-        }
 
         let orgDetails = null;
         if (result.user.organizationId) {
@@ -1399,15 +1869,12 @@ export const getSettings = async (req, res) => {
         }
 
         const userProfile = {
-            id: profile?.id || user.id,
-            name: profile?.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Client Admin',
-            email: profile?.email || user.email || '',
-            phone: profile?.phone || fullUser?.phone || '+91 98000 00000',
-            designation: profile?.designation || fullUser?.jobTitle || (user.role === 'ORGANIZATION_ADMIN' ? 'Client Administrator' : 'Sales Lead'),
-            role: profile?.role || user.role || 'ORGANIZATION_ADMIN',
-            orgName: profile?.organizationName || orgDetails?.name || 'SHNOOR CRM',
-            organizationName: profile?.organizationName || orgDetails?.name || 'SHNOOR CRM',
-            passwordLastChangedAt: profile?.passwordLastChangedAt
+            name: `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim() || 'Client Admin',
+            email: result.user.email,
+            phone: '+91 98000 00000',
+            designation: result.user.role === 'ORGANIZATION_ADMIN' ? 'Client Administrator' : 'Sales Lead',
+            role: result.user.role || 'ORGANIZATION_ADMIN',
+            orgName: orgDetails?.name || 'SHNOOR CRM'
         };
 
         const combined = {
@@ -1423,145 +1890,518 @@ export const getSettings = async (req, res) => {
     }
 };
 
-export const updateSettings = async (req, res) => {
-    try {
-        const result = await getClientAdmin(req.user.uid);
-        if (result.error) {
-            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
+/**
+ * PATCH /settings
+ * Update portal settings for the authenticated organisation.
+ *
+ * Explicit allowlist prevents mass assignment and privilege escalation.
+ * Protected fields (organizationId, role, etc.) are never accepted.
+ */
+const SETTINGS_PERMITTED_FIELDS = new Set([
+    "platformName",
+    "supportEmail",
+    "defaultPlan",
+    "allowSignup",
+    "emailAlerts",
+    "maintenanceMode",
+    "notifications",
+]);
+
+export const updateSettings = asyncHandler(async (req, res) => {
+    const orgId = req.organizationId;
+
+    // Apply only permitted settings fields – no mass assignment.
+    const appliedChanges = {};
+    for (const key of SETTINGS_PERMITTED_FIELDS) {
+        if (req.body[key] !== undefined) {
+            appliedChanges[key] = req.body[key];
         }
-
-        portalSettings = { ...portalSettings, ...req.body };
-
-        if (result.user.organizationId && (req.body.platformName || req.body.supportEmail)) {
-            await prisma.organization.update({
-                where: { id: result.user.organizationId },
-                data: {
-                    ...(req.body.platformName && { name: req.body.platformName }),
-                    ...(req.body.supportEmail && { email: req.body.supportEmail }),
-                }
-            });
-        }
-
-        return res.status(200).json(new ApiResponse(200, [], portalSettings, "Settings updated successfully"));
-    } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update settings"));
     }
-};
+
+    if (Object.keys(appliedChanges).length === 0) {
+        throw new ApiError(400, "No valid settings fields provided");
+    }
+
+    // Handle nested notifications merge safely.
+    if (appliedChanges.notifications !== null && typeof appliedChanges.notifications === "object") {
+        appliedChanges.notifications = {
+            ...portalSettings.notifications,
+            ...appliedChanges.notifications,
+        };
+    }
+
+    portalSettings = { ...portalSettings, ...appliedChanges };
+
+    // Persist org-level fields to the database.
+    if (orgId && (appliedChanges.platformName || appliedChanges.supportEmail)) {
+        await prisma.organization.update({
+            where: { id: orgId },
+            data: {
+                ...(appliedChanges.platformName && { name: String(appliedChanges.platformName).trim() }),
+                ...(appliedChanges.supportEmail && { email: String(appliedChanges.supportEmail).trim() }),
+            },
+        });
+    }
+
+    return res.status(200).json(new ApiResponse(200, [], portalSettings, "Settings updated successfully"));
+});
 
 
 
-export const listFollowUps = async (req, res) => {
+
+
+
+
+/* ==========================================================================
+   Users Management CRUD
+   ========================================================================== */
+
+export const listUsers = async (req, res) => {
     try {
-        const { entityType, entityId } = req.query;
-        if (!entityType || !entityId) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "entityType and entityId required" }], null));
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
         }
 
-        const items = await prisma.followUp.findMany({
+        const users = await prisma.user.findMany({
             where: {
-                entityType: { equals: String(entityType), mode: 'insensitive' },
-                entityId: String(entityId)
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true
             },
             orderBy: { createdAt: "desc" }
         });
 
-        const formatted = items.map(f => ({
-            id: f.id,
-            description: f.description,
-            nextFollowUpDate: f.nextFollowUpDate,
-            author: f.author,
-            createdAt: new Date(f.createdAt).toLocaleDateString('en-US', {
-                month: '2-digit', day: '2-digit', year: 'numeric'
-            }) + ', ' + new Date(f.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-        }));
-
-        return res.status(200).json(new ApiResponse(200, [], formatted, "Follow-ups retrieved"));
+        return res.status(200).json(
+            new ApiResponse(200, [], users, "Users retrieved successfully")
+        );
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+        console.error("List users error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve users")
+        );
     }
 };
 
-export const createFollowUp = async (req, res) => {
+export const getUser = async (req, res) => {
     try {
         const result = await getClientAdmin(req.user.uid, req.user.email);
-        const { entityType, entityId, description, nextFollowUpDate, author } = req.body;
 
-        if (!entityType || !entityId || !description) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "Missing required fields" }], null));
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
         }
 
-        let orgId = result.user?.organizationId;
-        if (!orgId) {
-            const defaultOrg = await prisma.organization.findFirst();
-            orgId = defaultOrg?.id;
-        }
-        if (!orgId) {
-            return res.status(400).json(new ApiResponse(400, [{ message: "No organization found" }], null));
-        }
-
-        const created = await prisma.followUp.create({
-            data: {
-                entityType: String(entityType).toLowerCase(),
-                entityId: String(entityId),
-                description,
-                nextFollowUpDate: nextFollowUpDate || null,
-                author: author || 'Sarah Jenkins',
-                organizationId: orgId,
+        const user = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true
             }
         });
 
-        const formatted = {
-            id: created.id,
-            description: created.description,
-            nextFollowUpDate: created.nextFollowUpDate,
-            author: created.author,
-            createdAt: new Date(created.createdAt).toLocaleDateString('en-US', {
-                month: '2-digit', day: '2-digit', year: 'numeric'
-            }) + ', ' + new Date(created.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-        };
+        if (!user) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
 
-        return res.status(201).json(new ApiResponse(201, [], formatted, "Follow-up created"));
+        return res.status(200).json(
+            new ApiResponse(200, [], user, "User retrieved successfully")
+        );
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+        console.error("Get user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve user")
+        );
     }
 };
 
-export const updateFollowUp = async (req, res) => {
+export const createUser = async (req, res) => {
     try {
-        const { description, nextFollowUpDate } = req.body;
-        const updated = await prisma.followUp.update({
-            where: { id: req.params.id },
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const {
+            name,
+            firstName,
+            lastName,
+            email,
+            role = "SALES",
+            status = "ACTIVE"
+        } = req.body;
+
+        if (!email || typeof email !== "string") {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Email is required" }], null, "Email is required")
+            );
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const existing = await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        });
+
+        if (existing) {
+            return res.status(409).json(
+                new ApiResponse(409, [{ message: "Email already exists" }], null, "Email already exists")
+            );
+        }
+
+        let fName = firstName || "";
+        let lName = lastName || "";
+
+        if (name && !firstName) {
+            const parts = name.trim().split(/\s+/);
+            fName = parts[0] || "";
+            lName = parts.slice(1).join(" ");
+        }
+
+        // Valid Prisma UserRole and UserStatus enum values.
+        const allowedRoles = ["SALES", "MANAGER"];
+        // INACTIVE is not a valid UserStatus enum value — valid values are:
+        // INVITED, ACTIVE, SUSPENDED, DEACTIVATED
+        const allowedStatuses = ["ACTIVE", "INVITED", "SUSPENDED", "DEACTIVATED"];
+
+        if (!allowedRoles.includes(role)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid role" }], null, "Invalid role")
+            );
+        }
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid status" }], null, "Invalid status")
+            );
+        }
+
+        if (!result.user.organizationId) {
+            return res.status(403).json(
+                new ApiResponse(
+                    403,
+                    [{ message: "Organization Admin is not assigned to an organization" }],
+                    null,
+                    "Organization Admin is not assigned to an organization"
+                )
+            );
+        }
+
+        const user = await prisma.user.create({
             data: {
-                ...(description !== undefined && { description: description.trim() }),
-                ...(nextFollowUpDate !== undefined && { nextFollowUpDate })
+                firebaseUid: `pending-${crypto.randomUUID()}`,
+                email: normalizedEmail,
+                firstName: fName,
+                lastName: lName,
+                role,
+                status,
+                organizationId: result.user.organizationId
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                createdAt: true
             }
         });
 
-        const formatted = {
-            id: updated.id,
-            description: updated.description,
-            nextFollowUpDate: updated.nextFollowUpDate,
-            author: updated.author,
-            createdAt: new Date(updated.createdAt).toLocaleDateString('en-US', {
-                month: '2-digit', day: '2-digit', year: 'numeric'
-            }) + ', ' + new Date(updated.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-        };
-
-        return res.status(200).json(new ApiResponse(200, [], formatted, "Follow-up updated successfully"));
+        return res.status(201).json(
+            new ApiResponse(201, [], user, "User created successfully")
+        );
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+        console.error("Create user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to create user")
+        );
     }
 };
 
-export const deleteFollowUp = async (req, res) => {
+export const updateUser = async (req, res) => {
     try {
-        await prisma.followUp.delete({ where: { id: req.params.id } });
-        return res.status(200).json(new ApiResponse(200, [], null, "Follow-up deleted"));
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const { id } = req.params;
+        const { name, firstName, lastName, email, role, status } = req.body;
+
+        const target = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            }
+        });
+
+        if (!target) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        if (
+            target.id === result.user.id ||
+            ["ADMIN", "SUPER_ADMIN", "ORGANIZATION_ADMIN"].includes(target.role)
+        ) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: "This account cannot be modified here" }], null, "Modification disallowed")
+            );
+        }
+
+        let fName = firstName;
+        let lName = lastName;
+
+        if (name !== undefined && firstName === undefined) {
+            const parts = name.trim().split(/\s+/);
+            fName = parts[0] || "";
+            lName = parts.slice(1).join(" ");
+        }
+
+        if (role !== undefined && !["SALES", "MANAGER"].includes(role)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid role" }], null, "Invalid role")
+            );
+        }
+
+        // INACTIVE is not a valid UserStatus enum value.
+        if (status !== undefined && !["ACTIVE", "INVITED", "SUSPENDED", "DEACTIVATED"].includes(status)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid status" }], null, "Invalid status")
+            );
+        }
+
+        const normalizedEmail =
+            email !== undefined ? email.trim().toLowerCase() : undefined;
+
+        if (normalizedEmail && normalizedEmail !== target.email) {
+            const existing = await prisma.user.findUnique({
+                where: { email: normalizedEmail }
+            });
+
+            if (existing) {
+                return res.status(409).json(
+                    new ApiResponse(409, [{ message: "Email already exists" }], null, "Email already exists")
+                );
+            }
+        }
+
+        const updated = await prisma.user.update({
+            where: { id },
+            data: {
+                ...(fName !== undefined && { firstName: fName }),
+                ...(lName !== undefined && { lastName: lName }),
+                ...(normalizedEmail !== undefined && { email: normalizedEmail }),
+                ...(role !== undefined && { role }),
+                ...(status !== undefined && { status })
+            },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                status: true,
+                updatedAt: true
+            }
+        });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], updated, "User updated successfully")
+        );
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null));
+        console.error("Update user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to update user")
+        );
     }
 };
 
+export const updateUserStatus = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // INACTIVE is not a valid UserStatus enum value.
+        if (!["ACTIVE", "INVITED", "SUSPENDED", "DEACTIVATED"].includes(status)) {
+            return res.status(400).json(
+                new ApiResponse(400, [{ message: "Invalid status" }], null, "Invalid status")
+            );
+        }
+
+        const target = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            }
+        });
+
+        if (!target) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        if (
+            target.id === result.user.id ||
+            ["ADMIN", "SUPER_ADMIN", "ORGANIZATION_ADMIN"].includes(target.role)
+        ) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: "This account status cannot be changed here" }], null, "Status change disallowed")
+            );
+        }
+
+        const updated = await prisma.user.update({
+            where: { id },
+            data: { status },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                status: true,
+                updatedAt: true
+            }
+        });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], updated, "User status updated successfully")
+        );
+    } catch (error) {
+        console.error("Update user status error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to update user status")
+        );
+    }
+};
+
+export const deleteUser = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user.uid, req.user.email);
+
+        if (result.error) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: result.error }], null, result.error)
+            );
+        }
+
+        const { id } = req.params;
+
+        const target = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(result.user.organizationId
+                    ? { organizationId: result.user.organizationId }
+                    : {})
+            }
+        });
+
+        if (!target) {
+            return res.status(404).json(
+                new ApiResponse(404, [{ message: "User not found" }], null, "User not found")
+            );
+        }
+
+        if (
+            target.id === result.user.id ||
+            ["ADMIN", "SUPER_ADMIN", "ORGANIZATION_ADMIN"].includes(target.role)
+        ) {
+            return res.status(403).json(
+                new ApiResponse(403, [{ message: "This account cannot be deleted here" }], null, "Deletion disallowed")
+            );
+        }
+
+        await prisma.user.delete({ where: { id } });
+
+        return res.status(200).json(
+            new ApiResponse(200, [], null, "User deleted successfully")
+        );
+    } catch (error) {
+        console.error("Delete user error:", error);
+        return res.status(500).json(
+            new ApiResponse(500, [{ message: error.message }], null, "Failed to delete user")
+        );
+    }
+};
+
+export const getProfile = async (req, res) => {
+    try {
+        const result = await getClientAdmin(req.user?.uid, req.user?.email);
+        if (result.error) {
+            return res.status(403).json(new ApiResponse(403, [{ message: result.error }], null, result.error));
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: result.user.id },
+            select: { firstName: true, lastName: true, email: true, phone: true, role: true, organizationId: true },
+        });
+        const organization = user?.organizationId
+            ? await prisma.organization.findUnique({ where: { id: user.organizationId }, select: { name: true } })
+            : null;
+        const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || "Client Admin";
+
+        return res.status(200).json(
+            new ApiResponse(200, [], {
+                id: result.user.id,
+                name,
+                email: user?.email || req.user?.email,
+                phone: user?.phone || "",
+                designation: user?.role === "ORGANIZATION_ADMIN" ? "Client Administrator" : "Sales Lead",
+                organizationName: organization?.name || "SHNOOR CRM",
+                orgName: organization?.name || "SHNOOR CRM",
+                role: user?.role || result.user.role,
+            }, "Profile retrieved successfully")
+        );
+    } catch (error) {
+        return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve profile"));
+    }
+};
 export const listCustomers = async (req, res) => {
     try {
         const customers = await prisma.customer.findMany({
@@ -1574,6 +2414,8 @@ export const listCustomers = async (req, res) => {
     }
 };
 
+
+
 export const listCompanies = async (req, res) => {
     try {
         const companies = await prisma.company.findMany({
@@ -1585,6 +2427,8 @@ export const listCompanies = async (req, res) => {
         return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to retrieve companies"));
     }
 };
+
+
 
 export const updateCustomer = async (req, res) => {
     try {
@@ -1602,6 +2446,8 @@ export const updateCustomer = async (req, res) => {
         return res.status(500).json(new ApiResponse(500, [{ message: error.message }], null, "Failed to update customer"));
     }
 };
+
+
 
 export const deleteCustomer = async (req, res) => {
     try {

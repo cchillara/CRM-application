@@ -8,12 +8,6 @@ import "./styles.css";
 if (new URLSearchParams(window.location.hash.slice(1)).has("token")) {
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
 }
-[
-  "superAdminToken",
-  "superAdminUser",
-  "shnoorSuperAdminToken",
-  "shnoorSuperAdminUser",
-].forEach((key) => localStorage.removeItem(key));
 
 class DashboardErrorBoundary extends React.Component {
   constructor(props) {

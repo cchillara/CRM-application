@@ -372,18 +372,27 @@ export function PlatformProvider({ children }) {
         method: "POST",
         body: JSON.stringify({ name: form.name.trim(), email: form.adminEmail.trim() || null, phone: form.adminPhone.trim() || null })
       });
-      {
-        const [firstName, ...lastName] = form.adminName.trim().split(/\s+/);
-        try {
-          await superAdminRequest(`/organizations/${organization.id}/users`, {
-            method: "POST",
-            body: JSON.stringify({ firstName, lastName: lastName.join(" "), email: form.adminEmail.trim(), password: form.adminPassword, role: "ORGANIZATION_ADMIN" })
-          });
-        } catch (error) {
+      const [firstName, ...lastName] = form.adminName.trim().split(/\s+/);
+      try {
+        await superAdminRequest(`/organizations/${organization.id}/users`, {
+          method: "POST",
+          body: JSON.stringify({ firstName, lastName: lastName.join(" "), email: form.adminEmail.trim(), password: form.adminPassword, role: "ORGANIZATION_ADMIN" })
+        });
+      } catch (error) {
+        error.createdOrganizationId = organization.id;
+        if (error.status !== 409) {
           await refreshOrganizations().catch(() => {});
-          error.createdOrganizationId = organization.id;
           throw error;
         }
+        try {
+          await superAdminRequest(`/organizations/${organization.id}`, { method: "DELETE" });
+          await refreshOrganizations().catch(() => {});
+          error.message = `${error.message} The incomplete organization was removed.`;
+        } catch (cleanupError) {
+          await refreshOrganizations().catch(() => {});
+          error.message = `${error.message} The organization was created but could not be removed; its ID is ${organization.id}.`;
+        }
+        throw error;
       }
       await refreshOrganizations();
       setApiError("");

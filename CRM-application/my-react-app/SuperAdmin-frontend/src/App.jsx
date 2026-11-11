@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -17,6 +17,7 @@ const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
 function ProtectedLayout() {
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [authError, setAuthError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -25,8 +26,7 @@ function ProtectedLayout() {
       .catch((error) => {
         if (!active) return;
         if (error.status === 401 || error.status === 403) {
-          ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
-          window.location.replace(LOGIN_URL);
+          setAuthError(error.message || "The backend rejected the Super Admin session.");
         } else {
           setAuthorized(true);
         }
@@ -35,7 +35,16 @@ function ProtectedLayout() {
     return () => { active = false; };
   }, []);
 
-  if (checking || !authorized) return <div className="form-note">Verifying Super Admin access…</div>;
+  if (checking) return <div className="form-note">Verifying Super Admin access…</div>;
+  if (authError) {
+    return (
+      <div className="form-note" role="alert">
+        <p>{authError}</p>
+        <Link to={LOGIN_URL}>Return to login</Link>
+      </div>
+    );
+  }
+  if (!authorized) return <div className="form-note">Could not verify Super Admin access.</div>;
   return <Layout />;
 }
 

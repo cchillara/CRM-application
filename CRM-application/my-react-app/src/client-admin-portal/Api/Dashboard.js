@@ -4,4 +4,11 @@ export const getDashboard = async () => {
   return await api.get('/dashboard');
 };
 
-export default { getDashboard };
+export const exportReport = async () => {
+  return await api.get('/export-report');
+};
+
+export default {
+  getDashboard,
+  exportReport,
+};

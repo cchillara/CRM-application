@@ -72,15 +72,30 @@ export default function Organizations() {
           phone: form.adminPhone.trim() || null
         })
       });
-      if (matchingCreateAdmin) {
-        await assignUser(matchingCreateAdmin.id, organization.id, "ORG_ADMIN");
-      } else {
-        await addUser(organization.id, {
-          name: form.adminName,
-          email: form.adminEmail,
-          password: form.adminPassword,
-          role: "ORG_ADMIN"
-        });
+      try {
+        if (matchingCreateAdmin) {
+          await assignUser(matchingCreateAdmin.id, organization.id, "ORG_ADMIN");
+        } else {
+          await addUser(organization.id, {
+            name: form.adminName,
+            email: form.adminEmail,
+            password: form.adminPassword,
+            role: "ORG_ADMIN"
+          });
+        }
+      } catch (error) {
+        // Organization and admin are created by separate API calls. If the
+        // admin step fails (for example, Firebase already has that email),
+        // remove the empty organization and keep the error in this dialog.
+        if (error.status !== 409) throw error;
+        try {
+          await superAdminRequest(`/organizations/${organization.id}`, { method: "DELETE" });
+          await refreshData().catch(() => {});
+          error.message = `${error.message} The incomplete organization was removed.`;
+        } catch (cleanupError) {
+          error.message = `${error.message} The organization was created but could not be removed; its ID is ${organization.id}.`;
+        }
+        throw error;
       }
       const plan = data.plans.find((item) => item.id === form.planId);
       if (plan) {
@@ -103,7 +118,7 @@ export default function Organizations() {
         adminPassword: "",
         planId: data.settings.defaultPlanId
       });
-      navigate(`/organizations/${organization.id}`);
+      navigate(`/super-admin/organizations/${organization.id}`);
     } catch (error) {
       setActionError(error.message || "Could not create the organization.");
     } finally {
@@ -309,7 +324,7 @@ export default function Organizations() {
               onClick={() => {
                 const id = viewingOrg.id;
                 setViewingOrg(null);
-                navigate(`/organizations/${id}`);
+                navigate(`/super-admin/organizations/${id}`);
               }}
             >
               View Full Details Page

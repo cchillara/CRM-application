@@ -18,10 +18,10 @@ export default function Dashboard() {
   const [planPopupTab, setPlanPopupTab] = useState("details");
 
   const cards = [
-    { label: "Organizations", value: metrics.totalOrganizations, helper: `${metrics.activeOrganizations} active`, icon: Building2, path: "/organizations" },
-    { label: "Users", value: metrics.totalUsers, helper: `${metrics.activeUsers} active`, icon: Users, path: "/organizations" },
-    { label: "Subscriptions", value: metrics.activeSubscriptions, helper: `${formatCurrency(metrics.monthlyRevenue)} / month`, icon: CreditCard, path: "/subscriptions" },
-    { label: "Open Queries", value: metrics.openTickets, helper: "Support requests", icon: Headphones, path: "/support" }
+    { label: "Organizations", value: metrics.totalOrganizations, helper: `${metrics.activeOrganizations} active`, icon: Building2, path: "/super-admin/organizations" },
+    { label: "Users", value: metrics.totalUsers, helper: `${metrics.activeUsers} active`, icon: Users, path: "/super-admin/organizations" },
+    { label: "Subscriptions", value: metrics.activeSubscriptions, helper: `${formatCurrency(metrics.monthlyRevenue)} / month`, icon: CreditCard, path: "/super-admin/subscriptions" },
+    { label: "Open Queries", value: metrics.openTickets, helper: "Support requests", icon: Headphones, path: "/super-admin/support" }
   ];
 
   return (
@@ -43,7 +43,7 @@ export default function Dashboard() {
         <div className="panel">
           <div className="panel-title">
             <div><h3>Organizations</h3><p>Recently added organizations</p></div>
-            <button className="text-button" onClick={() => navigate("/organizations")}>View all</button>
+            <button className="text-button" onClick={() => navigate("/super-admin/organizations")}>View all</button>
           </div>
           <div className="list">
             {data.organizations.slice(0, 5).map((org) => (
@@ -69,7 +69,7 @@ export default function Dashboard() {
         <div className="panel">
           <div className="panel-title">
             <div><h3>Subscription Summary</h3><p>Calculated from organization plans</p></div>
-            <button className="text-button" onClick={() => navigate("/subscriptions")}>View plans</button>
+            <button className="text-button" onClick={() => navigate("/super-admin/subscriptions")}>View plans</button>
           </div>
           <div className="plan-summary-list">
             {data.plans.map((plan) => {
@@ -100,7 +100,7 @@ export default function Dashboard() {
             {data.tickets.slice(0, 4).map((ticket) => {
               const org = data.organizations.find((item) => item.id === ticket.orgId);
               return (
-                <button className="list-row support-row" key={ticket.id} onClick={() => navigate("/support")}>
+                <button className="list-row support-row" key={ticket.id} onClick={() => navigate("/super-admin/support")}>
                   <div><strong>{ticket.subject}</strong><span>{org?.name || ticket.orgId}</span></div>
                   <Status value={ticket.status} />
                 </button>
@@ -148,7 +148,7 @@ export default function Dashboard() {
               onClick={() => {
                 const id = viewingOrg.id;
                 setViewingOrg(null);
-                navigate(`/organizations/${id}`);
+                navigate(`/super-admin/organizations/${id}`);
               }}
             >
               View Full Page
@@ -340,7 +340,7 @@ export default function Dashboard() {
               className="primary-button"
               onClick={() => {
                 setViewingPlan(null);
-                navigate("/subscriptions");
+                navigate("/super-admin/subscriptions");
               }}
             >
               Go to Subscriptions Page
