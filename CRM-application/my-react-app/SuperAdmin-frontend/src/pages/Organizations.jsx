@@ -1,7 +1,8 @@
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Building, Calendar, DollarSign, Pencil, Phone, Plus, Search, Trash2, User, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
+import DetailPopup from "../components/DetailPopup";
 import Status from "../components/Status";
 import { usePlatform } from "../context/PlatformContext";
 import { superAdminRequest } from "../api/superAdminApi";
@@ -19,6 +20,8 @@ export default function Organizations() {
 
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [viewingOrg, setViewingOrg] = useState(null);
+  const [popupTab, setPopupTab] = useState("details");
   const [editOrgId, setEditOrgId] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -69,15 +72,30 @@ export default function Organizations() {
           phone: form.adminPhone.trim() || null
         })
       });
-      if (matchingCreateAdmin) {
-        await assignUser(matchingCreateAdmin.id, organization.id, "ORG_ADMIN");
-      } else {
-        await addUser(organization.id, {
-          name: form.adminName,
-          email: form.adminEmail,
-          password: form.adminPassword,
-          role: "ORG_ADMIN"
-        });
+      try {
+        if (matchingCreateAdmin) {
+          await assignUser(matchingCreateAdmin.id, organization.id, "ORG_ADMIN");
+        } else {
+          await addUser(organization.id, {
+            name: form.adminName,
+            email: form.adminEmail,
+            password: form.adminPassword,
+            role: "ORG_ADMIN"
+          });
+        }
+      } catch (error) {
+        // Organization and admin are created by separate API calls. If the
+        // admin step fails (for example, Firebase already has that email),
+        // remove the empty organization and keep the error in this dialog.
+        if (error.status !== 409) throw error;
+        try {
+          await superAdminRequest(`/organizations/${organization.id}`, { method: "DELETE" });
+          await refreshData().catch(() => {});
+          error.message = `${error.message} The incomplete organization was removed.`;
+        } catch (cleanupError) {
+          error.message = `${error.message} The organization was created but could not be removed; its ID is ${organization.id}.`;
+        }
+        throw error;
       }
       const plan = data.plans.find((item) => item.id === form.planId);
       if (plan) {
@@ -100,7 +118,7 @@ export default function Organizations() {
         adminPassword: "",
         planId: data.settings.defaultPlanId
       });
-      navigate(`/organizations/${organization.id}`);
+      navigate(`/super-admin/organizations/${organization.id}`);
     } catch (error) {
       setActionError(error.message || "Could not create the organization.");
     } finally {
@@ -217,7 +235,8 @@ export default function Organizations() {
                 return (
                   <tr
                     key={org.id}
-                    onClick={() => navigate(`/organizations/${org.id}`)}
+                    onClick={() => setViewingOrg(org)}
+                    style={{ cursor: "pointer" }}
                   >
                     <td>
                       <strong>{org.name}</strong>
@@ -268,6 +287,213 @@ export default function Organizations() {
           </table>
         </div>
       </section>
+
+      {/* Organization Details Popup Dialog in exact screenshot format */}
+      <DetailPopup
+        isOpen={Boolean(viewingOrg)}
+        onClose={() => setViewingOrg(null)}
+        title={viewingOrg?.name}
+        tier={(() => {
+          const p = data.plans.find((item) => item.id === viewingOrg?.planId);
+          return p ? p.name.replace(/ plan$/i, "") : "Enterprise";
+        })()}
+        phone={viewingOrg?.admin?.phone || "+91 98111 22233"}
+        tabs={[
+          { id: "details", label: "Organization Details", icon: Building },
+          { id: "users", label: "Team Members", icon: Users, badge: viewingOrg?.users?.length || 0 },
+          { id: "admin", label: "Admin Contact", icon: User },
+        ]}
+        activeTab={popupTab}
+        onTabChange={setPopupTab}
+        footerActions={
+          <>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                const orgToEdit = viewingOrg;
+                setViewingOrg(null);
+                openEdit(orgToEdit, { stopPropagation: () => {} });
+              }}
+            >
+              <Pencil size={14} /> Edit Organization
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                const id = viewingOrg.id;
+                setViewingOrg(null);
+                navigate(`/super-admin/organizations/${id}`);
+              }}
+            >
+              View Full Details Page
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setViewingOrg(null)}
+            >
+              Close
+            </button>
+          </>
+        }
+      >
+        {viewingOrg && popupTab === "details" && (() => {
+          const plan = data.plans.find((item) => item.id === viewingOrg.planId);
+          return (
+            <section className="crm-slideover-section" aria-label="Organization details">
+              <div className="crm-slideover-section-header">
+                <div className="crm-slideover-section-title">
+                  <Building size={16} />
+                  <span>Organization details</span>
+                </div>
+              </div>
+
+              <div className="crm-lead-details-grid">
+                <div className="crm-lead-detail-item crm-lead-detail-full">
+                  <span className="crm-lead-detail-label">ORGANIZATION DESCRIPTION</span>
+                  <p className="crm-lead-detail-desc">
+                    {viewingOrg.name} is registered under the {plan?.name || "Enterprise"} tier with {viewingOrg.users?.length || 0} active team members and primary administrator {viewingOrg.admin?.name || "assigned contact"}.
+                  </p>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">ID</span>
+                  <span className="crm-lead-detail-value">{viewingOrg.id}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <User size={12} /> CONTACT PERSON
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingOrg.admin?.name || "Rahul Sharma"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Phone size={12} /> CONTACT NUMBER
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingOrg.admin?.phone || "+91 98111 22233"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Calendar size={12} /> CREATED DATE
+                  </span>
+                  <span className="crm-lead-detail-value">{viewingOrg.joined || "10-01-2026"}</span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">STATUS</span>
+                  <span className="crm-lead-detail-value">
+                    <span className={`crm-status-badge ${viewingOrg.status === "Active" ? "badge-active" : "badge-danger"}`}>
+                      {viewingOrg.status || "Active"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">PRIORITY</span>
+                  <span className="crm-lead-detail-value">
+                    <span className="crm-status-badge badge-pending">
+                      {plan?.name?.includes("Enterprise") ? "High" : plan?.name?.includes("Pro") ? "Medium" : "Standard"}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <DollarSign size={12} /> EXPECTED VALUE
+                  </span>
+                  <span className="crm-lead-detail-value" style={{ color: "#059669", fontWeight: 700 }}>
+                    ₹{plan ? plan.price.toLocaleString("en-IN") : "120,000"}
+                  </span>
+                </div>
+
+                <div className="crm-lead-detail-item">
+                  <span className="crm-lead-detail-label">
+                    <Users size={12} /> ACTIVE USERS
+                  </span>
+                  <span className="crm-lead-detail-value">
+                    {viewingOrg.users?.length || 0} / {plan?.userLimit || 25} Users
+                  </span>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
+        {viewingOrg && popupTab === "users" && (
+          <section className="crm-slideover-section" aria-label="Team members">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <Users size={16} />
+                <span>Team Members ({viewingOrg.users?.length || 0})</span>
+              </div>
+            </div>
+            {viewingOrg.users && viewingOrg.users.length > 0 ? (
+              <div className="crm-popup-table-wrap">
+                <table className="crm-popup-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewingOrg.users.map((user) => (
+                      <tr key={user.id}>
+                        <td><strong>{user.name}</strong></td>
+                        <td>{user.email}</td>
+                        <td><span className="crm-status-badge badge-progress">{user.role}</span></td>
+                        <td><span className={`crm-status-badge ${user.status === "Active" ? "badge-active" : "badge-pending"}`}>{user.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "13px" }}>No users registered for this organization yet.</p>
+            )}
+          </section>
+        )}
+
+        {viewingOrg && popupTab === "admin" && (
+          <section className="crm-slideover-section" aria-label="Admin contact">
+            <div className="crm-slideover-section-header">
+              <div className="crm-slideover-section-title">
+                <User size={16} />
+                <span>Primary Organization Admin</span>
+              </div>
+            </div>
+            <div className="crm-lead-details-grid">
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><User size={12}/> Admin Name</span>
+                <span className="crm-lead-detail-value">{viewingOrg.admin?.name || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Email Address</span>
+                <span className="crm-lead-detail-value">{viewingOrg.admin?.email || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label"><Phone size={12}/> Phone Number</span>
+                <span className="crm-lead-detail-value">{viewingOrg.admin?.phone || "-"}</span>
+              </div>
+              <div className="crm-lead-detail-item">
+                <span className="crm-lead-detail-label">Payment Status</span>
+                <span className="crm-lead-detail-value">
+                  <span className={`crm-status-badge ${viewingOrg.paymentStatus === "Paid" ? "badge-active" : "badge-pending"}`}>
+                    {viewingOrg.paymentStatus || "Paid"}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+      </DetailPopup>
 
       <Modal open={open} title="Add Organization" onClose={() => setOpen(false)}>
         <form className="form-stack" onSubmit={submit}>

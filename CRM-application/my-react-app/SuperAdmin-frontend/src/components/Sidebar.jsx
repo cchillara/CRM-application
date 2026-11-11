@@ -10,13 +10,13 @@ import {
 import { NavLink } from "react-router-dom";
 
 const items = [
-  { label: "Overview", path: "/", icon: LayoutDashboard, end: true },
-  { label: "Organizations", path: "/organizations", icon: Building2 },
-  { label: "Subscriptions", path: "/subscriptions", icon: CreditCard },
-  { label: "Analytics", path: "/analytics", icon: BarChart3 },
-  { label: "Audit Logs", path: "/audit-logs", icon: ScrollText },
-  { label: "Support & Help", path: "/support", icon: Headphones },
-  { label: "Settings", path: "/settings", icon: Settings }
+  { label: "Overview", path: "/super-admin/", icon: LayoutDashboard, end: true },
+  { label: "Organizations", path: "/super-admin/organizations", icon: Building2 },
+  { label: "Subscriptions", path: "/super-admin/subscriptions", icon: CreditCard },
+  { label: "Analytics", path: "/super-admin/analytics", icon: BarChart3 },
+  { label: "Audit Logs", path: "/super-admin/audit-logs", icon: ScrollText },
+  { label: "Support & Help", path: "/super-admin/support", icon: Headphones },
+  { label: "Settings", path: "/super-admin/settings", icon: Settings }
 ];
 
 export default function Sidebar() {

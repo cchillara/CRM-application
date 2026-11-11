@@ -1,10 +1,31 @@
 # Local environment files (keep example templates)
 .env
 .env.*
+*.env.local
 !.env.example
 
-# Installed dependencies
+# Dependencies and generated build output
 node_modules/
-
-# Vite cache
 .vite/
+dist/
+dist-ssr/
+build/
+coverage/
+/generated/prisma
+
+# Logs
+logs/
+*.log
+
+# Local credentials
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+crmbackend-*.json
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

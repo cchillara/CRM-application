@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Auth.css";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
-const SUPER_ADMIN_URL = import.meta.env.VITE_SUPER_ADMIN_URL || "http://localhost:5174";
 
 function Login() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -14,6 +15,7 @@ function Login() {
     const [loading, setLoading] = useState(false);
 
     const [showPassword, setShowPassword] = useState(false);
+    const [credentialsEnabled, setCredentialsEnabled] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -36,11 +38,15 @@ function Login() {
                 await userCredential.user.getIdToken();
 
             const headers = { Authorization: `Bearer ${idToken}` };
-            const superAdminResponse = await fetch(`${API_BASE_URL}/auth/super-admin/session`, { headers });
+            const superAdminResponse = await fetch(`${API_BASE_URL}/auth/super-admin/session`, {
+                method: "POST",
+                credentials: "include",
+                headers,
+            });
             const superAdminData = await superAdminResponse.json().catch(() => ({}));
 
             if (superAdminResponse.ok) {
-                window.location.assign(`${SUPER_ADMIN_URL}/#token=${encodeURIComponent(idToken)}`);
+                navigate("/super-admin/", { replace: true });
                 return;
             }
 
@@ -53,7 +59,18 @@ function Login() {
             const response = await fetch(`${API_BASE_URL}/auth/protected`, { headers });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.message || "Backend authentication failed");
-            alert("Login successful!");
+
+            const destinations = {
+                SALES: "/dashboard",
+                MANAGER: "/client-admin",
+                ORGANIZATION_ADMIN: "/client-admin",
+            };
+            const destination = destinations[data.data?.role];
+            if (!destination) {
+                throw new Error("Your account does not have a supported CRM role.");
+            }
+
+            navigate(destination, { replace: true });
         } catch (error) {
             const firebaseMessages = {
                 "auth/invalid-credential": "Email or password is incorrect.",
@@ -130,6 +147,7 @@ function Login() {
                     <form
                         onSubmit={handleLogin}
                         className="auth-form"
+                        autoComplete="off"
                     >
                         <div className="form-group">
                             <label htmlFor="email">
@@ -138,7 +156,13 @@ function Login() {
 
                             <input
                                 id="email"
+                                name="crm-login-email"
                                 type="email"
+                                autoComplete="off"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                readOnly={!credentialsEnabled}
+                                onFocus={() => setCredentialsEnabled(true)}
                                 placeholder="Enter your email"
                                 value={email}
                                 onChange={(e) =>
@@ -156,12 +180,16 @@ function Login() {
                             <div className="input-wrapper">
                                 <input
                                     id="password"
+                                    name="crm-login-password"
                                     className="password-input"
                                     type={
                                         showPassword
                                             ? "text"
                                             : "password"
                                     }
+                                    autoComplete="new-password"
+                                    readOnly={!credentialsEnabled}
+                                    onFocus={() => setCredentialsEnabled(true)}
                                     placeholder="Enter your password"
                                     value={password}
                                     onChange={(e) =>

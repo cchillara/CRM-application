@@ -1,17 +1,37 @@
-class ApiResponse{
-    constructor(statusCode = 200, errorsOrData = [], dataOrMessage = null, message = 'Success') {
-        // Keep the existing four argument form used by client-admin routes while
-        // also supporting the three argument (status, data, message) form used
-        // by the auth and Super Admin controllers.
-        const compactForm = arguments.length === 3 && typeof dataOrMessage === 'string';
-        const errors = compactForm ? [] : errorsOrData;
-        const data = compactForm ? errorsOrData : dataOrMessage;
-        if (compactForm) message = dataOrMessage;
+class ApiResponse {
+    constructor(
+        statusCode = 200,
+        arg2 = null,
+        arg3 = null,
+        arg4 = "Success"
+    ) {
         this.statusCode = statusCode;
-        this.message = message;
-        this.data = data;
         this.success = statusCode >= 200 && statusCode < 300;
-        this.errors = errors;
+
+        // Support both calling conventions:
+        // 1. Standard: new ApiResponse(statusCode, data, message) -> 3 args
+        // 2. Legacy:   new ApiResponse(statusCode, errors, data, message) -> 4 args
+        if (arguments.length === 3 && typeof arg3 === "string") {
+            // Check the compact form first: array data is common for list APIs.
+            this.errors = [];
+            this.data = arg2;
+            this.message = arg3;
+        } else if (Array.isArray(arg2)) {
+            // (statusCode, errors, data, message)
+            this.errors = arg2;
+            this.data = arg3;
+            this.message = typeof arg4 === "string" ? arg4 : "Success";
+        } else if (typeof arg3 === "string") {
+            // (statusCode, data, message)
+            this.errors = [];
+            this.data = arg2;
+            this.message = arg3;
+        } else {
+            this.errors = [];
+            this.data = arg3 !== null && arg3 !== undefined ? arg3 : arg2;
+            this.message = typeof arg4 === "string" ? arg4 : "Success";
+        }
     }
 }
-export {ApiResponse}
+
+export { ApiResponse };

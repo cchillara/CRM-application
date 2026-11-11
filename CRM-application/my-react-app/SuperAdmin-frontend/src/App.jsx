@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -10,28 +10,23 @@ import AuditLogs from "./pages/AuditLogs";
 import Support from "./pages/Support";
 import Settings from "./pages/Settings";
 import { superAdminRequest } from "./api/superAdminApi";
+import "./styles.css";
 
-const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login";
+const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
 
 function ProtectedLayout() {
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [authError, setAuthError] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("shnoorSuperAdminToken") || localStorage.getItem("superAdminToken");
-    if (!token) {
-      window.location.replace(LOGIN_URL);
-      return;
-    }
-
     let active = true;
     superAdminRequest("/organizations")
       .then(() => { if (active) setAuthorized(true); })
       .catch((error) => {
         if (!active) return;
         if (error.status === 401 || error.status === 403) {
-          ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
-          window.location.replace(LOGIN_URL);
+          setAuthError(error.message || "The backend rejected the Super Admin session.");
         } else {
           setAuthorized(true);
         }
@@ -40,14 +35,22 @@ function ProtectedLayout() {
     return () => { active = false; };
   }, []);
 
-  if (checking || !authorized) return <div className="form-note">Verifying Super Admin access…</div>;
+  if (checking) return <div className="form-note">Verifying Super Admin access…</div>;
+  if (authError) {
+    return (
+      <div className="form-note" role="alert">
+        <p>{authError}</p>
+        <Link to={LOGIN_URL}>Return to login</Link>
+      </div>
+    );
+  }
+  if (!authorized) return <div className="form-note">Could not verify Super Admin access.</div>;
   return <Layout />;
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
         <Route element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="organizations" element={<Organizations />} />
@@ -59,8 +62,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="account" element={<Settings accountMode />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+        <Route path="*" element={<Navigate to="/super-admin/" replace />} />
+    </Routes>
   );
 }

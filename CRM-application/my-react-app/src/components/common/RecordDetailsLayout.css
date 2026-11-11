@@ -1,0 +1,123 @@
+.record-details-layout {
+  min-height: 100vh;
+  padding: 28px;
+  background: var(--bg-main, var(--background));
+  color: var(--text-main, var(--heading));
+  font-family: var(--font-family);
+}
+
+.record-details-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 19px;
+  color: var(--text-muted, var(--body));
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.record-details-back-link:hover {
+  color: var(--blue-primary, var(--blue));
+}
+
+.record-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.record-details-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+}
+
+.record-details-avatar {
+  display: inline-flex;
+  flex: 0 0 46px;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: 50%;
+  background: var(--bg-card, var(--white));
+  color: var(--blue-primary, var(--blue));
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.record-details-heading-copy {
+  min-width: 0;
+}
+
+.record-details-heading-copy h1 {
+  margin: 0;
+  color: var(--text-main, var(--heading));
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.record-details-heading-copy p {
+  overflow: hidden;
+  margin: 4px 0 0;
+  color: var(--text-muted, var(--body));
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-details-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.record-details-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+
+.record-details-content.has-secondary {
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr);
+  align-items: start;
+}
+
+.record-details-main,
+.record-details-secondary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .record-details-content.has-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .record-details-layout {
+    padding: 22px 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .record-details-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .record-details-header-actions {
+    flex-wrap: wrap;
+  }
+}

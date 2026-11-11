@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import { usePlatform } from "../context/PlatformContext";
+import { logoutSuperAdmin } from "../api/superAdminApi";
 
 function normalizeE164Phone(value) {
   return String(value || "").trim().replace(/[\s()-]/g, "");
@@ -201,9 +202,13 @@ export default function Settings({ accountMode = false }) {
       type: "success",
       text: "Password changed successfully. You will be returned to login."
     });
-    window.setTimeout(() => {
-      ["superAdminToken", "superAdminUser", "shnoorSuperAdminToken", "shnoorSuperAdminUser"].forEach((key) => localStorage.removeItem(key));
-      window.location.replace(import.meta.env.VITE_LOGIN_URL || "http://localhost:5173/login");
+    window.setTimeout(async () => {
+      try {
+        await logoutSuperAdmin();
+      } catch (error) {
+        console.warn("Super Admin logout could not clear the server session:", error.message);
+      }
+      window.location.replace(import.meta.env.VITE_LOGIN_URL || "/login");
     }, 1400);
   }
 
