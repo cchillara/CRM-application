@@ -2,10 +2,14 @@
 .env
 .env.*
 *.env.local
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 
 # Dependencies and generated build output
 node_modules/
+**/node_modules/
 .vite/
 dist/
 dist-ssr/
@@ -29,3 +33,5 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+test-results/

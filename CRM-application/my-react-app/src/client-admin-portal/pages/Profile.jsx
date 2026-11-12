@@ -12,6 +12,8 @@ import {
   EyeOff,
   X
 } from "lucide-react";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword as updateFirebasePassword } from "firebase/auth";
+import { auth } from "../../firebase";
 import {
   getProfile,
   updateProfile,
@@ -171,24 +173,42 @@ export default function Profile() {
     }
 
     try {
-      await updatePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
-      });
+      const currentUser = auth.currentUser;
+      if (!currentUser?.email) throw new Error("Please sign in again before changing your password.");
+
+      const credential = EmailAuthProvider.credential(currentUser.email, passwordForm.currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+      await updateFirebasePassword(currentUser, passwordForm.newPassword);
+
+      let changedAt = new Date();
+      try {
+        const freshToken = await currentUser.getIdToken(true);
+        const result = await updatePassword(freshToken);
+        if (result?.passwordLastChangedAt) changedAt = new Date(result.passwordLastChangedAt);
+      } catch (recordError) {
+        console.warn("Password changed in Firebase, but could not update the profile timestamp:", recordError.message);
+      }
 
       setPasswordMessage({ type: "success", text: "Password updated successfully!" });
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setPasswordLastChanged(
-        new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        changedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       );
       setTimeout(() => {
         setPasswordMessage({ type: "", text: "" });
         setShowPasswordModal(false);
       }, 1500);
     } catch (err) {
+      const passwordErrors = {
+        "auth/invalid-credential": "Current password is incorrect.",
+        "auth/wrong-password": "Current password is incorrect.",
+        "auth/weak-password": "Choose a stronger password with at least 8 characters.",
+        "auth/too-many-requests": "Too many attempts. Please wait a while and try again.",
+        "auth/requires-recent-login": "Please sign in again before changing your password."
+      };
       setPasswordMessage({
         type: "error",
-        text: err.message || "Failed to update password. Please try again."
+        text: passwordErrors[err.code] || err.message || "Failed to update password. Please try again."
       });
     }
   }
@@ -199,8 +219,6 @@ export default function Profile() {
 
   return (
     <div className="crm-dashboard">
-
-      {/* ── Account cards ── */}
       <section className="panel">
         <div className="panel-title">
           <div>
@@ -213,7 +231,7 @@ export default function Profile() {
         </div>
 
         <div className="settings-option-list">
-          {/* Profile card */}
+         
           <button
             type="button"
             className="settings-option"
@@ -234,7 +252,7 @@ export default function Profile() {
             </div>
           </button>
 
-          {/* Change Password card */}
+        
           <button
             type="button"
             className="settings-option"
