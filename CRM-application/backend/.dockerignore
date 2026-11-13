@@ -1,0 +1,11 @@
+node_modules
+.git
+.env
+.env.*
+!.env.example
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+crmbackend-*.json
+coverage
+npm-debug.log*
