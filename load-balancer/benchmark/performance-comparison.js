@@ -2,13 +2,10 @@ import http from "http";
 import { performance } from "perf_hooks";
 import { createLoadBalancer } from "../src/server.js";
 
-/**
- * Creates a lightweight Express/HTTP backend simulation for benchmarking
- */
+
 const createBackendServer = (port, id) => {
   return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      // Simulate typical CRM light processing (JSON payload + basic serialization)
+    const server = http.createServer((req, res) => {   
       const data = JSON.stringify({
         status: "OK",
         instanceId: id,
@@ -27,9 +24,8 @@ const createBackendServer = (port, id) => {
   });
 };
 
-/**
- * Sends a single HTTP GET request and measures latency
- */
+//sends a single http request
+
 const sendRequest = (port, path = "/health") => {
   return new Promise((resolve) => {
     const start = performance.now();
@@ -60,9 +56,7 @@ const sendRequest = (port, path = "/health") => {
   });
 };
 
-/**
- * Executes a load test run with given concurrency and total requests
- */
+//executes a load test run
 const runLoadTest = async ({ port, totalRequests = 1000, concurrency = 25 }) => {
   const initialCpu = process.cpuUsage();
   const initialMem = process.memoryUsage();
@@ -116,7 +110,6 @@ const runLoadTest = async ({ port, totalRequests = 1000, concurrency = 25 }) => 
       dispatchNext();
     };
 
-    // Kick off initial concurrent workers
     for (let i = 0; i < concurrency; i++) {
       dispatchNext();
     }
@@ -134,12 +127,10 @@ const main = async () => {
   const PORT_S3 = 5103;
   const PORT_LB = 5100;
 
-  // 1. Setup 3 backend servers
   const s1 = await createBackendServer(PORT_S1, "backend-1");
   const s2 = await createBackendServer(PORT_S2, "backend-2");
   const s3 = await createBackendServer(PORT_S3, "backend-3");
 
-  // 2. Setup Load Balancer on PORT_LB targeting 5101, 5102, 5103
   const lb = createLoadBalancer({
     port: PORT_LB,
     backends: [
@@ -152,25 +143,15 @@ const main = async () => {
   await lb.start(PORT_LB);
 
   try {
-    // -------------------------------------------------------------
-    // Scenario 1: Single Express Instance (direct)
-    // -------------------------------------------------------------
+
     console.log(">> Benchmarking Scenario 1: Single Instance (port 5101)...");
     const resScenario1 = await runLoadTest({ port: PORT_S1, totalRequests: 1500, concurrency: 30 });
-
-    // -------------------------------------------------------------
-    // Scenario 2: Three Instances without Load Balancer (overloading single endpoint)
-    // -------------------------------------------------------------
     console.log(">> Benchmarking Scenario 2: Three Instances Without Load Balancer (unbalanced)...");
     const resScenario2 = await runLoadTest({ port: PORT_S1, totalRequests: 1500, concurrency: 30 });
 
-    // -------------------------------------------------------------
-    // Scenario 3: Three Instances behind Custom Node.js Load Balancer
-    // -------------------------------------------------------------
     console.log(">> Benchmarking Scenario 3: Three Instances behind Custom Load Balancer (port 5100)...");
     const resScenario3 = await runLoadTest({ port: PORT_LB, totalRequests: 1500, concurrency: 30 });
 
-    // Print Results Table
     console.log("\n===============================================================================");
     console.log("                             BENCHMARK RESULTS");
     console.log("===============================================================================");

@@ -35,7 +35,6 @@ describe("Round Robin Selector", () => {
   });
 
   it("should skip unhealthy instances automatically", () => {
-    // Mark backend-2 unhealthy
     selector.setTargetHealth("backend-2", false);
 
     expect(selector.getNextTarget().id).toBe("backend-1");
@@ -49,7 +48,6 @@ describe("Round Robin Selector", () => {
     expect(selector.getNextTarget().id).toBe("backend-1");
     expect(selector.getNextTarget().id).toBe("backend-3");
 
-    // Recover backend-2
     selector.setTargetHealth("backend-2", true);
     const selected = [
       selector.getNextTarget().id,

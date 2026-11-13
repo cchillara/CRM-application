@@ -54,7 +54,6 @@ describe("Proxy Headers Handling", () => {
   it("should preserve valid incoming X-Request-ID and generate one if missing", () => {
     const target = { id: "backend-1", host: "127.0.0.1", port: 5001 };
 
-    // With incoming valid UUID
     const validUuid = "11111111-2222-4333-8444-555555555555";
     const reqWithId = {
       headers: { "x-request-id": validUuid },
@@ -64,7 +63,7 @@ describe("Proxy Headers Handling", () => {
     expect(res1.requestId).toBe(validUuid);
     expect(res1.headers["x-request-id"]).toBe(validUuid);
 
-    // Without incoming ID
+    //without UUID 
     const reqWithoutId = {
       headers: {},
       socket: { remoteAddress: "127.0.0.1" },

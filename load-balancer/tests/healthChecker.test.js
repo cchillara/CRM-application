@@ -75,11 +75,9 @@ describe("HealthChecker", () => {
       if (t.id === "mock-1") downEmitted = true;
     });
 
-    // 1st failure - below threshold (2)
     await checker.checkTarget("mock-1");
     expect(selector.getTargetById("mock-1").healthy).toBe(true);
 
-    // 2nd failure - reaches threshold (2)
     await checker.checkTarget("mock-1");
     expect(selector.getTargetById("mock-1").healthy).toBe(false);
     expect(downEmitted).toBe(true);

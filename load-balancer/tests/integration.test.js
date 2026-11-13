@@ -10,7 +10,7 @@ describe("Load Balancer End-to-End Integration Tests", () => {
   let serverHits = { s1: 0, s2: 0, s3: 0 };
 
   beforeAll(async () => {
-    // Start 3 independent test backend HTTP servers
+    // 3 independent backend servers will be created 
     const createBackend = (id, hitKey) => {
       return new Promise((resolve) => {
         const s = http.createServer((req, res) => {
@@ -59,7 +59,6 @@ describe("Load Balancer End-to-End Integration Tests", () => {
           }
 
           if (req.url === "/api/slow") {
-            // Intentionally don't respond to test timeout
             setTimeout(() => {
               if (!res.writableEnded) {
                 res.writeHead(200);
@@ -93,12 +92,12 @@ describe("Load Balancer End-to-End Integration Tests", () => {
         { id: "backend-3", host: "127.0.0.1", port: ports[2] },
       ],
       healthCheck: {
-        intervalMs: 100000, // Manual triggers for testing
+        intervalMs: 100000, 
         unhealthyThreshold: 1,
         healthyThreshold: 1,
       },
       proxy: {
-        timeoutMs: 500, // Short timeout for test
+        timeoutMs: 500, 
       },
     });
   });
@@ -111,7 +110,6 @@ describe("Load Balancer End-to-End Integration Tests", () => {
   });
 
   afterEach(() => {
-    // Reset all backend targets to healthy
     lbApp.selector.setTargetHealth("backend-1", true);
     lbApp.selector.setTargetHealth("backend-2", true);
     lbApp.selector.setTargetHealth("backend-3", true);
@@ -182,7 +180,7 @@ describe("Load Balancer End-to-End Integration Tests", () => {
 
   it("6. should skip unhealthy instances automatically", async () => {
     lbApp.selector.reset();
-    // Mark backend-2 unhealthy
+    
     lbApp.selector.setTargetHealth("backend-2", false);
 
     const instancesVisited = [];
