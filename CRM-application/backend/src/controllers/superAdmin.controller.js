@@ -86,7 +86,7 @@ const validPlanBilling = ["Monthly", "Quarterly", "Yearly"];
 const validSubscriptionStatuses = ["ACTIVE", "PENDING", "INACTIVE"];
 const validPaymentStatuses = ["PAID", "PENDING", "UNPAID", "FAILED"];
 const validOrganizationStatuses = ["ACTIVE", "SUSPENDED", "DEACTIVATED"];
-const validUserRoles = ["ORGANIZATION_ADMIN", "MANAGER", "SALES"];
+const validUserRoles = ["ORGANIZATION_ADMIN", "MANAGER", "SALES", "USER"];
 const validUserStatuses = ["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"];
 
 const writeAuditLog = (data, db = prisma) => db.auditLog.create({ data });

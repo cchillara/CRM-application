@@ -66,7 +66,7 @@ const logoutSuperAdmin = (req, res) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, organizationId, role } = req.body;
+  const { firstName, lastName } = req.body;
 
   const firebaseUid = req.user?.uid;
   const email = req.user?.email;
@@ -79,37 +79,30 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "First name is required");
   }
 
-  if (!organizationId) {
-    throw new ApiError(400, "Organization ID is required for registration");
-  }
-
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
-  });
-
-  if (!organization) {
-    throw new ApiError(404, "Organization not found");
-  }
-
-  if (organization.status !== "ACTIVE") {
-    throw new ApiError(403, "Cannot register under a non-active organization");
-  }
-
   const existingUser = await prisma.user.findUnique({
     where: { firebaseUid },
   });
 
   if (existingUser) {
-    throw new ApiError(409, "User already exists");
+    return res.status(200).json(
+      new ApiResponse(200, existingUser, "User is already registered"),
+    );
   }
 
-  const user = await prisma.user.create({
+  // Public sign-up may claim an account that an organization admin has
+  // pre-created for this email. The role and organization come only from
+  // that trusted record; they are never accepted from the public request.
+  const invitedUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!invitedUser || !invitedUser.firebaseUid?.startsWith("pending-")) {
+    throw new ApiError(403, "No pending CRM invitation was found for this email. Ask your organization administrator to create your account first.");
+  }
+
+  const user = await prisma.user.update({
+    where: { id: invitedUser.id },
     data: {
       firebaseUid,
-      email,
-      firstName,
-      lastName: lastName || null,
-      organizationId: null,
+      firstName: firstName.trim(),
+      lastName: lastName?.trim() || null,
     },
   });
 

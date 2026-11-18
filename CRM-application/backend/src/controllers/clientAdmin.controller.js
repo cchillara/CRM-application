@@ -110,7 +110,7 @@ const getClientAdmin = async (firebaseUid, email) => {
  * Shared role/status validators (reused by Employees and Users)
  * These were previously called but never defined, causing ReferenceError.
  * ──────────────────────────────────────────────────────────────*/
-const VALID_USER_ROLES = new Set(["ORGANIZATION_ADMIN", "MANAGER", "SALES"]);
+const VALID_USER_ROLES = new Set(["ORGANIZATION_ADMIN", "MANAGER", "SALES", "USER"]);
 const VALID_USER_STATUSES = new Set(["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"]);
 
 const validateUserRole = (role) => VALID_USER_ROLES.has(role);
@@ -1514,7 +1514,7 @@ export const listEmployee = asyncHandler(async (req, res) => {
             id: emp.id,
             name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email,
             email: emp.email,
-            role: meta.displayRole || (emp.role === 'ORGANIZATION_ADMIN' ? 'Regional Manager' : emp.role === 'MANAGER' ? 'Senior Account Manager' : 'Business Development'),
+            role: meta.displayRole || (emp.role === 'ORGANIZATION_ADMIN' ? 'Regional Manager' : emp.role === 'MANAGER' ? 'Senior Account Manager' : emp.role === 'USER' ? 'User' : 'Business Development'),
             department: meta.department || (emp.role === 'ORGANIZATION_ADMIN' ? 'Executive' : emp.role === 'MANAGER' ? 'Sales & Accounts' : 'Enterprise Sales'),
             phone: meta.phone || '+91 98000 00000',
             status: meta.displayStatus || (emp.status === 'ACTIVE' ? 'Full-time' : emp.status === 'INVITED' ? 'Contract' : 'Part-time'),
@@ -1571,7 +1571,10 @@ export const createEmployee = asyncHandler(async (req, res) => {
 
     // Map display role to valid Prisma UserRole enum.
     // Only MANAGER and SALES are valid non-admin roles for employee creation.
-    const prismaRole = validateUserRole(displayRole) ? displayRole : "SALES";
+    const normalizedDisplayRole = String(displayRole).trim().toUpperCase();
+    const prismaRole = normalizedDisplayRole === "USER PORTAL" || normalizedDisplayRole === "USER" || normalizedDisplayRole === "USER ACCOUNT"
+        ? "USER"
+        : validateUserRole(normalizedDisplayRole) ? normalizedDisplayRole : "SALES";
 
     // Store a placeholder Firebase UID.  Must be replaced when the real
     // Firebase user is created via invitation acceptance.
@@ -2089,7 +2092,7 @@ export const createUser = async (req, res) => {
         }
 
         // Valid Prisma UserRole and UserStatus enum values.
-        const allowedRoles = ["SALES", "MANAGER"];
+        const allowedRoles = ["SALES", "MANAGER", "USER"];
         // INACTIVE is not a valid UserStatus enum value — valid values are:
         // INVITED, ACTIVE, SUSPENDED, DEACTIVATED
         const allowedStatuses = ["ACTIVE", "INVITED", "SUSPENDED", "DEACTIVATED"];
@@ -2195,7 +2198,7 @@ export const updateUser = async (req, res) => {
             lName = parts.slice(1).join(" ");
         }
 
-        if (role !== undefined && !["SALES", "MANAGER"].includes(role)) {
+        if (role !== undefined && !["SALES", "MANAGER", "USER"].includes(role)) {
             return res.status(400).json(
                 new ApiResponse(400, [{ message: "Invalid role" }], null, "Invalid role")
             );

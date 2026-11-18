@@ -9,6 +9,7 @@ import superAdminRouter from "./routes/superAdmin.routes.js";
 import clientAdminRouter from "./routes/clientAdmin.routes.js";
 import salesRouter from "./routes/sales.routes.js";
 import managerRouter from "./routes/manager.routes.js";
+import userPortalRouter from "./routes/userPortal.routes.js";
 import { errorHandler } from "./middleware/errormiddleware.js";
 import { ApiError } from "./utils/apiError.js";
 import { requestId } from "./middleware/requestId.js";
@@ -67,6 +68,7 @@ app.get("/health", (req, res) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/super-admin", superAdminRouter);
 app.use("/api/v1/client-admin", clientAdminRouter);
+app.use("/api/v1/user-portal", userPortalRouter);
 app.use("/api/v1/sales", salesRouter);
 app.use("/api/v1/manager", managerRouter);
 

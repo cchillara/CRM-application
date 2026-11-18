@@ -10,6 +10,7 @@ enum UserRole {
   ORGANIZATION_ADMIN
   MANAGER
   SALES
+  USER
 }
 
 enum OrganizationStatus {
@@ -125,6 +126,7 @@ model User {
   firstName   String
   lastName    String?
   phone       String?
+  designation String?
   role        UserRole   @default(SALES)
   status      UserStatus @default(INVITED)
   lastLoginAt DateTime?
@@ -380,6 +382,8 @@ model Task {
   status  TaskStatus @default(TODO)
   dueDate DateTime?
   endDate DateTime?
+  priority String     @default("MEDIUM")
+  time     String?
   eventType CalendarEventType @default(TASK)
 
   organizationId String

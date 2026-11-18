@@ -98,6 +98,17 @@ const ROLE_PERMISSIONS = {
         "dashboard:read",
         "products:read",
     ]),
+    USER: new Set([
+        "leads:read",
+        "deals:read",
+        "tasks:read",
+        "tasks:create",
+        "tasks:update",
+        "tasks:delete",
+        "profile:update",
+        "password:update",
+        "dashboard:read",
+    ]),
 };
 
 /**
