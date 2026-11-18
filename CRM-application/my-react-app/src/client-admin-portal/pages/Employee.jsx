@@ -128,7 +128,7 @@ export default function Employee() {
               <div>
                 <h2 className="crm-modal-title">{editingEmployee ? 'Edit Employee' : 'Add New Employee'}</h2>
                 <p className="crm-card-subtitle" style={{ margin: 0 }}>
-                  {editingEmployee ? `Editing: ${editingEmployee.id}` : 'Create employee record and access profile'}
+                  {editingEmployee ? 'Update employee details' : 'Create employee record and access profile'}
                 </p>
               </div>
               <button type="button" className="crm-modal-close-btn" onClick={handleClose}><X size={18} /></button>
@@ -188,7 +188,7 @@ export default function Employee() {
           <table className="crm-table">
             <thead>
               <tr>
-                <th>Employee & ID</th>
+                <th>Employee</th>
                 <th>Contact Email</th>
                 <th>Department</th>
                 <th>Role / Designation</th>
@@ -207,7 +207,6 @@ export default function Employee() {
                       </div>
                       <div>
                         <span className="crm-table-primary-text">{emp.name}</span>
-                        <span className="crm-table-sub-text">{emp.id}</span>
                       </div>
                     </div>
                   </td>

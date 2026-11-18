@@ -10,6 +10,7 @@ import Employee from "./pages/Employee";
 import Settings from "./pages/Settings";
 import Calendar from "./pages/Calendar";
 import Profile from "./pages/Profile";
+import Users from "./pages/Users";
 import "./Client-admin.css"
 
 export default function ClientAdminRoutes() {
@@ -25,6 +26,7 @@ export default function ClientAdminRoutes() {
         <Route path="profile" element={<Profile/>}/>
         <Route path="products" element={<Products />} />
         <Route path="employee" element={<Employee />} />
+        <Route path="users" element={<Users />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

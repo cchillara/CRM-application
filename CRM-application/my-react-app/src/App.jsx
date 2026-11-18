@@ -18,6 +18,7 @@ import SalesAnalytics from "./pages/sales/SalesAnalytics.jsx";
 import SalesProfile from "./pages/sales/SalesProfile.jsx";
 import SalesSettings from "./pages/sales/SalesSettings.jsx";
 import ClientAdminRoutes from "./client-admin-portal/ClientAdminRoutes";
+import UserPortalRoutes from "./user-portal/UserPortalRoutes.jsx";
 import { PlatformProvider } from "../SuperAdmin-frontend/src/context/PlatformContext.jsx";
 
 const SuperAdminApp = lazy(() => import("../SuperAdmin-frontend/src/App.jsx"));
@@ -63,6 +64,10 @@ function RoleDashboard({ authState }) {
 
   if (role === "SALES") {
     return <SalesLayout><SalesDashboard /></SalesLayout>;
+  }
+
+  if (role === "USER") {
+    return <Navigate to="/user" replace />;
   }
 
   if (role === "MANAGER" || role === "ORGANIZATION_ADMIN") {
@@ -637,18 +642,17 @@ function LandingPage() {
 }
 /* Edited by subham sharma on 06-10-2026*/
 function App() {
-  const [authState, setAuthState] = useState({
-    loading: true,
-    firebaseUser: null,
-    crmUser: null,
-  });
+  const [authState, setAuthState] = useState({ loading: true, firebaseUser: null, crmUser: null });
 
   useEffect(() => {
     let active = true;
 
+    if (!auth) {
+      setAuthState({ loading: false, firebaseUser: null, crmUser: null });
+      return () => { active = false; };
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!active) return;
-
       if (!firebaseUser) {
         setAuthState({ loading: false, firebaseUser: null, crmUser: null });
         return;
@@ -684,6 +688,17 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const syncAuthenticatedCrmUser = (event) => {
+      const { crmUser, firebaseUser } = event.detail || {};
+      if (!firebaseUser || !crmUser?.role) return;
+      setAuthState({ loading: false, firebaseUser, crmUser });
+    };
+
+    window.addEventListener("crm:authenticated", syncAuthenticatedCrmUser);
+    return () => window.removeEventListener("crm:authenticated", syncAuthenticatedCrmUser);
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
@@ -693,6 +708,9 @@ function App() {
       <Route element={<RequireAuthentication authState={authState} />}>
         <Route element={<RequireAnyRole authState={authState} roles={["MANAGER", "ORGANIZATION_ADMIN"]} />}>
           <Route path="/client-admin/*" element={<ClientAdminRoutes />} />
+        </Route>
+        <Route element={<RequireRole authState={authState} role="USER" />}>
+          <Route path="/user/*" element={<UserPortalRoutes />} />
         </Route>
         <Route path="/dashboard" element={<RoleDashboard authState={authState} />} />
         <Route element={<RequireRole authState={authState} role="SALES" />}>

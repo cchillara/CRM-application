@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import Status from "../components/Status";
 import { usePlatform } from "../context/PlatformContext";
 
+const formatDateTime = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+};
+
 export default function Support() {
   const { data, apiError, replyTicket, restoreSampleTickets } = usePlatform();
   const [selectedId, setSelectedId] = useState(data.tickets[0]?.id || "");
@@ -53,7 +61,7 @@ export default function Support() {
                 const org = data.organizations.find((item) => item.id === ticket.orgId);
                 return (
                   <button className={`ticket-item ${selectedId === ticket.id ? "selected" : ""}`} key={ticket.id} onClick={() => { setSelectedId(ticket.id); setSent(false); }}>
-                  <div><strong>{ticket.subject}</strong><span>{org?.name || ticket.organizationName || ticket.orgId || "Platform"} · {ticket.id}</span></div>
+                  <div><strong>{ticket.subject}</strong><span>{org?.name || ticket.organizationName || "Platform"} · {formatDateTime(ticket.createdAt)}</span></div>
                     <Status value={ticket.status} />
                   </button>
                 );
@@ -67,12 +75,12 @@ export default function Support() {
         <div className="panel support-detail-panel">
           {selected ? (
             <>
-              <div className="ticket-heading"><div><h2>{selected.subject}</h2><p>{selected.id} · {selected.category} · {selected.createdAt}</p></div><Status value={selected.status} /></div>
+              <div className="ticket-heading"><div><h2>{selected.subject}</h2><p>{selected.category} · {formatDateTime(selected.createdAt)}</p></div><Status value={selected.status} /></div>
               <div className="query-box"><span>Organization query · {selected.priority} priority</span><p>{selected.message}</p></div>
               <div className="reply-history">
                 <h3>Replies <span className="record-count">{selected.replies.length}</span></h3>
                 {selected.replies.length === 0 ? <p className="empty-text">No reply yet. Send a response below.</p> : selected.replies.map((item) => (
-                  <div className="reply-item" key={item.id}><div><strong>{item.by}</strong><span>{item.createdAt}</span></div><p>{item.message}</p></div>
+                  <div className="reply-item" key={item.id}><div><strong>{item.by}</strong><span>{formatDateTime(item.createdAt)}</span></div><p>{item.message}</p></div>
                 ))}
               </div>
               <form className="reply-form" onSubmit={sendReply}>

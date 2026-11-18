@@ -457,6 +457,22 @@
     text-decoration: underline;
 }
 
+.auth-reset-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #2468C5;
+    font: inherit;
+    font-size: 13px;
+    text-align: right;
+    cursor: pointer;
+}
+
+.auth-success {
+    color: #087443;
+    font-size: 13px;
+}
+
 /* =========================================================
    MOBILE
    ========================================================= */

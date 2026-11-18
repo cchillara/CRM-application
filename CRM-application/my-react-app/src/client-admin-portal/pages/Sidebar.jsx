@@ -8,6 +8,7 @@ import {
   UserCheck,
   Package,
   UserCog,
+  UserPlus,
   Settings,
   LogOut,
   X,
@@ -26,6 +27,7 @@ const iconMap = {
   UserCheck: UserCheck,
   Package: Package,
   UserCog: UserCog,
+  UserPlus: UserPlus,
   Settings: Settings
 };
 

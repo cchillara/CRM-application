@@ -3,10 +3,13 @@ import "./Auth.css";
 
 import {
     createUserWithEmailAndPassword,
+    deleteUser,
     updateProfile,
 } from "firebase/auth";
 
 import { auth } from "../firebase";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
 
 function Signup() {
     const [name, setName] = useState("");
@@ -56,8 +59,6 @@ function Signup() {
             // 3. Get Firebase ID token
             const idToken = await firebaseUser.getIdToken();
 
-            console.log("Firebase UID:", firebaseUser.uid);
-
             // 4. Split full name
             const nameParts = name.trim().split(/\s+/);
 
@@ -69,7 +70,7 @@ function Signup() {
             // 5. Send only the fields expected by backend
             // DO NOT send organizationId.
             const response = await fetch(
-                "http://localhost:5000/api/v1/auth/register",
+                `${API_BASE_URL}/auth/register`,
                 {
                     method: "POST",
 
@@ -108,6 +109,11 @@ function Signup() {
 
             // 7. Handle backend error
             if (!response.ok) {
+                // The Firebase account was created for this sign-up attempt,
+                // but the CRM did not accept it (for example, no invitation).
+                // Remove it so the invited user can retry after their admin
+                // creates the matching CRM account.
+                await deleteUser(firebaseUser);
                 throw new Error(
                     data.message ||
                     "Failed to create CRM user"
@@ -200,8 +206,7 @@ function Signup() {
                         </h2>
 
                         <p>
-                            Start managing your customer relationships
-                            with SHNOOR.
+                            Set up your account using the email address invited by your organization administrator.
                         </p>
 
                     </div>

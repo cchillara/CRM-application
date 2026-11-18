@@ -6,6 +6,7 @@ export const menuItems = [
   { id: 'team', label: 'Team', icon: 'UserCheck' },
   { id: 'products', label: 'Products', icon: 'Package' },
   { id: 'employee', label: 'Employee', icon: 'UserCog' },
+  { id: 'users', label: 'Users', icon: 'UserPlus' },
   { id: 'settings', label: 'Settings', icon: 'Settings' }
 ];
 

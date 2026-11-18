@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Auth.css";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
@@ -16,6 +16,26 @@ function Login() {
 
     const [showPassword, setShowPassword] = useState(false);
     const [credentialsEnabled, setCredentialsEnabled] = useState(false);
+    const [resetMessage, setResetMessage] = useState("");
+
+    const handlePasswordReset = async () => {
+        setError("");
+        setResetMessage("");
+        if (!email.trim()) {
+            setError("Enter your invited email address first.");
+            return;
+        }
+        if (!auth) {
+            setError("Firebase is not configured for this app.");
+            return;
+        }
+        try {
+            await sendPasswordResetEmail(auth, email.trim());
+            setResetMessage("Password reset email sent. Use its link to choose a password, then sign in here.");
+        } catch (resetError) {
+            setError(resetError.message || "Could not send the password reset email.");
+        }
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -56,12 +76,28 @@ function Login() {
                 throw new Error(superAdminData.message || "Could not verify Super Admin access");
             }
 
+            // Link a Firebase account that already exists to a pending CRM
+            // invitation. This also safely succeeds for already registered users.
+            const displayName = userCredential.user.displayName?.trim()
+                || email.trim().split("@")[0].replace(/[._-]+/g, " ");
+            const [firstName, ...lastNameParts] = displayName.split(/\s+/).filter(Boolean);
+            const registrationResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: "POST",
+                headers: { ...headers, "Content-Type": "application/json" },
+                body: JSON.stringify({ firstName: firstName || "User", lastName: lastNameParts.join(" ") || null }),
+            });
+            const registrationData = await registrationResponse.json().catch(() => ({}));
+            if (!registrationResponse.ok && registrationResponse.status !== 403) {
+                throw new Error(registrationData.message || "Could not link your account to the CRM invitation");
+            }
+
             const response = await fetch(`${API_BASE_URL}/auth/protected`, { headers });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.message || "Backend authentication failed");
 
             const destinations = {
                 SALES: "/dashboard",
+                USER: "/user",
                 MANAGER: "/client-admin",
                 ORGANIZATION_ADMIN: "/client-admin",
             };
@@ -70,6 +106,7 @@ function Login() {
                 throw new Error("Your account does not have a supported CRM role.");
             }
 
+            window.dispatchEvent(new CustomEvent("crm:authenticated", { detail: { firebaseUser: userCredential.user, crmUser: data.data } }));
             navigate(destination, { replace: true });
         } catch (error) {
             const firebaseMessages = {
@@ -79,6 +116,7 @@ function Login() {
                 "auth/invalid-email": "Enter a valid email address.",
                 "auth/too-many-requests": "Too many sign-in attempts. Try again shortly.",
                 "auth/network-request-failed": "Could not reach the authentication service. Check your connection.",
+                "auth/internal-error": "Firebase could not access this browser session. Refresh the page and try again. If it continues, clear this site's stored data and retry.",
             };
             setError(firebaseMessages[error.code] || error.message || "Sign in failed. Please try again.");
         } finally {
@@ -212,11 +250,16 @@ function Login() {
                             </div>
                         </div>
 
+                        <button type="button" className="auth-reset-link" onClick={handlePasswordReset}>
+                            Forgot your password? Send a reset email
+                        </button>
+
                         {error && (
                             <p className="auth-error">
                                 {error}
                             </p>
                         )}
+                        {resetMessage && <p className="auth-success" role="status">{resetMessage}</p>}
 
                         <button
                             type="submit"
@@ -230,9 +273,8 @@ function Login() {
                     </form>
 
                     <p className="auth-switch">
-                        Need a CRM account?{" "}
                         <a href="/signup">
-                            Create an account
+                            Set up account
                         </a>
                     </p>
                 </div>

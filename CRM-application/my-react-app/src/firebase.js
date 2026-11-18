@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+    browserSessionPersistence,
+    getAuth,
+    initializeAuth,
+} from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,6 +24,16 @@ const hasFirebaseConfig = Boolean(
 
 // Keep public pages renderable when local Firebase settings have not been added.
 const app = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
-export const auth = app ? getAuth(app) : null;
+export const auth = app
+    ? (() => {
+        try {
+            return initializeAuth(app, { persistence: browserSessionPersistence });
+        } catch (error) {
+            // Vite can re-evaluate this module during HMR after Auth is initialized.
+            if (error.code === "auth/already-initialized") return getAuth(app);
+            throw error;
+        }
+    })()
+    : null;
 
 window.auth = auth;
